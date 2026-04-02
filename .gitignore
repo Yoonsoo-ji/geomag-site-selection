@@ -1,12 +1,26 @@
-﻿# 대용량 데이터 파일 제외
+# ── 대용량 원시 데이터 (Git LFS 또는 별도 관리) ──────────────
 data/EMAG2_V3_20170530.csv
 data/EMAG2_V3_20170530.zip
-data/*.json
 data/ngii_data.csv
-# Python 캐시
+
+# ── OSM Overpass API 캐시 (자동 재생성 가능) ──────────────────
+data/*.json
+
+# ── Python 캐시 ───────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 .ipynb_checkpoints/
-# 출력 파일 (HTML은 추적)
+
+# ── 출력 파일 (CSV는 제외, HTML/DOCX는 추적) ──────────────────
 output/*.csv
+
+# ── OS / IDE ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── Claude 내부 설정 (프로젝트 메모리는 별도 관리) ────────────
+.claude/
