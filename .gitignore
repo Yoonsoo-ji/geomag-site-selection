@@ -1,0 +1,12 @@
+﻿# 대용량 데이터 파일 제외
+data/EMAG2_V3_20170530.csv
+data/EMAG2_V3_20170530.zip
+data/*.json
+data/ngii_data.csv
+# Python 캐시
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+# 출력 파일 (HTML은 추적)
+output/*.csv
