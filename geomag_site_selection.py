@@ -37,10 +37,12 @@ Korea Geomagnetic Field Model — Measurement Site Selection Tool
   [6] 풍력발전기                           반경  0.5 km
   [7] 채석장·광산                          반경  1.0 km  (제14조③ 지하 자기발생원)
 
-━━━ 지자기 이상 제외 기준 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  [8] 부지 내 자기장 변화폭 > 10 nT  (KIGAM/EMAG2 사용 시, 제14조③)
-        ▸ 지자기 관측소 부지 선정 핵심 수치 기준:
-          부지 내 자기장 변화폭 10 nT 이하 (반경 ~10 km 내 max-min)
+━━━ 지자기 이상 기준 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [8] 부지 내 자기장 변화폭 (KIGAM 1.5분 격자, 반경 0.05°≈5.5km, P90-P10)
+        ▸ ≤ 100 nT : 우수 후보
+        ▸ 100~200 nT: 현장 검토 필요
+        ▸ > 200 nT : 제외 (hard cut)
+        ▸ ※ 광역 자력이상도 예비선정이며, 최종 확정은 현장 정밀 자력측량 필요
 
 ━━━ 모델 구축 우선순위 가중치 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
   - 기존 관측소와의 거리 (멀수록 데이터 공백 → 높은 우선순위)
@@ -104,17 +106,27 @@ URBAN_RESIDENT_BUFFER_M =   300   # 주거 지역 (농촌 친화적 완화)
 # 후보 격자 간격 (m)
 GRID_SPACING_M = 10_000   # 10 km
 
-# 좌표 참조계: UTM Zone 52N (한반도 표준)
-UTM_CRS   = "EPSG:32652"
+# 좌표 참조계: Korea 2000 / Korea Unified Coordinate System
+# EPSG:5179 — 한반도 전역 분석 기준 (UTM 52N 대비 한국 전역 등거리 보장)
+UTM_CRS   = "EPSG:5179"
 WGS84_CRS = "EPSG:4326"
 
 # Overpass API
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
-# 부지 내 자기장 변화폭 임계값 (nT) — KIGAM/EMAG2 사용 시 적용
-# 지자기 관측소 선정 기준: 부지 내 변화폭 10 nT 이하 (제14조③)
-ANOMALY_VARIATION_THRESHOLD = 10.0  # nT  (반경 ~10 km 내 max-min)
-ANOMALY_SITE_RADIUS_DEG     =  0.10  # ≈ 11 km  (부지 반경 기준)
+# 지자기 이상 기준 (KIGAM 1.5분 격자, 반경 0.05°≈5.5km 내 P90-P10)
+# ■ 평가 스케일: 반경 0.05°(≈5.5 km) — KIGAM 1.5' 최소 실용 반경
+# ■ 지표: P90-P10 (이상치 강건 범위, robust range)
+#   ≤ 100 nT : 우수 (녹색)
+#   100~200 nT: 현장 검토 필요 (주황)
+#   > 200 nT : 제외 (red, hard cut)
+# ※ KIGAM 1.5분(≈2.8 km) 데이터는 1 km 스케일을 직접 해상하지 못함.
+#   광역 자력이상도 기반 예비선정이며, 최종 확정은 현장 정밀 자력측량 필요.
+ANOMALY_EXCLUDE_THRESHOLD_NT = 200.0  # nT  hard cut (제외)
+ANOMALY_CAUTION_THRESHOLD_NT = 100.0  # nT  현장검토 권고
+ANOMALY_SITE_RADIUS_DEG      =  0.05  # °   ≈ 5.5 km
+# 하위 호환성 유지
+ANOMALY_VARIATION_THRESHOLD  = ANOMALY_EXCLUDE_THRESHOLD_NT
 
 # ── 한국 지자기 관측소 (기준점) ───────────────────────────────
 # 출처: KMA (기상청), INTERMAGNET
@@ -671,6 +683,35 @@ def get_quarries_mines() -> gpd.GeoDataFrame:
     return gdf
 
 
+def get_water_bodies() -> gpd.GeoDataFrame:
+    """
+    [수계] 대형 수계·수면 취득 (자력계 설치 불가 지역)
+    호수, 저수지, 강 수면 등 — 관측소 부지로 부적합
+    """
+    print("\n[추가-6] 수계·수면 데이터 취득...")
+    s, w, n, e = KOREA_BBOX[1], KOREA_BBOX[0], KOREA_BBOX[3], KOREA_BBOX[2]
+    query = f"""
+    [out:json][timeout:180];
+    (
+      way["natural"="water"]({s},{w},{n},{e});
+      relation["natural"="water"]({s},{w},{n},{e});
+      way["water"~"^(lake|reservoir|pond|oxbow)$"]({s},{w},{n},{e});
+      way["waterway"~"^(riverbank|dock)$"]({s},{w},{n},{e});
+      relation["waterway"="riverbank"]({s},{w},{n},{e});
+      way["landuse"="reservoir"]({s},{w},{n},{e});
+    );
+    out body;
+    >;
+    out skel qt;
+    """
+    gdf = elements_to_gdf(
+        query_overpass(query, DATA_DIR / "water_bodies.json"),
+        keep_tags=["natural", "water", "waterway", "landuse"],
+    )
+    print(f"    수계/수면: {len(gdf)}개 요소")
+    return gdf
+
+
 def get_public_land() -> gpd.GeoDataFrame:
     """
     [⑦] 국공유지·공공 관리 토지 취득 (부지 지속성 산정용)
@@ -859,36 +900,47 @@ def load_kigam_anomaly(path: Path | None = None) -> "pd.DataFrame | None":
 
 def compute_anomaly_variation_zones(
     mag_data,
-    threshold_nT: float = ANOMALY_VARIATION_THRESHOLD,
-    site_radius_deg: float = ANOMALY_SITE_RADIUS_DEG,
+    exclude_threshold_nT: float = ANOMALY_EXCLUDE_THRESHOLD_NT,
+    caution_threshold_nT: float = ANOMALY_CAUTION_THRESHOLD_NT,
+    site_radius_deg:      float = ANOMALY_SITE_RADIUS_DEG,
+    threshold_nT:         float | None = None,  # 하위 호환성
 ) -> gpd.GeoDataFrame | None:
     """
     부지 내 자기장 변화폭 기반 제외 구역 생성.
 
-    ■ 핵심 기준 (제14조③):
-      지자기 관측소 선정 시 부지 내 자기장 변화폭 10 nT 이하
-      → 반경 site_radius_deg(≈11 km) 내 max(anomaly) - min(anomaly) > 10 nT
-         인 격자 셀을 제외 구역으로 지정.
+    ■ 평가 기준 (제14조③) — 단일 공간 스케일 통일:
+      반경 0.05°(≈5.5 km) 내 P90-P10 (robust range, 이상치 강건)
+      ≤ 100 nT   : 우수
+      100~200 nT : 현장 검토 필요
+      > 200 nT   : 제외 (hard cut) → 이 함수에서 제외 구역 생성
+
+    ■ 데이터 한계 고지:
+      KIGAM 1.5분(≈2.8 km) 데이터는 1 km 스케일을 직접 해상하지 못함.
+      광역 자력이상도 기반 예비선정이며, 최종 확정은 현장 정밀 자력측량 필요.
 
     Parameters
     ----------
-    mag_data        : KIGAM/EMAG2 DataFrame (lon, lat, anomaly_nT 컬럼)
-    threshold_nT    : 변화폭 임계값 (기본 10 nT)
-    site_radius_deg : 부지 반경 (°, 기본 0.10° ≈ 11 km)
+    mag_data             : KIGAM/EMAG2 DataFrame (lon, lat, anomaly_nT 컬럼)
+    exclude_threshold_nT : 제외 임계값 (기본 200 nT, hard cut)
+    caution_threshold_nT : 현장검토 임계값 (기본 100 nT, 점수 감점용)
+    site_radius_deg      : 탐색 반경 (°, 기본 0.05° ≈ 5.5 km)
 
     Returns
     -------
-    GeoDataFrame (WGS84) or None
+    GeoDataFrame (WGS84) with column 'variability_nT' — 제외 구역(>200 nT)만 포함
     """
+    # 하위 호환성: 구 threshold_nT 인수 → exclude_threshold_nT
+    if threshold_nT is not None:
+        exclude_threshold_nT = threshold_nT
+
     if mag_data is None or len(mag_data) < 4:
         return None
 
     from shapely.geometry import box as _box
 
-    print(f"    자기이상 변화폭 계산 중 (부지 반경 {site_radius_deg}° ≈ "
-          f"{site_radius_deg * 111:.0f} km, 임계값 {threshold_nT} nT)...")
+    print(f"    자기이상 변화폭(P90-P10) 계산 중 (반경 {site_radius_deg}° ≈ "
+          f"{site_radius_deg * 111:.0f} km, 제외 기준 {exclude_threshold_nT} nT)...")
 
-    # DataFrame 또는 numpy array 모두 지원
     if hasattr(mag_data, "columns"):
         lons = mag_data["lon"].values.astype(float)
         lats = mag_data["lat"].values.astype(float)
@@ -898,40 +950,55 @@ def compute_anomaly_variation_zones(
         lats = mag_data[:, 1].astype(float)
         vals = mag_data[:, 2].astype(float)
 
-    # 0.1° 간격 탐색 격자 (= site_radius_deg, 약 11 km)
-    res   = site_radius_deg
-    glon  = np.arange(KOREA_BBOX[0], KOREA_BBOX[2] + res, res)
-    glat  = np.arange(KOREA_BBOX[1], KOREA_BBOX[3] + res, res)
+    res  = site_radius_deg
+    glon = np.arange(KOREA_BBOX[0], KOREA_BBOX[2] + res, res)
+    glat = np.arange(KOREA_BBOX[1], KOREA_BBOX[3] + res, res)
 
-    high_var_cells = []
+    exclude_cells  = []
+    variabilities  = []
     n_valid        = 0
+    n_caution      = 0
 
     for lat_c in glat:
         for lon_c in glon:
-            # 부지 반경 내 KIGAM 데이터 수집
             mask = (
                 (np.abs(lats - lat_c) <= site_radius_deg) &
                 (np.abs(lons - lon_c) <= site_radius_deg)
             )
             pts = vals[mask]
-            if len(pts) < 3:        # 데이터 부족 → 판단 불가
+            if len(pts) < 3:
                 continue
             n_valid += 1
-            variation = float(np.nanmax(pts) - np.nanmin(pts))
-            if variation > threshold_nT:
-                high_var_cells.append(_box(
+            # P90-P10: robust range (이상치에 강건)
+            variability = float(np.percentile(pts, 90) - np.percentile(pts, 10))
+            if variability > caution_threshold_nT:
+                n_caution += 1
+            if variability > exclude_threshold_nT:
+                exclude_cells.append(_box(
                     lon_c - res / 2, lat_c - res / 2,
                     lon_c + res / 2, lat_c + res / 2,
                 ))
+                variabilities.append(round(variability, 1))
 
-    if not high_var_cells:
-        print(f"    ℹ 고변화 구역 없음 (전체 {n_valid}개 격자 평가, 기준 {threshold_nT} nT)")
+    n_caution_only = n_caution - len(exclude_cells)
+    pct_excl = len(exclude_cells) / n_valid * 100 if n_valid else 0
+    print(f"    자기이상 평가: {n_valid}개 격자 평가")
+    print(f"      ≤ {caution_threshold_nT} nT (우수): {n_valid - n_caution}개")
+    print(f"      {caution_threshold_nT}~{exclude_threshold_nT} nT (현장검토): {n_caution_only}개")
+    print(f"      > {exclude_threshold_nT} nT (제외): {len(exclude_cells)}개 ({pct_excl:.1f}%)")
+
+    if not exclude_cells:
+        print(f"    ℹ 제외 구역 없음 (P90-P10 기준 {exclude_threshold_nT} nT 초과 없음)")
         return None
 
-    gdf = gpd.GeoDataFrame(geometry=high_var_cells, crs=WGS84_CRS)
-    pct = len(high_var_cells) / n_valid * 100 if n_valid else 0
-    print(f"    고자기변화 제외 구역: {len(high_var_cells)}/{n_valid}개 셀 "
-          f"({pct:.1f}%) — 기준 {threshold_nT} nT")
+    gdf = gpd.GeoDataFrame(
+        {"variability_nT": variabilities},
+        geometry=exclude_cells,
+        crs=WGS84_CRS,
+    )
+    print(f"    ✅ 자기이상 제외 구역 생성: {len(exclude_cells)}개 셀 "
+          f"(P90-P10 > {exclude_threshold_nT} nT)")
+    print(f"    ⚠  광역 자력이상도(KIGAM 1.5분) 예비선정 결과 — 최종 확정은 현장 정밀 자력측량 필요")
     return gdf
 
 
@@ -1189,13 +1256,12 @@ def build_exclusion_zones(
     wind_gdf:         gpd.GeoDataFrame,
     quarry_gdf:       gpd.GeoDataFrame,
     anomaly_gdf:      gpd.GeoDataFrame | None,
+    water_gdf:        gpd.GeoDataFrame | None = None,
 ) -> dict:
     """
-    각 제외 조건별 단일 유니온 폴리곤 반환 (UTM CRS)
-    키: power, railway, urban_dense, urban_resid, pipeline, comm, wind, quarry, anomaly
-    도시 분류:
-      - urban_dense: 상업/공업/건설 → URBAN_DENSE_BUFFER_M(500m) 버퍼
-      - urban_resid: 주거/취락     → URBAN_RESIDENT_BUFFER_M(300m) 버퍼
+    각 제외 조건별 단일 유니온 폴리곤 반환 (UTM CRS, EPSG:5179)
+    키: power, railway, urban_dense, urban_resid, pipeline, comm, wind, quarry,
+        water, anomaly
     """
     print("\n제외 구역 구축 중...")
     zones = {}
@@ -1220,10 +1286,18 @@ def build_exclusion_zones(
     zones["quarry"]   = _build_zone(quarry_gdf,   QUARRY_BUFFER_M,
                                      "[8] 채석장/광산")
 
+    # 수계 제외 (폴리곤 직접 사용 — 수면 위에 관측소 설치 불가)
+    if water_gdf is not None and len(water_gdf) > 0:
+        zones["water"] = _build_zone(water_gdf, None, "[수계] 호수·저수지·강수면")
+    else:
+        zones["water"] = None
+        print("    [수계] 수계 데이터 없음 (건너뜀)")
+
     if anomaly_gdf is not None and len(anomaly_gdf) > 0:
         an_utm = anomaly_gdf.to_crs(UTM_CRS)
         zones["anomaly"] = unary_union(an_utm.geometry)
-        print(f"    [9] 자기이상도: {zones['anomaly'].area/1e6:.0f} km²  (변화폭 >{ANOMALY_VARIATION_THRESHOLD} nT 제외)")
+        print(f"    [9] 자기이상도: {zones['anomaly'].area/1e6:.0f} km²  "
+              f"(P90-P10 >{ANOMALY_EXCLUDE_THRESHOLD_NT} nT 제외)")
     else:
         zones["anomaly"] = None
         print("    [9] 자기이상도: KIGAM/EMAG2 파일 배치 시 활성화")
@@ -1235,7 +1309,7 @@ def filter_candidates(
     grid:  gpd.GeoDataFrame,
     zones: dict,
 ) -> gpd.GeoDataFrame:
-    """제외 구역 적용 후 최종 후보점 반환 (UTM)"""
+    """제외 구역 + 기존 관측소 이격 거리 적용 후 최종 후보점 반환 (UTM)"""
     print("\n후보점 필터링...")
     candidates = grid.copy()
 
@@ -1248,7 +1322,8 @@ def filter_candidates(
         "comm":        f"[6] 통신탑 ({COMM_TOWER_BUFFER_M//1000} km)",
         "wind":        f"[7] 풍력발전기 ({WIND_BUFFER_M//1000} km)",
         "quarry":      f"[8] 채석장/광산 ({QUARRY_BUFFER_M//1000} km)",
-        "anomaly":     "[9] 자기이상도 고변화",
+        "water":       "[수계] 호수·저수지·강수면",
+        "anomaly":     f"[9] 자기이상도 P90-P10 >{ANOMALY_EXCLUDE_THRESHOLD_NT} nT",
     }
     for key, geom in zones.items():
         if geom is None or geom.is_empty:
@@ -1258,10 +1333,91 @@ def filter_candidates(
         candidates = candidates[mask].reset_index(drop=True)
         removed = before - len(candidates)
         if removed > 0:
-            print(f"  {labels[key]}: -{removed}개 → 잔여 {len(candidates)}개")
+            print(f"  {labels.get(key, key)}: -{removed}개 → 잔여 {len(candidates)}개")
+
+    # ── 기존 관측소 이격 거리 필터 ─────────────────────────────────
+    # 기존 관측소 {OBS_MIN_SPACING_KM} km 이내 후보점 제외
+    print(f"\n  기존 관측소 {OBS_MIN_SPACING_KM:.0f} km 이격 필터 적용...")
+    obs_pts_utm = gpd.GeoDataFrame(
+        geometry=[Point(obs["lon"], obs["lat"]) for obs in KOREA_OBSERVATORIES],
+        crs=WGS84_CRS,
+    ).to_crs(UTM_CRS)
+    spacing_m = OBS_MIN_SPACING_KM * 1000
+    obs_union = unary_union([pt.buffer(spacing_m) for pt in obs_pts_utm.geometry])
+    before = len(candidates)
+    mask = ~candidates.geometry.within(obs_union)
+    candidates = candidates[mask].reset_index(drop=True)
+    removed = before - len(candidates)
+    print(f"  기존 관측소 {OBS_MIN_SPACING_KM:.0f} km 이내: -{removed}개 → 잔여 {len(candidates)}개")
 
     print(f"\n  ✅ 최종 후보점: {len(candidates)}개 / 전체 격자 {len(grid)}개")
     return candidates
+
+
+def _fetch_dem_via_srtm(lats, lons, radius_deg) -> np.ndarray | None:
+    """
+    로컬 SRTM GeoTIFF에서 표고 표준편차 계산.
+    data/srtm/ 디렉토리에 한반도 SRTM3 타일 배치 시 자동 사용.
+    예: data/srtm/N33E124.hgt, N34E125.hgt, ...  (HGT 또는 GeoTIFF 가능)
+
+    반환: shape (n,) 표고 std 배열, 또는 rasterio 미설치/파일 없음 시 None
+    """
+    try:
+        import rasterio
+        from rasterio.merge import merge as rio_merge
+        from rasterio.transform import rowcol
+    except ImportError:
+        return None
+
+    srtm_dir = DATA_DIR / "srtm"
+    if not srtm_dir.exists():
+        return None
+
+    tif_files = list(srtm_dir.glob("*.tif")) + list(srtm_dir.glob("*.TIF")) \
+              + list(srtm_dir.glob("*.hgt")) + list(srtm_dir.glob("*.HGT"))
+    if not tif_files:
+        return None
+
+    print(f"    SRTM 로컬 파일 사용 ({len(tif_files)}개 타일)...")
+    try:
+        src_list = [rasterio.open(str(f)) for f in tif_files]
+        mosaic, transform = rio_merge(src_list)
+        elev_arr = mosaic[0].astype(float)
+        elev_arr[elev_arr < -9000] = np.nan  # SRTM nodata
+
+        n = len(lats)
+        r = radius_deg
+        stds = np.full(n, np.nan)
+        for i in range(n):
+            lat_c, lon_c = lats[i], lons[i]
+            sample_pts = [
+                (lat_c,       lon_c),
+                (lat_c + r,   lon_c),
+                (lat_c - r,   lon_c),
+                (lat_c,       lon_c + r),
+                (lat_c,       lon_c - r),
+            ]
+            elevs = []
+            for slat, slon in sample_pts:
+                try:
+                    row, col = rowcol(transform, slon, slat)
+                    if 0 <= row < elev_arr.shape[0] and 0 <= col < elev_arr.shape[1]:
+                        v = elev_arr[row, col]
+                        if not np.isnan(v):
+                            elevs.append(v)
+                except Exception:
+                    pass
+            if elevs:
+                stds[i] = float(np.std(elevs))
+
+        for src in src_list:
+            src.close()
+        valid = (~np.isnan(stds)).sum()
+        print(f"    SRTM 표고 std 계산 완료: {valid}/{n}개 유효")
+        return stds
+    except Exception as exc:
+        print(f"    ⚠ SRTM 처리 실패: {exc}")
+        return None
 
 
 def fetch_dem_elevations(
@@ -1270,95 +1426,114 @@ def fetch_dem_elevations(
     cache_file: Path = DATA_DIR / "dem_elevations.json",
 ) -> np.ndarray:
     """
-    Open-Elevation API를 통해 후보 지점의 지형적 대표성 산정용 표고 데이터 취득.
+    후보 지점의 지형적 대표성 산정용 표고 표준편차 취득.
 
-    각 후보점에 대해 중심 + 4방향(N/S/E/W, ~5 km) 총 5개 지점의 표고를 배치 조회.
-    표고 표준편차(std) → 지형 기복 지표 (높을수록 지형 다양성 높음 → 대표성 높음).
+    우선순위:
+      1. 로컬 SRTM GeoTIFF (data/srtm/*.hgt 또는 *.tif)
+         → rasterio 설치 및 data/srtm/ 타일 배치 시 사용
+      2. Open-Elevation API (무료, 느림, 불안정)
+         → SRTM 로컬 파일 없을 때 폴백
 
-    반환: shape (n,) numpy array — 각 후보점의 주변 5점 표고 표준편차 (m)
+    각 후보점에 대해 중심 + 4방향(N/S/E/W, ~5 km) 총 5개 지점의 표고를 조회.
+    표고 표준편차(std) → 지형 기복 지표.
+
+    반환: shape (n,) numpy array — 후보점별 표고 표준편차 (m)
     """
     import json
 
     pts_wgs = candidates_wgs
     n = len(pts_wgs)
+    lats = pts_wgs.geometry.y.values
+    lons = pts_wgs.geometry.x.values
 
-    # ── 캐시 확인 ─────────────────────────────────────────────
+    # ── 캐시 확인 (재현성 강화: 좌표 해시 + 격자 간격 포함) ───────────
+    import hashlib
+    coord_bytes = (lats.tobytes() + lons.tobytes()
+                   + np.array([GRID_SPACING_M]).tobytes())
+    coord_hash = hashlib.md5(coord_bytes).hexdigest()[:12]
+    cache_key = {
+        "n": n,
+        "radius_deg": radius_deg,
+        "grid_spacing_m": GRID_SPACING_M,
+        "coord_hash": coord_hash,
+    }
     if cache_file.exists():
         try:
             with open(cache_file, "r") as f:
                 cached = json.load(f)
-            if cached.get("n") == n and cached.get("radius_deg") == radius_deg:
+            if (cached.get("n") == n
+                    and cached.get("radius_deg") == radius_deg
+                    and cached.get("coord_hash") == coord_hash):
                 print(f"    DEM 캐시 로드: {cache_file.name} ({n}개 지점)")
                 return np.array(cached["stds"])
+            else:
+                print(f"    DEM 캐시 무효 (좌표/설정 변경) — 재취득")
         except Exception:
             pass
 
-    print(f"    Open-Elevation API 조회 중 ({n}개 후보점 × 5방향)...")
-    lats = pts_wgs.geometry.y.values
-    lons = pts_wgs.geometry.x.values
-    r = radius_deg
+    # ── 1단계: 로컬 SRTM ─────────────────────────────────────
+    stds = _fetch_dem_via_srtm(lats, lons, radius_deg)
 
-    # 각 후보점마다 5개 쿼리 포인트 생성: [center, N, S, E, W]
-    all_locations = []
-    for i in range(n):
-        all_locations += [
-            {"latitude": round(lats[i],          5), "longitude": round(lons[i],      5)},
-            {"latitude": round(lats[i] + r,      5), "longitude": round(lons[i],      5)},
-            {"latitude": round(lats[i] - r,      5), "longitude": round(lons[i],      5)},
-            {"latitude": round(lats[i],           5), "longitude": round(lons[i] + r, 5)},
-            {"latitude": round(lats[i],           5), "longitude": round(lons[i] - r, 5)},
-        ]
+    # ── 2단계: Open-Elevation API fallback ───────────────────
+    if stds is None:
+        print(f"    Open-Elevation API 조회 중 ({n}개 후보점 × 5방향)...")
+        print(f"    ※ 로컬 SRTM 사용 시 data/srtm/ 에 한반도 HGT/GeoTIFF 타일 배치 권장")
+        r = radius_deg
+        all_locations = []
+        for i in range(n):
+            all_locations += [
+                {"latitude": round(lats[i],      5), "longitude": round(lons[i],      5)},
+                {"latitude": round(lats[i] + r,  5), "longitude": round(lons[i],      5)},
+                {"latitude": round(lats[i] - r,  5), "longitude": round(lons[i],      5)},
+                {"latitude": round(lats[i],       5), "longitude": round(lons[i] + r, 5)},
+                {"latitude": round(lats[i],       5), "longitude": round(lons[i] - r, 5)},
+            ]
+        chunk_size = 1000
+        elevations = []
+        url = "https://api.open-elevation.com/api/v1/lookup"
+        total_locs = len(all_locations)
 
-    # ── 배치 분할 요청 (최대 1000포인트/요청) ────────────────────
-    chunk_size = 1000
-    elevations = []
-    url = "https://api.open-elevation.com/api/v1/lookup"
-    total_locs = len(all_locations)
+        for start in range(0, total_locs, chunk_size):
+            chunk = all_locations[start : start + chunk_size]
+            for attempt in range(3):
+                try:
+                    resp = requests.post(
+                        url,
+                        json={"locations": chunk},
+                        timeout=60,
+                        headers={"Content-Type": "application/json"},
+                    )
+                    resp.raise_for_status()
+                    results = resp.json().get("results", [])
+                    elevations += [r_["elevation"] for r_ in results]
+                    pct = min(start + chunk_size, total_locs)
+                    print(f"      {pct}/{total_locs} 지점 완료", end="\r")
+                    break
+                except Exception as exc:
+                    if attempt < 2:
+                        print(f"\n      재시도 {attempt+1}/3 ({exc})")
+                        time.sleep(10)
+                    else:
+                        print(f"\n      ✗ 청크 실패 — 0m 대체")
+                        elevations += [0] * len(chunk)
 
-    for start in range(0, total_locs, chunk_size):
-        chunk = all_locations[start : start + chunk_size]
-        for attempt in range(3):
-            try:
-                resp = requests.post(
-                    url,
-                    json={"locations": chunk},
-                    timeout=60,
-                    headers={"Content-Type": "application/json"},
-                )
-                resp.raise_for_status()
-                results = resp.json().get("results", [])
-                elevations += [r_["elevation"] for r_ in results]
-                pct = min(start + chunk_size, total_locs)
-                print(f"      {pct}/{total_locs} 지점 완료", end="\r")
-                break
-            except Exception as exc:
-                if attempt < 2:
-                    print(f"\n      재시도 {attempt+1}/3 ({exc})")
-                    time.sleep(10)
-                else:
-                    print(f"\n      ✗ 청크 실패 — 0m 대체")
-                    elevations += [0] * len(chunk)
-
-    print(f"\n    DEM 취득 완료: {len(elevations)}개 표고값")
-
-    # ── 후보점별 5포인트 표고 표준편차 계산 ──────────────────────
-    stds = []
-    elev_arr = np.array(elevations, dtype=float)
-    for i in range(n):
-        s = i * 5
-        five = elev_arr[s : s + 5]
-        if len(five) == 5 and not np.any(np.isnan(five)):
-            stds.append(float(np.std(five)))
-        else:
-            stds.append(float(np.nanstd(five)) if len(five) > 0 else np.nan)
-    stds = np.array(stds)
+        print(f"\n    DEM 취득 완료: {len(elevations)}개 표고값")
+        stds_list = []
+        elev_arr = np.array(elevations, dtype=float)
+        for i in range(n):
+            s = i * 5
+            five = elev_arr[s : s + 5]
+            if len(five) == 5 and not np.any(np.isnan(five)):
+                stds_list.append(float(np.std(five)))
+            else:
+                stds_list.append(float(np.nanstd(five)) if len(five) > 0 else np.nan)
+        stds = np.array(stds_list)
 
     # ── 캐시 저장 ─────────────────────────────────────────────
     try:
         with open(cache_file, "w") as f:
             json.dump({
-                "n": n,
-                "radius_deg": radius_deg,
+                **cache_key,
                 "stds": [float(v) for v in stds],
             }, f)
         print(f"    DEM 캐시 저장: {cache_file.name}")
@@ -1474,8 +1649,14 @@ def compute_priority(
     result["d_urban_km"]  = np.round(d_urban / 1000, 1)
     print(f"    ④ 인구이격: 평균 {s4.mean():.1f} / 15점")
 
-    # ── ⑤ 자기 이상 균일도 (10점) ──────────────────────────
-    # EMAG2 데이터 반경 0.2°(~20 km) 내 자기이상 표준편차 역산
+    # ── ⑤ 자기 이상 균일도 (10점) ─ 고정 임계값 기반 점수화 ──────
+    # 기준: KIGAM 1.5분 격자, 반경 0.05°(≈5.5km) 내 P90-P10
+    # 고정 임계값 점수화 (상대정규화 X):
+    #   ≤ 50 nT  → 10점 (최우수)
+    #   ≤ 100 nT → 8점  (우수)
+    #   ≤ 150 nT → 5점  (보통)
+    #   ≤ 200 nT → 2점  (현장검토)
+    #   > 200 nT → 0점  (제외 — filter_candidates에서 이미 제거됨)
     s5 = np.full(n, np.nan)
     emag_available = False
     if emag2_data is not None:
@@ -1486,22 +1667,29 @@ def compute_priority(
             cw = candidates.to_crs(WGS84_CRS)
             c_lats = cw.geometry.y.values
             c_lons = cw.geometry.x.values
-            radius = 0.2
-            stds = np.full(n, np.nan)
+            radius = ANOMALY_SITE_RADIUS_DEG  # 0.05° — 동일 스케일 통일
+            p90p10 = np.full(n, np.nan)
             for i, (clat, clon) in enumerate(zip(c_lats, c_lons)):
-                mask = (np.abs(e_lats - clat) < radius) & (np.abs(e_lons - clon) < radius)
-                if mask.sum() > 2:
-                    stds[i] = np.std(e_anom[mask])
-            valid = ~np.isnan(stds)
+                mask = (np.abs(e_lats - clat) <= radius) & (np.abs(e_lons - clon) <= radius)
+                pts = e_anom[mask]
+                if len(pts) >= 3:
+                    p90p10[i] = np.percentile(pts, 90) - np.percentile(pts, 10)
+            valid = ~np.isnan(p90p10)
             if valid.sum() > 0:
-                mx_s = np.nanmax(stds)
-                if mx_s > 0:
-                    s5[valid] = (1 - stds[valid] / mx_s) * 10
-                else:
-                    s5[valid] = 10
-                s5[~valid] = 5
+                # 고정 임계값 기반 점수 (상대정규화 대신 절대 기준)
+                def _score_variability(v):
+                    if v <= 50:   return 10.0
+                    if v <= 100:  return 8.0
+                    if v <= 150:  return 5.0
+                    if v <= 200:  return 2.0
+                    return 0.0
+                s5[valid] = np.array([_score_variability(v) for v in p90p10[valid]])
+                s5[~valid] = 5.0   # 데이터 없는 지점 중간값
                 emag_available = True
-                print(f"    ⑤ 자기균일: 평균 {np.nanmean(s5):.1f} / 10점")
+                result["mag_p90p10_nT"] = np.round(p90p10, 1)
+                print(f"    ⑤ 자기균일: 평균 {np.nanmean(s5):.1f} / 10점  "
+                      f"(P90-P10 반경 {radius}°, 고정임계값 기반)")
+                print(f"    ⚠  KIGAM 1.5분 광역 자력이상도 예비선정 — 최종 확정은 현장 정밀 자력측량 필요")
         except Exception as exc:
             print(f"    ⚠ 자기균일 계산 실패: {exc}")
     result["s5_자기균일"] = np.round(s5, 1)
@@ -1628,6 +1816,43 @@ def create_folium_map(
         ).add_to(grid_layer)
     grid_layer.add_to(m)
 
+    # ── 기존 관측소 레이어 ────────────────────────────────────
+    obs_layer = folium.FeatureGroup(name="🔵 기존 지자기 관측소", show=True)
+    for obs in KOREA_OBSERVATORIES:
+        folium.CircleMarker(
+            location=[obs["lat"], obs["lon"]],
+            radius=10,
+            color="#003399",
+            fill=True,
+            fill_color="#3366FF",
+            fill_opacity=0.9,
+            weight=2,
+            popup=folium.Popup(
+                f'<div style="font-family:sans-serif;font-size:12px;min-width:160px;">'
+                f'<b style="color:#003399;">기존 관측소: {obs["name"]}</b><br>'
+                f'코드: {obs["code"]} | 기관: {obs["org"]}<br>'
+                f'위도: {obs["lat"]:.4f}°N, 경도: {obs["lon"]:.4f}°E<br>'
+                f'설치: {obs["established"]}년 | {obs["status"]}<br>'
+                f'<span style="color:#888;font-size:10px;">'
+                f'신규 후보 {OBS_MIN_SPACING_KM:.0f}km 이격 기준 적용</span>'
+                f'</div>',
+                max_width=200,
+            ),
+            tooltip=f"기존 관측소: {obs['name']} ({obs['code']})",
+        ).add_to(obs_layer)
+        # 이격 거리 원 표시 (점선)
+        folium.Circle(
+            location=[obs["lat"], obs["lon"]],
+            radius=OBS_MIN_SPACING_KM * 1000,
+            color="#003399",
+            weight=1,
+            dash_array="8 4",
+            fill=False,
+            opacity=0.4,
+            tooltip=f"{obs['name']} 관측소 {OBS_MIN_SPACING_KM:.0f}km 이격 구역",
+        ).add_to(obs_layer)
+    obs_layer.add_to(m)
+
     # ── 최종 후보 지점 (우선순위별 3개 레이어) ──────────────────
     priority_cfg = {
         1: ("#FF0000", "#CC0000", "🔴 우선순위 1등급 (최우선, 모델 공백 지역)"),
@@ -1693,8 +1918,8 @@ def create_folium_map(
                 f'&nbsp;④ 인구 이격: {v4} / 15'
                 f' <span style="color:#888;">(도시 {du}km)</span><br>'
                 f'&nbsp;⑤ 자기균일: {v5s} / 10<br>'
-                f'&nbsp;⑦ 부지 지속성: {v7s} / 10{dpub_str}<br>'
-                f'&nbsp;⑧ 관리 접근성: {v8s} / 5{drd_str}<br>'
+                f'&nbsp;<span style="color:#999;">⑦ 부지 지속성: 현장검토 / 10</span><br>'
+                f'&nbsp;<span style="color:#999;">⑧ 관리 접근성: 현장검토 / 5</span><br>'
                 f'&nbsp;<span style="color:#999;">⑥암상: 미산정</span>'
                 f'</span></div>'
             )
@@ -1745,7 +1970,7 @@ def create_folium_map(
       {_swatch('#0088FF','[5] 통신탑·기지국 0.5 km')}
       {_swatch('#00CCAA','[6] 풍력발전기 0.5 km')}
       {_swatch('#AA6600','[7] 채석장·광산 1.0 km')}
-      {_swatch('#0044FF','[8] 자기이상도 고변화 *')}
+      {_swatch('#0044FF','[8] 자기이상도 P90-P10>200nT *')}
       <hr style="margin:6px 0;border-color:#ccc;">
       <b>▸ 측정 후보지 (총 {n_cands}개)</b><br>
       {_dot('#FF0000',f'1등급 최우선 (데이터 공백): {n_p1}개')}
@@ -1753,9 +1978,13 @@ def create_folium_map(
       {_dot('#00BB00',f'3등급 일반: {n_p3}개')}
       <hr style="margin:6px 0;border-color:#ccc;">
       <small style="color:#555;">
-        격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/UTM 52N<br>
+        격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/EPSG:5179<br>
+        기존 관측소 {OBS_MIN_SPACING_KM:.0f}km 이내 제외<br>
         데이터: OpenStreetMap (Overpass API)<br>
-        * EMAG2 배치 시 활성화
+        * KIGAM 배치 시 활성화<br>
+        ⚠ 광역 자력이상도 예비선정.<br>
+        &nbsp;&nbsp;최종 확정은 현장 정밀<br>
+        &nbsp;&nbsp;자력측량으로 검증 필요.
       </small>
     </div>
     """
@@ -1815,12 +2044,12 @@ def create_folium_map(
             <td style="text-align:center;color:#999;">-</td></tr>
         <tr style="border-top:1px solid #eee;">
             <td rowspan="2">운영 인프라</td>
-            <td>⑦ 부지 지속성</td>
-            <td style="text-align:center;">10</td>
-            <td style="text-align:center;">✅</td></tr>
-        <tr><td>⑧ 관리 접근성</td>
-            <td style="text-align:center;">5</td>
-            <td style="text-align:center;">✅</td></tr>
+            <td style="color:#888;">⑦ 부지 지속성</td>
+            <td style="text-align:center;color:#888;">10</td>
+            <td style="text-align:center;color:#888;">※</td></tr>
+        <tr><td style="color:#888;">⑧ 관리 접근성</td>
+            <td style="text-align:center;color:#888;">5</td>
+            <td style="text-align:center;color:#888;">※</td></tr>
       </table>
       <hr style="margin:5px 0;border-color:#ccc;">
       <span style="color:#444;font-size:10.5px;">
@@ -1830,8 +2059,8 @@ def create_folium_map(
       ③ log(전력·철도 이격 거리) 정규화<br>
       ④ log(도시·주거 이격 거리) 정규화<br>
       ⑤ KIGAM 반경 20km 내 자기이상 표준편차 역산<br>
-      ⑦ 국공유지 거리: 내부=10, 1km=7, 2km=4, 외부=1<br>
-      ⑧ 일반도로 거리: ≤500m=5, ≤1km=3, >1km=0<br>
+      ⑦ 부지 지속성: 최종 선정 후 현장·지도 육안 확인<br>
+      ⑧ 관리 접근성: 최종 선정 후 도로망 지도 확인<br>
       <br>
       가용 항목 합산 → 100점 정규화<br>
       </span>
@@ -1840,7 +2069,7 @@ def create_folium_map(
       🔴 상위 34% → 1등급 최우선<br>
       🟠 34~67% → 2등급 우선<br>
       🟢 하위 33% → 3등급 일반<br>
-      <span style="color:#999;">✅ 산정 가능 &nbsp; ⚠ KIGAM/EMAG2 필요 &nbsp; - 데이터 미확보</span>
+      <span style="color:#999;">✅ 산정 가능 &nbsp; ⚠ KIGAM 필요 &nbsp; - 미확보 &nbsp; ※ 현장확인</span>
       </span>
     </div>
     """
@@ -2205,14 +2434,16 @@ def estimate_runtime() -> None:
       - 점수 계산       : 후보점당 ~0.05초 (거리 행렬)
     """
     osm_items = {
-        "전력(power_infrastructure.json)":   DATA_DIR / "power_infrastructure.json",
+        "전력(power_infra.json)":             DATA_DIR / "power_infra.json",
         "철도(railways.json)":               DATA_DIR / "railways.json",
         "도시핵심(urban_dense.json)":         DATA_DIR / "urban_dense.json",
         "도시주거(urban_residential_v2.json)": DATA_DIR / "urban_residential_v2.json",
         "파이프라인(pipelines.json)":          DATA_DIR / "pipelines.json",
+        "군사시설(military.json)":             DATA_DIR / "military.json",
         "통신탑(comm_towers.json)":           DATA_DIR / "comm_towers.json",
         "풍력(wind_turbines.json)":           DATA_DIR / "wind_turbines.json",
-        "채석장(quarries.json)":              DATA_DIR / "quarries.json",
+        "채석장(quarries_mines.json)":        DATA_DIR / "quarries_mines.json",
+        "수계(water_bodies.json)":            DATA_DIR / "water_bodies.json",
     }
 
     cached   = [k for k, p in osm_items.items() if p.exists()]
@@ -2280,7 +2511,8 @@ def main():
     comm_gdf        = get_comm_towers()           # [5] 통신탑·기지국
     wind_gdf        = get_wind_turbines()         # [6] 풍력발전기
     quarry_gdf      = get_quarries_mines()        # [7] 채석장·광산
-    # ⑦ 국공유지 / ⑧ 일반도로 → 최종 선정 후 육안 확인 (계산 제외)
+    water_gdf       = get_water_bodies()          # [수계] 호수·저수지·강수면
+    # ⑦ 국공유지 / ⑧ 일반도로 → 최종 선정 후 현장·지도 육안 확인 (계산 제외)
     print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
 
     # ── 3. 자기이상도 — KIGAM 우선, EMAG2 폴백 ───────────────
@@ -2312,6 +2544,7 @@ def main():
         urban_dense_gdf, urban_resid_gdf,
         pipeline_gdf, comm_gdf,
         wind_gdf, quarry_gdf, anomaly_gdf,
+        water_gdf=water_gdf,
     )
     final_candidates = filter_candidates(grid, zones)
     print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
