@@ -1349,24 +1349,23 @@ def compute_priority(
     candidates:   gpd.GeoDataFrame,
     zones:        dict,
     emag2_data=None,
-    public_land:  "gpd.GeoDataFrame | None" = None,
-    access_roads: "gpd.GeoDataFrame | None" = None,
 ) -> gpd.GeoDataFrame:
     """
     입지 점수 산정 (0~100점, UTM CRS 입력).
 
-    ┌─────────────┬──────────────────┬────┬─────────────────────┐
-    │ 평가 항목    │ 세부 지표         │배점│ 가용 여부             │
-    ├─────────────┼──────────────────┼────┼─────────────────────┤
-    │ 공간 대표성  │ 격자 데이터 희소성 │ 25 │ ✅ 후보점 분포 분석   │
-    │             │ 지형적 대표성      │ 15 │ ❌ DEM 미확보         │
-    │ 환경 정온도  │ 전력/철도 이격도   │ 15 │ ✅ OSM 데이터         │
-    │             │ 인구 밀집 이격도   │ 15 │ ✅ OSM 데이터         │
-    │ 지질 안정성  │ 자기 이상 균일도   │ 10 │ ⚠  EMAG2 배치 시      │
-    │             │ 암상 적합성       │  5 │ ❌ 지질도 미확보       │
-    │ 운영 인프라  │ 부지 지속성       │ 10 │ ❌ 토지 데이터 미확보  │
-    │             │ 관리 접근성       │  5 │ ❌ 도로 데이터 미확보  │
-    └─────────────┴──────────────────┴────┴─────────────────────┘
+    ┌─────────────┬──────────────────┬────┬──────────────────────────────┐
+    │ 평가 항목    │ 세부 지표         │배점│ 가용 여부                     │
+    ├─────────────┼──────────────────┼────┼──────────────────────────────┤
+    │ 공간 대표성  │ 격자 데이터 희소성 │ 25 │ ✅ 후보점 분포 분석            │
+    │             │ 지형적 대표성      │ 15 │ ⚠  Open-Elevation API        │
+    │ 환경 정온도  │ 전력/철도 이격도   │ 15 │ ✅ OSM 데이터                 │
+    │             │ 인구 밀집 이격도   │ 15 │ ✅ OSM 데이터                 │
+    │ 지질 안정성  │ 자기 이상 균일도   │ 10 │ ⚠  KIGAM/EMAG2 배치 시       │
+    │             │ 암상 적합성       │  5 │ ❌ 지질도 미확보               │
+    │ 운영 인프라  │ 부지 지속성       │ 10 │ ※ 최종 선정 후 육안 확인       │
+    │             │ 관리 접근성       │  5 │ ※ 최종 선정 후 지도 확인       │
+    └─────────────┴──────────────────┴────┴──────────────────────────────┘
+    ⑦ 부지 지속성 / ⑧ 관리 접근성은 최종 선정 후보지에서 지도·현장 육안 확인.
     가용 항목 점수를 100점 만점으로 정규화하여 등급 분류.
     """
     if len(candidates) == 0:
@@ -1486,50 +1485,8 @@ def compute_priority(
 
     # ── ⑥ 암상 적합성 (5점) — 지질도 미확보 ─────────────────
     result["s6_암상"] = np.nan
-    # ── ⑦ 부지 지속성 (10점) — 국공유지 여부 ─────────────────
-    # 국립공원·자연보호구역·공공관리토지 내/근처 = 장기 유지 가능
-    s7 = np.full(n, np.nan)
-    land_available = False
-    if public_land is not None and len(public_land) > 0:
-        try:
-            pub_utm = public_land.to_crs(UTM_CRS)
-            pub_geom = unary_union(pub_utm.geometry).simplify(200)
-            print(f"    ⑦ 부지 지속성 계산 ({n}개)...")
-            d_pub = np.array([pt.distance(pub_geom) for pt in pts])
-            # 국공유지 내: 10pts / 1km 내: 7pts / 2km 내: 4pts / 그 외: 1pt
-            s7 = np.where(d_pub == 0, 10.0,
-                 np.where(d_pub <= 1_000, 7.0,
-                 np.where(d_pub <= 2_000, 4.0, 1.0)))
-            land_available = True
-            result["d_public_km"] = np.round(d_pub / 1000, 1)
-            print(f"    ⑦ 부지 지속성: 평균 {s7.mean():.1f} / 10점")
-        except Exception as exc:
-            print(f"    ⚠ 부지 지속성 계산 실패: {exc}")
-    result["s7_부지"] = np.round(s7, 1)
-
-    # ── ⑧ 관리 접근성 (5점) — 일반 도로 반경 1km 이내 ────────
-    # 고속국도 제외 국도·지방도·군도 반경 1km 이내 접근 가능 여부
-    s8 = np.full(n, np.nan)
-    road_available = False
-    if access_roads is not None and len(access_roads) > 0:
-        try:
-            road_utm = access_roads[
-                access_roads.geometry.geom_type.isin(
-                    ["LineString", "MultiLineString"])
-            ].to_crs(UTM_CRS)
-            if len(road_utm) > 0:
-                road_geom = unary_union(road_utm.geometry).simplify(100)
-                print(f"    ⑧ 접근성 계산 ({n}개)...")
-                d_road = np.array([pt.distance(road_geom) for pt in pts])
-                # ≤500m: 5pts / 500m~1km: 3pts / >1km: 0pts
-                s8 = np.where(d_road <= 500, 5.0,
-                     np.where(d_road <= 1_000, 3.0, 0.0))
-                road_available = True
-                result["d_road_km"] = np.round(d_road / 1000, 1)
-                print(f"    ⑧ 접근성: 평균 {s8.mean():.1f} / 5점 (1km내 {(d_road<=1000).sum()}개)")
-        except Exception as exc:
-            print(f"    ⚠ 접근성 계산 실패: {exc}")
-    result["s8_접근성"] = np.round(s8, 1)
+    # ⑦ 부지 지속성 (10점): 최종 선정 후보지에서 국공유지 여부 육안 확인
+    # ⑧ 관리 접근성  (5점): 최종 선정 후보지에서 도로망 지도 육안 확인
 
     # ── 종합 점수 (가용 항목 합산 → 100점 정규화) ────────────
     total = s1 + s3 + s4                       # 기본 55점 만점
@@ -1539,13 +1496,7 @@ def compute_priority(
         available_max += 15                    # +15 = 70
     if emag_available:
         total = total + np.nan_to_num(s5, nan=0)
-        available_max += 10                    # +10
-    if land_available:
-        total = total + np.nan_to_num(s7, nan=0)
-        available_max += 10                    # +10
-    if road_available:
-        total = total + np.nan_to_num(s8, nan=0)
-        available_max += 5                     # +5
+        available_max += 10                    # +10 (최대 80점)
 
     result["score"] = np.round(total / available_max * 100, 1)
     result["score_max"] = available_max
@@ -1561,17 +1512,11 @@ def compute_priority(
         label = ["최우선", "우선", "일반"][p - 1]
         print(f"  우선순위 {p}등급({label}): {cnt}개")
 
-    unavail_list = []
+    unavail_list = ["⑥암상(5)", "⑦부지(10,육안확인)", "⑧접근성(5,육안확인)"]
     if not dem_available:
-        unavail_list.append("②지형(15)")
-    unavail_list.append("⑥암상(5)")
-    if not land_available:
-        unavail_list.append("⑦부지(10)")
-    if not road_available:
-        unavail_list.append("⑧접근성(5)")
+        unavail_list.insert(0, "②지형(15)")
     print(f"  가용 항목 합계: {available_max}/100점 → 100점 정규화")
-    if unavail_list:
-        print(f"  미산정 항목: {', '.join(unavail_list)}")
+    print(f"  미산정/후확인 항목: {', '.join(unavail_list)}")
 
     return result
 
@@ -2144,19 +2089,99 @@ def create_folium_map(
 
 
 # ============================================================
+# 예상 소요 시간 추정
+# ============================================================
+
+def _fmt_time(secs: float) -> str:
+    """초 → 사람이 읽기 쉬운 시간 문자열"""
+    if secs < 60:
+        return f"약 {int(secs)}초"
+    elif secs < 3600:
+        m, s = divmod(int(secs), 60)
+        return f"약 {m}분 {s}초" if s else f"약 {m}분"
+    else:
+        h, rem = divmod(int(secs), 3600)
+        return f"약 {h}시간 {rem // 60}분"
+
+
+def estimate_runtime() -> None:
+    """
+    실행 전 단계별 예상 소요 시간 출력.
+
+    추정 기준:
+      - OSM 캐시 있음  : 항목당 ~1초 (파일 읽기)
+      - OSM 캐시 없음  : 항목당 ~60초 (Overpass API, 네트워크 상황에 따라 변동)
+      - DEM 캐시 있음  : 후보점당 ~0.05초
+      - DEM 캐시 없음  : 후보점당 ~1.5초 (Open-Elevation API 5점 배치)
+      - 점수 계산       : 후보점당 ~0.05초 (거리 행렬)
+    """
+    osm_items = {
+        "전력(power_infrastructure.json)":   DATA_DIR / "power_infrastructure.json",
+        "철도(railways.json)":               DATA_DIR / "railways.json",
+        "도시핵심(urban_dense.json)":         DATA_DIR / "urban_dense.json",
+        "도시주거(urban_residential_v2.json)": DATA_DIR / "urban_residential_v2.json",
+        "파이프라인(pipelines.json)":          DATA_DIR / "pipelines.json",
+        "통신탑(comm_towers.json)":           DATA_DIR / "comm_towers.json",
+        "풍력(wind_turbines.json)":           DATA_DIR / "wind_turbines.json",
+        "채석장(quarries.json)":              DATA_DIR / "quarries.json",
+    }
+
+    cached   = [k for k, p in osm_items.items() if p.exists()]
+    uncached = [k for k, p in osm_items.items() if not p.exists()]
+
+    osm_time = len(cached) * 1 + len(uncached) * 60  # seconds
+
+    # 한반도 육상 면적 약 100,000 km², 격자 간격 기준 후보점 추산 (통과율 ~30%)
+    grid_km      = GRID_SPACING_M / 1000
+    raw_pts      = 100_000 / (grid_km ** 2)
+    est_cands    = int(raw_pts * 0.30)
+
+    dem_cache    = DATA_DIR / "dem_elevations.json"
+    dem_per_pt   = 0.05 if dem_cache.exists() else 1.5
+    dem_time     = est_cands * dem_per_pt
+
+    score_time   = est_cands * 0.05
+    total_time   = osm_time + dem_time + score_time + 30  # 기타 여유 30초
+
+    print("\n━━━ 예상 소요 시간 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print(f"  격자 간격 : {grid_km:.0f} km  →  예상 후보점 : 약 {est_cands}개")
+    print(f"  OSM 데이터: {len(cached)}개 캐시됨, {len(uncached)}개 신규 취득 필요")
+    if uncached:
+        print(f"    미캐시 항목 ({len(uncached)}개, 각 ~1분):")
+        for item in uncached:
+            print(f"      · {item}")
+    print(f"  ① OSM 취득  : {_fmt_time(osm_time)}")
+    dem_label = "캐시" if dem_cache.exists() else "API"
+    print(f"  ② DEM 고도  : {_fmt_time(dem_time)}  ({dem_label})")
+    print(f"  ③ 점수 계산 : {_fmt_time(score_time)}")
+    print(f"  ──────────────────────────────────────────────────────────")
+    print(f"  총 예상 시간: {_fmt_time(total_time)}")
+    if len(uncached) == 0 and dem_cache.exists():
+        print(f"  (모든 캐시 존재 — 빠른 실행 예상)")
+    elif len(uncached) > 0:
+        print(f"  ※ 네트워크 상태에 따라 OSM 취득 시간 변동 가능")
+    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+
+# ============================================================
 # 메인
 # ============================================================
 
 def main():
+    t_total_start = time.time()
+
     print("=" * 66)
     print("  대한민국 지구자기장 모델 구축 — 측정 입지 선정 시스템")
     print("  Korea Geomagnetic Field Model — Site Selection Tool")
     print("=" * 66)
 
+    estimate_runtime()
+
     # ── 1. 대한민국 경계 ─────────────────────────────────────
     korea = get_korea_boundary()
 
     # ── 2. OSM 데이터 취득 (캐싱) ────────────────────────────
+    t_step = time.time()
     print("\n▶ 인공 간섭 요소 데이터 취득 (OSM Overpass API)")
     power_gdf       = get_power_infrastructure()  # [1] 송전탑/선
     railway_gdf     = get_railways()              # [2] 철도
@@ -2166,10 +2191,11 @@ def main():
     comm_gdf        = get_comm_towers()           # [5] 통신탑·기지국
     wind_gdf        = get_wind_turbines()         # [6] 풍력발전기
     quarry_gdf      = get_quarries_mines()        # [7] 채석장·광산
-    public_land_gdf = get_public_land()           # [⑦] 국공유지 (점수용)
-    access_roads_gdf= get_access_roads()          # [⑧] 일반도로 (점수용)
+    # ⑦ 국공유지 / ⑧ 일반도로 → 최종 선정 후 육안 확인 (계산 제외)
+    print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
 
     # ── 3. 자기이상도 — KIGAM 우선, EMAG2 폴백 ───────────────
+    t_step = time.time()
     print("\n▶ 자기이상도 데이터 확인 [9]")
     mag_data    = load_kigam_anomaly()       # KIGAM 1.5분 격자 우선
     if mag_data is None:
@@ -2181,12 +2207,16 @@ def main():
         print(f"  ✅ 자기이상도 gradient 제외 구역 생성 완료")
     else:
         print(f"  ℹ  {DATA_DIR}/mag_1982-2018_1.5min_ed.dat 필요")
+    print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
 
     # ── 4. 후보 격자 생성 ─────────────────────────────────────
+    t_step = time.time()
     print("\n▶ 후보 격자 생성")
     grid = create_candidate_grid(korea)
+    print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
 
     # ── 5. 제외 구역 구축 + 필터링 ───────────────────────────
+    t_step = time.time()
     print("\n▶ 제외 구역 구축 및 후보점 필터링")
     zones = build_exclusion_zones(
         power_gdf, railway_gdf,
@@ -2195,22 +2225,22 @@ def main():
         wind_gdf, quarry_gdf, anomaly_gdf,
     )
     final_candidates = filter_candidates(grid, zones)
+    print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
 
     # ── 6. 입지 점수 산출 ──────────────────────────────────────
+    t_step = time.time()
     print("\n▶ 입지 점수 산출 (다기준 평가)")
-    final_candidates = compute_priority(
-        final_candidates, zones, mag_data,
-        public_land=public_land_gdf,
-        access_roads=access_roads_gdf,
-    )
+    final_candidates = compute_priority(final_candidates, zones, mag_data)
+    print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
 
     # ── 7. 지도 생성 ─────────────────────────────────────────
+    t_step = time.time()
     m = create_folium_map(zones, grid, final_candidates, korea_gdf=korea)
 
     # ── 8. HTML 저장 ─────────────────────────────────────────
     html_path = OUTPUT_DIR / "geomag_site_selection.html"
     m.save(str(html_path))
-    print(f"\n✅ 지도 저장: {html_path.resolve()}")
+    print(f"\n✅ 지도 저장: {html_path.resolve()}  [소요 {_fmt_time(time.time() - t_step)}]")
 
     # ── 9. CSV 저장 ──────────────────────────────────────────
     if len(final_candidates) > 0:
@@ -2222,9 +2252,8 @@ def main():
         cols = ["site_id", "lat", "lon"]
         for c in ["priority", "score",
                   "s1_희소성", "s2_지형", "s3_전력철도", "s4_인구이격",
-                  "s5_자기균일", "s7_부지", "s8_접근성",
-                  "dem_std_m", "d_power_km", "d_railway_km", "d_urban_km",
-                  "d_public_km", "d_road_km"]:
+                  "s5_자기균일",
+                  "dem_std_m", "d_power_km", "d_railway_km", "d_urban_km"]:
             if c in result.columns:
                 cols.append(c)
 
@@ -2244,7 +2273,8 @@ def main():
         print(f"  제외 항목: {sum(1 for v in zones.values() if v is not None and not v.is_empty)}개 조건 적용")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-    print("\n완료!")
+    elapsed = time.time() - t_total_start
+    print(f"\n✅ 완료!  총 소요 시간: {_fmt_time(elapsed)}")
     return final_candidates
 
 
