@@ -45,8 +45,8 @@ Korea Geomagnetic Field Model — Measurement Site Selection Tool
         ▸ ※ 광역 자력이상도 예비선정이며, 최종 확정은 현장 정밀 자력측량 필요
 
 ━━━ 모델 구축 우선순위 가중치 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  - 기존 관측소와의 거리 (멀수록 데이터 공백 → 높은 우선순위)
-  - 남북 위도 분포 균형 (제13조① 전국 균일 분포)
+  - 후보점 공간 희소성 (전국 균일 분포, 제13조① 기준)
+  - 지형 대표성, 전자기 이격도, 자기이상 균일도
 
 사용법:
   python geomag_site_selection.py
@@ -127,29 +127,6 @@ ANOMALY_CAUTION_THRESHOLD_NT = 100.0  # nT  현장검토 권고
 ANOMALY_SITE_RADIUS_DEG      =  0.05  # °   ≈ 5.5 km
 # 하위 호환성 유지
 ANOMALY_VARIATION_THRESHOLD  = ANOMALY_EXCLUDE_THRESHOLD_NT
-
-# ── 한국 지자기 관측소 (기준점) ───────────────────────────────
-# 출처: KMA (기상청), INTERMAGNET
-KOREA_OBSERVATORIES = [
-    {
-        "code": "SLE", "name": "서울",  "name_en": "Seoul",
-        "lat": 37.160, "lon": 127.074, "org": "KMA",
-        "established": 1957, "status": "운영중",
-    },
-    {
-        "code": "ICH", "name": "인천",  "name_en": "Incheon",
-        "lat": 37.271, "lon": 126.622, "org": "KMA",
-        "established": 2006, "status": "운영중",
-    },
-    {
-        "code": "USN", "name": "울산",  "name_en": "Ulsan",
-        "lat": 35.527, "lon": 129.244, "org": "KMA",
-        "established": 2014, "status": "운영중",
-    },
-]
-
-# 모델 구축 시 신규 관측소 최소 이격 거리 (기존 관측소로부터)
-OBS_MIN_SPACING_KM = 100.0
 
 # ── 1:50,000 지형도 도엽 셰이프파일 (NGII 국가기본도) ────────────
 # 출처: 국토지리정보원 국가기본도_도엽인덱스50K (TN_MAPINDX_50K.shp)
@@ -1024,18 +1001,30 @@ def create_topo_sheet_grid(korea_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         try:
             raw = gpd.read_file(str(TOPO50K_SHP), encoding="cp949")
 
-            # CRS 처리:
-            # PRJ에 내장된 Korea 2000 UCS WKT를 pyproj가 EPSG로 인식 못할 수 있음.
-            # 파라미터가 EPSG:5179와 동일하므로 EPSG:5179로 강제 지정 후 변환.
-            # → 이렇게 해야 WGS84 변환이 EPSG 정의를 따라 정확하게 수행됨.
-            raw = raw.set_crs("EPSG:5179", allow_override=True)
+            # ── CRS 처리 (네이티브 PRJ WKT 우선) ─────────────────────────
+            # 문제 분석:
+            #   pyproj의 EPSG:5179 정의가 버전에 따라 TOWGS84 파라미터를 포함하면
+            #   WGS84 변환 시 수십~수백m 오프셋이 발생하여 도엽 위치가 어긋날 수 있음.
+            # 해결책:
+            #   SHP PRJ 파일의 네이티브 WKT("Korea_2000_Korea_Unified_CS")를 직접 사용.
+            #   pyproj가 CRS를 읽어오지 못할 때만 EPSG:5179 폴백.
+            #
+            # ⚠ 만약 변환 후에도 위치가 맞지 않으면 _check_topo_alignment.py 실행하여
+            #   실제 SHP 좌표 범위와 올바른 EPSG 코드를 확인할 것.
+            native_crs = raw.crs
+            if native_crs is None:
+                print("    ⚠ PRJ CRS 없음 → EPSG:5179 폴백")
+                raw = raw.set_crs("EPSG:5179", allow_override=True)
+            else:
+                print(f"    CRS: 네이티브 PRJ 사용 ({native_crs.name})")
+                # EPSG:5179 override 하지 않음 — 네이티브 WKT로 정확 변환
             topo_raw = raw.to_crs(WGS84_CRS)
 
             # ★ TM 투영 곡선 보정: WGS84 변환 후 bbox 직사각형으로 교체
-            # TM(Korea 2000)→WGS84 변환 시 폴리곤 경계가 미세하게 휘어질 수 있음.
-            # bounding-box 직사각형으로 교체하면 NGII 도엽 경계와 정확히 일치.
+            # 지리 좌표계에서 도엽은 경위선 직교 직사각형이어야 함.
+            # 변환 잔류 곡선을 제거해 NGII 도엽 경계와 정렬.
             topo_raw["geometry"] = topo_raw.geometry.apply(
-                lambda g: box(*g.bounds)   # box(min_lon, min_lat, max_lon, max_lat)
+                lambda g: box(*g.bounds)
             )
             topo = topo_raw
 
@@ -1309,7 +1298,7 @@ def filter_candidates(
     grid:  gpd.GeoDataFrame,
     zones: dict,
 ) -> gpd.GeoDataFrame:
-    """제외 구역 + 기존 관측소 이격 거리 적용 후 최종 후보점 반환 (UTM)"""
+    """제외 구역 적용 후 최종 후보점 반환 (UTM)"""
     print("\n후보점 필터링...")
     candidates = grid.copy()
 
@@ -1334,21 +1323,6 @@ def filter_candidates(
         removed = before - len(candidates)
         if removed > 0:
             print(f"  {labels.get(key, key)}: -{removed}개 → 잔여 {len(candidates)}개")
-
-    # ── 기존 관측소 이격 거리 필터 ─────────────────────────────────
-    # 기존 관측소 {OBS_MIN_SPACING_KM} km 이내 후보점 제외
-    print(f"\n  기존 관측소 {OBS_MIN_SPACING_KM:.0f} km 이격 필터 적용...")
-    obs_pts_utm = gpd.GeoDataFrame(
-        geometry=[Point(obs["lon"], obs["lat"]) for obs in KOREA_OBSERVATORIES],
-        crs=WGS84_CRS,
-    ).to_crs(UTM_CRS)
-    spacing_m = OBS_MIN_SPACING_KM * 1000
-    obs_union = unary_union([pt.buffer(spacing_m) for pt in obs_pts_utm.geometry])
-    before = len(candidates)
-    mask = ~candidates.geometry.within(obs_union)
-    candidates = candidates[mask].reset_index(drop=True)
-    removed = before - len(candidates)
-    print(f"  기존 관측소 {OBS_MIN_SPACING_KM:.0f} km 이내: -{removed}개 → 잔여 {len(candidates)}개")
 
     print(f"\n  ✅ 최종 후보점: {len(candidates)}개 / 전체 격자 {len(grid)}개")
     return candidates
@@ -1816,43 +1790,6 @@ def create_folium_map(
         ).add_to(grid_layer)
     grid_layer.add_to(m)
 
-    # ── 기존 관측소 레이어 ────────────────────────────────────
-    obs_layer = folium.FeatureGroup(name="🔵 기존 지자기 관측소", show=True)
-    for obs in KOREA_OBSERVATORIES:
-        folium.CircleMarker(
-            location=[obs["lat"], obs["lon"]],
-            radius=10,
-            color="#003399",
-            fill=True,
-            fill_color="#3366FF",
-            fill_opacity=0.9,
-            weight=2,
-            popup=folium.Popup(
-                f'<div style="font-family:sans-serif;font-size:12px;min-width:160px;">'
-                f'<b style="color:#003399;">기존 관측소: {obs["name"]}</b><br>'
-                f'코드: {obs["code"]} | 기관: {obs["org"]}<br>'
-                f'위도: {obs["lat"]:.4f}°N, 경도: {obs["lon"]:.4f}°E<br>'
-                f'설치: {obs["established"]}년 | {obs["status"]}<br>'
-                f'<span style="color:#888;font-size:10px;">'
-                f'신규 후보 {OBS_MIN_SPACING_KM:.0f}km 이격 기준 적용</span>'
-                f'</div>',
-                max_width=200,
-            ),
-            tooltip=f"기존 관측소: {obs['name']} ({obs['code']})",
-        ).add_to(obs_layer)
-        # 이격 거리 원 표시 (점선)
-        folium.Circle(
-            location=[obs["lat"], obs["lon"]],
-            radius=OBS_MIN_SPACING_KM * 1000,
-            color="#003399",
-            weight=1,
-            dash_array="8 4",
-            fill=False,
-            opacity=0.4,
-            tooltip=f"{obs['name']} 관측소 {OBS_MIN_SPACING_KM:.0f}km 이격 구역",
-        ).add_to(obs_layer)
-    obs_layer.add_to(m)
-
     # ── 최종 후보 지점 (우선순위별 3개 레이어) ──────────────────
     priority_cfg = {
         1: ("#FF0000", "#CC0000", "🔴 우선순위 1등급 (최우선, 모델 공백 지역)"),
@@ -1979,7 +1916,6 @@ def create_folium_map(
       <hr style="margin:6px 0;border-color:#ccc;">
       <small style="color:#555;">
         격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/EPSG:5179<br>
-        기존 관측소 {OBS_MIN_SPACING_KM:.0f}km 이내 제외<br>
         데이터: OpenStreetMap (Overpass API)<br>
         * KIGAM 배치 시 활성화<br>
         ⚠ 광역 자력이상도 예비선정.<br>
