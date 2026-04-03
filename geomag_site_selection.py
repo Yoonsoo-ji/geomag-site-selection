@@ -1935,150 +1935,203 @@ def create_folium_map(
             print(f"  ⚠ 도엽 격자 생성 실패: {exc}")
 
     # ── 주소 검색 창 — 좌상단 고정 ──────────────────────────────
-    # Nominatim OSM geocoder + V-World 좌표 검색 통합
-    # 한국 도로명·지번·지명 모두 지원
+    # Nominatim OSM geocoder — 한국 도로명·지번·지명 검색
+    # 3단계 폴백: ① countrycodes=kr ② +대한민국 ③ 상위 행정구역만
     geocoder_html = """
     <div id="geocoder-box" style="
-        position:fixed; top:55px; left:10px; z-index:9999;
+        position:fixed; top:130px; left:10px; z-index:9999;
         background:rgba(255,255,255,0.97); border:2px solid #336699;
         border-radius:8px; padding:9px 11px;
         font-family:'Malgun Gothic',sans-serif; font-size:12px;
-        box-shadow:2px 2px 8px rgba(0,0,0,0.25); width:272px;">
-      <b style="font-size:12px;color:#224;">🔍 주소 / 지명 검색</b>
-      <span style="font-size:10px;color:#888;margin-left:3px;">도로명·지번·지명</span>
+        box-shadow:2px 2px 8px rgba(0,0,0,0.25); width:278px;">
+      <b style="font-size:12px;color:#224;">&#128269; 주소 / 지명 검색</b>
+      <span style="font-size:10px;color:#888;margin-left:3px;">도로명&#183;지번&#183;지명</span>
       <div style="display:flex;gap:4px;margin-top:6px;">
         <input id="gc-input" type="text"
-          placeholder="예: 태백시, 홍성군, 설악산..."
+          placeholder="예: 태백시, 홍성군, 설악산, 안동시..."
           style="flex:1;padding:5px 7px;border:1px solid #aac;
                  border-radius:5px;font-size:11.5px;outline:none;
-                 font-family:'Malgun Gothic',sans-serif;"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();gcSearch();}">
-        <button onclick="gcSearch()"
+                 font-family:'Malgun Gothic',sans-serif;">
+        <button id="gc-btn"
           style="padding:5px 10px;background:#336699;color:white;
                  border:none;border-radius:5px;cursor:pointer;
                  font-size:11.5px;white-space:nowrap;flex-shrink:0;">검색</button>
       </div>
       <div style="margin-top:3px;font-size:9.5px;color:#aaa;">
-        예) 세종대로 110 &nbsp;|&nbsp; 북한산 &nbsp;|&nbsp; 충청남도 홍성군
+        ※ 시&#183;군&#183;구 / 산&#183;강 / 지명 위주 검색 권장 (리&#183;동 단위는 생략)
       </div>
       <div id="gc-result" style="margin-top:5px;font-size:11px;color:#444;
-           max-height:180px;overflow-y:auto;border-top:1px solid #eee;
+           max-height:200px;overflow-y:auto;border-top:1px solid #eee;
            padding-top:3px;display:none;"></div>
     </div>
 
     <script>
     (function(){
       var gcMarker = null;
+      var NOM = 'https://nominatim.openstreetmap.org/search';
 
-      // 지도 객체 가져오기
+      /* ── Folium 지도 객체 탐색 ─────────────────────────────── */
       function getMap() {
-        var k = Object.keys(window).find(function(x){return /^map_[a-f0-9]+$/.test(x);});
-        return k ? window[k] : null;
+        var keys = Object.keys(window);
+        for (var i = 0; i < keys.length; i++) {
+          if (/^map_[a-f0-9]{8,}$/.test(keys[i]) && window[keys[i]] &&
+              typeof window[keys[i]].setView === 'function') {
+            return window[keys[i]];
+          }
+        }
+        return null;
       }
 
-      // 결과 렌더링
-      function gcRender(items) {
+      /* ── 결과 렌더링 ─────────────────────────────────────── */
+      function gcRender(items, query) {
         var div = document.getElementById('gc-result');
+        if (!div) return;
         div.style.display = 'block';
         if (!items || items.length === 0) {
-          div.innerHTML = '<span style="color:#c00;">검색 결과 없음 — 지명이나 행정구역으로 검색해 보세요</span>';
+          div.innerHTML =
+            '<div style="color:#c00;padding:4px 0;">'
+            + '&#10060; <b>"' + query + '"</b> 결과 없음</div>'
+            + '<div style="color:#888;font-size:10px;margin-top:3px;">'
+            + '&#128161; 시&#183;군&#183;구 단위로 검색해 보세요<br>'
+            + '예) <i>안동시</i>, <i>경상북도 안동</i>, <i>설악산</i></div>';
           return;
         }
         var typeMap = {
-          'administrative':'행정','road':'도로','amenity':'시설',
-          'place':'장소','natural':'자연','tourism':'관광',
-          'building':'건물','highway':'도로','residential':'주거',
-          'peak':'산','water':'수계','forest':'산림'
+          administrative:'행정', road:'도로', amenity:'시설',
+          place:'장소', natural:'자연', tourism:'관광',
+          building:'건물', highway:'도로', residential:'주거',
+          peak:'산', water:'수계', forest:'산림'
         };
         var html = '';
-        items.slice(0,8).forEach(function(item, i){
-          var parts = item.display_name.split(',');
-          var label = parts.slice(0, Math.min(3, parts.length)).join(', ').trim();
-          var badge = typeMap[item.type] || typeMap[item.class] || '';
-          var lat = parseFloat(item.lat), lon = parseFloat(item.lon);
-          // escape quotes in name for onclick
-          var safeName = item.display_name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-          html += '<div style="padding:4px 2px;border-bottom:1px solid #f0f0f0;cursor:pointer;" '
-               + 'onmouseover="this.style.background=\'#eef3ff\'" onmouseout="this.style.background=\'\'" '
-               + 'onclick="gcJump(' + lat + ',' + lon + ',\'' + safeName + '\')">'
-               + '<span style="color:#336699;font-weight:bold;">' + (i+1) + '.</span> ' + label;
-          if(badge) html += ' <span style="background:#ddeeff;color:#336;font-size:9px;'
-                          + 'padding:1px 3px;border-radius:3px;">' + badge + '</span>';
+        items.slice(0, 8).forEach(function(item, i) {
+          var parts  = item.display_name.split(',');
+          var label  = parts.slice(0, Math.min(3, parts.length)).join(', ').trim();
+          var badge  = typeMap[item.type] || typeMap[item.class] || '';
+          var lat    = parseFloat(item.lat);
+          var lon    = parseFloat(item.lon);
+          var safe   = item.display_name.replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'");
+          html += '<div style="padding:5px 2px;border-bottom:1px solid #f0f0f0;cursor:pointer;" '
+               +  'onmouseover="this.style.background=\'#eef3ff\'"'
+               +  ' onmouseout="this.style.background=\'\'"'
+               +  ' onclick="gcJump(' + lat + ',' + lon + ',\'' + safe + '\')">'
+               +  '<span style="color:#336699;font-weight:bold;">' + (i+1) + '.</span> ' + label;
+          if (badge) html += ' <span style="background:#ddeeff;color:#336;font-size:9px;'
+                           + 'padding:1px 3px;border-radius:3px;">' + badge + '</span>';
           html += '<br><span style="color:#bbb;font-size:10px;">'
-               + lat.toFixed(5) + '°N &nbsp;' + lon.toFixed(5) + '°E</span></div>';
+               +  lat.toFixed(5) + '&deg;N &nbsp;' + lon.toFixed(5) + '&deg;E</span></div>';
         });
         div.innerHTML = html;
       }
 
-      // 검색 실행 (Nominatim API — 한국 한정, 뷰박스 설정)
-      window.gcSearch = function() {
-        var q = document.getElementById('gc-input').value.trim();
-        if (!q) return;
-        var div = document.getElementById('gc-result');
-        div.style.display = 'block';
-        div.innerHTML = '<span style="color:#888;"><i>검색 중...</i></span>';
-
-        // viewbox: 한국 전체 (서→동, 남→북)
-        var vb = '124.5,33.0,130.0,38.9';
-        var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=8'
-                + '&countrycodes=kr&viewbox=' + vb + '&bounded=0'
-                + '&accept-language=ko,en'
-                + '&q=' + encodeURIComponent(q);
-
-        fetch(url, {method:'GET', mode:'cors'})
-          .then(function(r){
-            if(!r.ok) throw new Error('HTTP ' + r.status);
+      /* ── fetch 래퍼 (에러 시 null 반환) ─────────────────────── */
+      function nomFetch(url, cb) {
+        fetch(url, {method:'GET', mode:'cors', cache:'no-cache'})
+          .then(function(r) {
+            if (!r.ok) { console.warn('[GC] HTTP', r.status, url); cb(null); return; }
             return r.json();
           })
-          .then(function(data){
-            if(!data || data.length === 0){
-              // 결과 없으면 '대한민국' 추가 재시도
-              var url2 = 'https://nominatim.openstreetmap.org/search?format=json&limit=8'
-                       + '&accept-language=ko,en'
-                       + '&q=' + encodeURIComponent(q + ' 대한민국');
-              return fetch(url2, {method:'GET',mode:'cors'}).then(function(r2){return r2.json();});
-            }
-            return data;
-          })
-          .then(function(data){ gcRender(data); })
-          .catch(function(err){
-            div.innerHTML = '<span style="color:#c00;">API 오류: ' + err.message
-              + '<br><small>인터넷 연결을 확인하세요</small></span>';
+          .then(function(d) { cb(d || null); })
+          .catch(function(e) { console.warn('[GC] fetch error:', e.message); cb(null); });
+      }
+
+      /* ── 검색 메인 (3단계 폴백) ─────────────────────────────── */
+      window.gcSearch = function() {
+        var inp = document.getElementById('gc-input');
+        var div = document.getElementById('gc-result');
+        if (!inp || !div) return;
+        var q = inp.value.trim();
+        if (!q) return;
+
+        div.style.display = 'block';
+        div.innerHTML = '<span style="color:#888;"><i>&#128269; 검색 중...</i></span>';
+        console.log('[GC] query:', q);
+
+        var base = NOM + '?format=json&limit=8&addressdetails=1&accept-language=ko,en';
+
+        /* 시도1: countrycodes=kr, 원문 그대로 */
+        var u1 = base + '&countrycodes=kr&q=' + encodeURIComponent(q);
+        nomFetch(u1, function(d1) {
+          console.log('[GC] try1 count:', d1 ? d1.length : 'null');
+          if (d1 && d1.length > 0) { gcRender(d1, q); return; }
+
+          /* 시도2: countrycodes 없이, "대한민국" 덧붙임 */
+          var u2 = base + '&q=' + encodeURIComponent(q + ' 대한민국');
+          nomFetch(u2, function(d2) {
+            console.log('[GC] try2 count:', d2 ? d2.length : 'null');
+            if (d2 && d2.length > 0) { gcRender(d2, q); return; }
+
+            /* 시도3: 상위 행정구역만 (공백 기준 앞 2토큰) */
+            var tokens = q.split(/\\s+/);
+            var short  = tokens.slice(0, Math.min(2, tokens.length)).join(' ');
+            if (short === q) { gcRender([], q); return; }   // 이미 단어 1개
+            console.log('[GC] try3 simplified:', short);
+            var u3 = base + '&countrycodes=kr&q=' + encodeURIComponent(short);
+            nomFetch(u3, function(d3) {
+              console.log('[GC] try3 count:', d3 ? d3.length : 'null');
+              if (d3 && d3.length > 0) {
+                /* 결과에 "간략화 안내" 표시 */
+                div.style.display = 'block';
+                div.innerHTML = '<div style="color:#886;font-size:10px;padding:2px 0 4px;">'
+                  + '&#128161; <i>"' + short + '"</i> 기준 결과 (주소 단순화)</div>';
+                var tmp = document.createElement('div');
+                document.body.appendChild(tmp);
+                /* gcRender를 임시 div에 쓰고 내용만 가져오기 */
+                var prev = document.getElementById('gc-result');
+                tmp.id = 'gc-result';
+                gcRender(d3, short);
+                tmp.id = '';
+                prev.innerHTML += tmp.innerHTML;
+                document.body.removeChild(tmp);
+                /* 다시 원래 id 복원 */
+                prev.id = 'gc-result';
+              } else {
+                gcRender([], q);
+              }
+            });
           });
+        });
       };
 
-      // 지도 이동 + 마커
+      /* ── 지도 이동 + 마커 ───────────────────────────────────── */
       window.gcJump = function(lat, lon, name) {
         var map = getMap();
-        if (!map) return;
+        if (!map) { console.warn('[GC] map not found'); return; }
         map.setView([lat, lon], 13);
-        if (gcMarker) { gcMarker.remove(); gcMarker = null; }
+        if (gcMarker) { try { gcMarker.remove(); } catch(e){} gcMarker = null; }
         var label = name.split(',')[0].trim();
         gcMarker = L.marker([lat, lon], {
           icon: L.divIcon({
-            html: '<div style="background:#336699;color:#fff;padding:3px 8px;'
+            html: '<div style="background:#336699;color:#fff;padding:3px 9px;'
                 + 'border-radius:5px;font-size:12px;white-space:nowrap;'
                 + 'font-family:Malgun Gothic,sans-serif;'
-                + 'box-shadow:1px 2px 6px rgba(0,0,0,0.4);">📍 ' + label + '</div>',
-            className: '', iconAnchor:[10,30]
+                + 'box-shadow:1px 2px 6px rgba(0,0,0,0.4);">&#128205; ' + label + '</div>',
+            className: '', iconAnchor:[12, 32]
           })
         }).addTo(map);
         gcMarker.bindPopup(
           '<b>' + name.split(',').slice(0,3).join(', ') + '</b><br>'
           + '<span style="color:#666;font-size:11px;">'
-          + lat.toFixed(5) + '°N, ' + lon.toFixed(5) + '°E</span>'
+          + lat.toFixed(5) + '&deg;N, ' + lon.toFixed(5) + '&deg;E</span>'
         ).openPopup();
-        document.getElementById('gc-result').innerHTML =
-          '<div style="color:#226;padding:3px 0;">✔ <b>' + label + '</b> 이동 완료</div>';
+        var div = document.getElementById('gc-result');
+        if (div) div.innerHTML =
+          '<div style="color:#226;padding:4px 0;">&#10004; <b>' + label + '</b> 이동 완료</div>';
       };
 
-      // Enter 키 이벤트 (DOMContentLoaded 후 바인딩)
-      document.addEventListener('DOMContentLoaded', function(){
+      /* ── Enter 키 + 버튼 바인딩 ────────────────────────────── */
+      function bindUI() {
         var inp = document.getElementById('gc-input');
-        if(inp) inp.addEventListener('keydown', function(e){
-          if(e.key === 'Enter'){ e.preventDefault(); gcSearch(); }
+        var btn = document.getElementById('gc-btn');
+        if (inp) inp.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') { e.preventDefault(); window.gcSearch(); }
         });
-      });
+        if (btn) btn.addEventListener('click', function() { window.gcSearch(); });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindUI);
+      } else {
+        bindUI();
+      }
     })();
     </script>
     """
