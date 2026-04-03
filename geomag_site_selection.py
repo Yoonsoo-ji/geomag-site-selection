@@ -38,7 +38,9 @@ Korea Geomagnetic Field Model — Measurement Site Selection Tool
   [7] 채석장·광산                          반경  1.0 km  (제14조③ 지하 자기발생원)
 
 ━━━ 지자기 이상 제외 기준 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  [8] 자기이상도 gradient > 5 nT/km  (EMAG2 사용 시, 선택 / 제14조③)
+  [8] 부지 내 자기장 변화폭 > 10 nT  (KIGAM/EMAG2 사용 시, 제14조③)
+        ▸ 지자기 관측소 부지 선정 핵심 수치 기준:
+          부지 내 자기장 변화폭 10 nT 이하 (반경 ~10 km 내 max-min)
 
 ━━━ 모델 구축 우선순위 가중치 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
   - 기존 관측소와의 거리 (멀수록 데이터 공백 → 높은 우선순위)
@@ -109,8 +111,10 @@ WGS84_CRS = "EPSG:4326"
 # Overpass API
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
-# 자기이상도 gradient 임계값 (nT/km) — EMAG2 사용 시 적용
-ANOMALY_GRADIENT_THRESHOLD = 5.0   # nT/km  (조정 가능)
+# 부지 내 자기장 변화폭 임계값 (nT) — KIGAM/EMAG2 사용 시 적용
+# 지자기 관측소 선정 기준: 부지 내 변화폭 10 nT 이하 (제14조③)
+ANOMALY_VARIATION_THRESHOLD = 10.0  # nT  (반경 ~10 km 내 max-min)
+ANOMALY_SITE_RADIUS_DEG     =  0.10  # ≈ 11 km  (부지 반경 기준)
 
 # ── 한국 지자기 관측소 (기준점) ───────────────────────────────
 # 출처: KMA (기상청), INTERMAGNET
@@ -853,75 +857,81 @@ def load_kigam_anomaly(path: Path | None = None) -> "pd.DataFrame | None":
         return None
 
 
-def compute_anomaly_gradient_zones(
-    emag2_data: np.ndarray,
-    threshold_nT_per_km: float = ANOMALY_GRADIENT_THRESHOLD,
+def compute_anomaly_variation_zones(
+    mag_data,
+    threshold_nT: float = ANOMALY_VARIATION_THRESHOLD,
+    site_radius_deg: float = ANOMALY_SITE_RADIUS_DEG,
 ) -> gpd.GeoDataFrame | None:
     """
-    EMAG2 anomaly 수평 gradient 계산 →
-    임계값 초과 지역을 제외 구역 GeoDataFrame으로 반환.
+    부지 내 자기장 변화폭 기반 제외 구역 생성.
 
-    Returns GeoDataFrame (WGS84) or None
+    ■ 핵심 기준 (제14조③):
+      지자기 관측소 선정 시 부지 내 자기장 변화폭 10 nT 이하
+      → 반경 site_radius_deg(≈11 km) 내 max(anomaly) - min(anomaly) > 10 nT
+         인 격자 셀을 제외 구역으로 지정.
+
+    Parameters
+    ----------
+    mag_data        : KIGAM/EMAG2 DataFrame (lon, lat, anomaly_nT 컬럼)
+    threshold_nT    : 변화폭 임계값 (기본 10 nT)
+    site_radius_deg : 부지 반경 (°, 기본 0.10° ≈ 11 km)
+
+    Returns
+    -------
+    GeoDataFrame (WGS84) or None
     """
-    if emag2_data is None or len(emag2_data) < 4:
+    if mag_data is None or len(mag_data) < 4:
         return None
 
-    try:
-        from scipy.interpolate import griddata
-        from scipy.ndimage import sobel
-    except ImportError:
-        print("    scipy 없음 — 자기이상도 gradient 계산 생략")
-        return None
+    from shapely.geometry import box as _box
 
-    print("    자기이상도 gradient 계산 중...")
+    print(f"    자기이상 변화폭 계산 중 (부지 반경 {site_radius_deg}° ≈ "
+          f"{site_radius_deg * 111:.0f} km, 임계값 {threshold_nT} nT)...")
 
     # DataFrame 또는 numpy array 모두 지원
-    if hasattr(emag2_data, "columns"):
-        lons = emag2_data["lon"].values.astype(float)
-        lats = emag2_data["lat"].values.astype(float)
-        vals = emag2_data["anomaly_nT"].values.astype(float)
+    if hasattr(mag_data, "columns"):
+        lons = mag_data["lon"].values.astype(float)
+        lats = mag_data["lat"].values.astype(float)
+        vals = mag_data["anomaly_nT"].values.astype(float)
     else:
-        lons = emag2_data[:, 0].astype(float)
-        lats = emag2_data[:, 1].astype(float)
-        vals = emag2_data[:, 2].astype(float)
+        lons = mag_data[:, 0].astype(float)
+        lats = mag_data[:, 1].astype(float)
+        vals = mag_data[:, 2].astype(float)
 
-    # 정규 격자 보간 (0.05도 간격)
-    res = 0.05
-    glon = np.arange(KOREA_BBOX[0], KOREA_BBOX[2] + res, res)
-    glat = np.arange(KOREA_BBOX[1], KOREA_BBOX[3] + res, res)
-    GLON, GLAT = np.meshgrid(glon, glat)
+    # 0.1° 간격 탐색 격자 (= site_radius_deg, 약 11 km)
+    res   = site_radius_deg
+    glon  = np.arange(KOREA_BBOX[0], KOREA_BBOX[2] + res, res)
+    glat  = np.arange(KOREA_BBOX[1], KOREA_BBOX[3] + res, res)
 
-    grid_vals = griddata(
-        (lons, lats), vals,
-        (GLON, GLAT),
-        method="linear",
-        fill_value=np.nan,
-    )
+    high_var_cells = []
+    n_valid        = 0
 
-    # Sobel 필터로 gradient 추정 (nT / grid_cell)
-    # 0.05도 ≈ 5.5 km → nT/grid_cell ÷ 5.5 = nT/km
-    deg_km = 111.0 * res   # ~5.55 km per 0.05 deg
-    gx = sobel(np.nan_to_num(grid_vals), axis=1) / (8 * deg_km)
-    gy = sobel(np.nan_to_num(grid_vals), axis=0) / (8 * deg_km)
-    grad = np.sqrt(gx**2 + gy**2)  # nT/km
+    for lat_c in glat:
+        for lon_c in glon:
+            # 부지 반경 내 KIGAM 데이터 수집
+            mask = (
+                (np.abs(lats - lat_c) <= site_radius_deg) &
+                (np.abs(lons - lon_c) <= site_radius_deg)
+            )
+            pts = vals[mask]
+            if len(pts) < 3:        # 데이터 부족 → 판단 불가
+                continue
+            n_valid += 1
+            variation = float(np.nanmax(pts) - np.nanmin(pts))
+            if variation > threshold_nT:
+                high_var_cells.append(_box(
+                    lon_c - res / 2, lat_c - res / 2,
+                    lon_c + res / 2, lat_c + res / 2,
+                ))
 
-    # 임계값 초과 → 제외 구역 폴리곤 생성
-    from shapely.geometry import box
-    high_grad_cells = []
-    for i in range(len(glat)):
-        for j in range(len(glon)):
-            if grad[i, j] >= threshold_nT_per_km:
-                lon0, lon1 = glon[j] - res / 2, glon[j] + res / 2
-                lat0, lat1 = glat[i] - res / 2, glat[i] + res / 2
-                high_grad_cells.append(box(lon0, lat0, lon1, lat1))
-
-    if not high_grad_cells:
+    if not high_var_cells:
+        print(f"    ℹ 고변화 구역 없음 (전체 {n_valid}개 격자 평가, 기준 {threshold_nT} nT)")
         return None
 
-    gdf = gpd.GeoDataFrame(
-        geometry=high_grad_cells, crs=WGS84_CRS
-    )
-    print(f"    고이상도 격자셀: {len(high_grad_cells)}개 (임계값 {threshold_nT_per_km} nT/km)")
+    gdf = gpd.GeoDataFrame(geometry=high_var_cells, crs=WGS84_CRS)
+    pct = len(high_var_cells) / n_valid * 100 if n_valid else 0
+    print(f"    고자기변화 제외 구역: {len(high_var_cells)}/{n_valid}개 셀 "
+          f"({pct:.1f}%) — 기준 {threshold_nT} nT")
     return gdf
 
 
@@ -948,16 +958,24 @@ def create_topo_sheet_grid(korea_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
             raw = gpd.read_file(str(TOPO50K_SHP), encoding="cp949")
 
             # CRS 처리:
-            # 파일에 내장된 Korea 2000 UCS CRS는 EPSG 코드가 없지만 정확함.
-            # → crs가 None일 때만 5179 강제 지정 (None이 아니면 내장 CRS 그대로 사용)
-            if raw.crs is None:
-                raw = raw.set_crs("EPSG:5179", allow_override=True)
-            # WGS84로 변환 (내장 CRS 기반 정확 변환)
-            topo = raw.to_crs(WGS84_CRS)
+            # PRJ에 내장된 Korea 2000 UCS WKT를 pyproj가 EPSG로 인식 못할 수 있음.
+            # 파라미터가 EPSG:5179와 동일하므로 EPSG:5179로 강제 지정 후 변환.
+            # → 이렇게 해야 WGS84 변환이 EPSG 정의를 따라 정확하게 수행됨.
+            raw = raw.set_crs("EPSG:5179", allow_override=True)
+            topo_raw = raw.to_crs(WGS84_CRS)
+
+            # ★ TM 투영 곡선 보정: WGS84 변환 후 bbox 직사각형으로 교체
+            # TM(Korea 2000)→WGS84 변환 시 폴리곤 경계가 미세하게 휘어질 수 있음.
+            # bounding-box 직사각형으로 교체하면 NGII 도엽 경계와 정확히 일치.
+            topo_raw["geometry"] = topo_raw.geometry.apply(
+                lambda g: box(*g.bounds)   # box(min_lon, min_lat, max_lon, max_lat)
+            )
+            topo = topo_raw
 
             # 컬럼 정리
-            name_col = "MAPID_NM" if "MAPID_NM" in topo.columns else topo.columns[1]
-            code_col = "MAPID_NO" if "MAPID_NO" in topo.columns else topo.columns[2]
+            name_col   = "MAPID_NM"   if "MAPID_NM"   in topo.columns else topo.columns[1]
+            code_col   = "MAPID_NO"   if "MAPID_NO"   in topo.columns else topo.columns[2]
+            mapidcd_col = "MAPIDCD_NO" if "MAPIDCD_NO" in topo.columns else None
 
             # 남한 범위 필터 (WGS84 변환 후 위도 33~38.65°)
             centroids_y = topo.geometry.centroid.y
@@ -968,20 +986,25 @@ def create_topo_sheet_grid(korea_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
             def _clean_name(row):
                 nm = str(row[name_col]).strip()
                 no = str(row[code_col]).strip()
-                # 숫자만 있거나 비어있으면 도엽번호로 대체
                 if not nm or nm.isdigit() or nm in ("nan", "None"):
                     return no
                 return nm
 
             topo["sheet_name"] = topo.apply(_clean_name, axis=1)
             topo["sheet_code"] = topo[code_col].astype(str)
+            # MAPIDCD_NO: NGII 5자리 도엽번호 (예: 36807 = 안동)
+            if mapidcd_col:
+                topo["sheet_mapidcd"] = topo[mapidcd_col].astype(str)
+            else:
+                topo["sheet_mapidcd"] = ""
 
             # 한국 경계와 교차하는 도엽만
             topo = topo[topo.geometry.intersects(korea_geom)].reset_index(drop=True)
-            result = topo[["sheet_name", "sheet_code", "geometry"]].copy()
-            # 이름 샘플 출력 (디버깅용)
+            keep_cols = ["sheet_name", "sheet_code", "sheet_mapidcd", "geometry"]
+            result = topo[keep_cols].copy()
             sample_names = result["sheet_name"].head(5).tolist()
-            print(f"  1:50,000 도엽 격자: {len(result)}개 셀 생성 (SHP) — 도엽명 예: {sample_names}")
+            print(f"  1:50,000 도엽 격자: {len(result)}개 셀 생성 (SHP, bbox 직사각형) "
+                  f"— 도엽명 예: {sample_names}")
             return result
         except Exception as exc:
             print(f"  ⚠ 셰이프파일 로드 실패: {exc} — CSV 백업으로 전환")
@@ -1200,7 +1223,7 @@ def build_exclusion_zones(
     if anomaly_gdf is not None and len(anomaly_gdf) > 0:
         an_utm = anomaly_gdf.to_crs(UTM_CRS)
         zones["anomaly"] = unary_union(an_utm.geometry)
-        print(f"    [9] 자기이상도: {zones['anomaly'].area/1e6:.0f} km²  (임계 {ANOMALY_GRADIENT_THRESHOLD} nT/km)")
+        print(f"    [9] 자기이상도: {zones['anomaly'].area/1e6:.0f} km²  (변화폭 >{ANOMALY_VARIATION_THRESHOLD} nT 제외)")
     else:
         zones["anomaly"] = None
         print("    [9] 자기이상도: KIGAM/EMAG2 파일 배치 시 활성화")
@@ -1834,7 +1857,12 @@ def create_folium_map(
             for _, row in topo_gdf.iterrows():
                 geom = row.geometry
                 coords = list(geom.exterior.coords)
-                # 폴리곤 경계선
+                # ── 폴리곤 경계선 ─────────────────────────────────────
+                mapidcd  = str(row.get("sheet_mapidcd", "")).strip()
+                mapidcd  = mapidcd if mapidcd not in ("", "nan", "None") else ""
+                # tooltip: NGII 형식 "도엽명 MAPIDCD_NO / MAPID_NO"
+                tip_name  = row["sheet_name"]
+                tip_code  = f"{mapidcd}  /  {row['sheet_code']}" if mapidcd else row["sheet_code"]
                 folium.Polygon(
                     locations=[(lat, lon) for lon, lat in coords],
                     color="#1A4A8A",
@@ -1843,30 +1871,38 @@ def create_folium_map(
                     fill_color="#4A90D9",
                     fill_opacity=0.06,
                     tooltip=(
-                        f"<b>{row['sheet_name']}</b><br>"
-                        f"<span style='color:#666;font-size:11px;'>{row['sheet_code']}</span>"
+                        f"<b>{tip_name}</b>"
+                        f"<br><span style='color:#555;font-size:11px;'>"
+                        f"NGII No.&nbsp;{tip_code}</span>"
                     ),
                 ).add_to(topo_layer)
-                # 셀 중심에 도엽명 라벨 (줌 반응형 — CSS 클래스로 제어)
+
+                # ── 셀 중심 도엽명 라벨 (줌 반응형) ────────────────────
                 cx = geom.centroid.x
                 cy = geom.centroid.y
-                name_escaped = row["sheet_name"].replace("'", "\\'").replace('"', "&quot;")
+                # 라벨: "도엽명\nMAPIDCD_NO" (NGII 표기 형식)
+                label_line1 = row["sheet_name"]
+                label_line2 = mapidcd  # 5자리 번호 (예: 36807)
+                name_esc    = label_line1.replace("'", "\\'").replace('"', "&quot;")
+                sub_span    = (
+                    '<br><span style="font-weight:normal;font-size:0.85em;color:#336;">'
+                    + label_line2 + "</span>"
+                ) if label_line2 else ""
+                html_label  = (
+                    f'<div class="topo-label" data-name="{name_esc}"'
+                    f' style="display:none;pointer-events:none;text-align:center;'
+                    f"font-family:'Malgun Gothic',sans-serif;"
+                    f'color:#1A3A6A;white-space:nowrap;font-weight:bold;line-height:1.3;'
+                    f'text-shadow:1px 1px 0 white,-1px -1px 0 white,'
+                    f'1px -1px 0 white,-1px 1px 0 white,0 0 4px white;">'
+                    f'{label_line1}{sub_span}</div>'
+                )
                 folium.Marker(
                     location=[cy, cx],
                     icon=folium.DivIcon(
-                        html=(
-                            f'<div class="topo-label"'
-                            f' data-name="{name_escaped}"'
-                            f' style="display:none;pointer-events:none;'
-                            f'font-family:\'Malgun Gothic\',sans-serif;'
-                            f'color:#1A3A6A;white-space:nowrap;font-weight:bold;'
-                            f'text-shadow:1px 1px 0 white,-1px -1px 0 white,'
-                            f'1px -1px 0 white,-1px 1px 0 white,'
-                            f'0 0 4px white,0 0 4px white;">'
-                            f'{row["sheet_name"]}</div>'
-                        ),
-                        icon_size=(80, 18),
-                        icon_anchor=(40, 9),
+                        html=html_label,
+                        icon_size=(90, 30),
+                        icon_anchor=(45, 15),
                     ),
                 ).add_to(topo_layer)
             topo_layer.add_to(m)
@@ -2256,8 +2292,8 @@ def main():
         mag_data = load_emag2_korea()        # 폴백: EMAG2 V3
     anomaly_gdf = None
     if mag_data is not None:
-        anomaly_gdf = compute_anomaly_gradient_zones(mag_data)
-        print(f"  ✅ 자기이상도 gradient 제외 구역 생성 완료")
+        anomaly_gdf = compute_anomaly_variation_zones(mag_data)
+        print(f"  ✅ 자기이상도 변화폭 제외 구역 생성 완료 (기준: {ANOMALY_VARIATION_THRESHOLD} nT)")
     else:
         print(f"  ℹ  {DATA_DIR}/mag_1982-2018_1.5min_ed.dat 필요")
     print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
