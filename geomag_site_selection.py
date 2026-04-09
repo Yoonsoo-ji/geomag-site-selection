@@ -2040,7 +2040,7 @@ def create_folium_map(
             "+'<b>입지 점수: '+vn(p.score)+' / 100</b><br>'"
             "+'<span style=\"font-size:11.5px;color:#333;\">'"
             "+'&nbsp;① 희소성: '+vn(p.s1)+' / 25<br>'"
-            "+'&nbsp;② 지형적 대표성: '+vn(p.s2)+' / 15<br>'"
+            "+'&nbsp;② 지형 경사도: '+vn(p.s2)+' / 15 '+'<span style=\"color:#888;\">(경사 '+vn(p.dem)+'°)</span><br>'"
             "+'&nbsp;③ 전력·철도 이격: '+vn(p.s3)+' / 15 '"
             "+'<span style=\"color:#888;\">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'"
             "+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '"
@@ -2412,9 +2412,9 @@ def create_folium_map(
           var lon    = parseFloat(item.lon);
           var safe   = item.display_name.replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'");
           html += '<div style="padding:5px 2px;border-bottom:1px solid #f0f0f0;cursor:pointer;" '
-               +  'onmouseover="this.style.background=\'#eef3ff\'"'
-               +  ' onmouseout="this.style.background=\'\'"'
-               +  ' onclick="gcJump(' + lat + ',' + lon + ',\'' + safe + '\')">'
+               +  'onmouseover="this.style.background=\\x27#eef3ff\\x27"'
+               +  ' onmouseout="this.style.background=\\x27\\x27"'
+               +  ' onclick="gcJump(' + lat + ',' + lon + ',\\x27' + safe + '\\x27)">'
                +  '<span style="color:#336699;font-weight:bold;">' + (i+1) + '.</span> ' + label;
           if (badge) html += ' <span style="background:#ddeeff;color:#336;font-size:9px;'
                            + 'padding:1px 3px;border-radius:3px;">' + badge + '</span>';

@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_1f0d58a0070e49c52460592a24ab799a {
+                #map_2dab30136b559b5aa48ba7019c85f818 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -53,20 +53,20 @@
 </head>
 <body>
     
-    <script>(function(){fetch('data/zone_power.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#FF3300',color:'#CC0000',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('⚡ [1] 고압철탑·송전탑 제외 (1.0 km)');}}).addTo(feature_group_a2eed3d7ca77ff9f04d291cf8cfe4ac4);}).catch(function(e){console.warn('zone_power:',e.message);});})();</script>
-    <script>(function(){fetch('data/zone_railway.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#FF7700',color:'#CC4400',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('🚆 [2] 철도 제외 (5.0 km)');}}).addTo(feature_group_93c163c4386396c05fa908ec0af2eb52);}).catch(function(e){console.warn('zone_railway:',e.message);});})();</script>
-    <script>(function(){fetch('data/zone_urban_dense.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#AA00FF',color:'#7700CC',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('🏙️ [3a] 핵심도심·산업 제외 (500m)');}}).addTo(feature_group_0ef8073fd0f69847a793cd5875e116c1);}).catch(function(e){console.warn('zone_urban_dense:',e.message);});})();</script>
-    <script>(function(){fetch('data/zone_urban_resid.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#CC66FF',color:'#9933CC',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('🏘️ [3b] 주거·취락 제외 (300m)');}}).addTo(feature_group_9da563cccea6370444904d442c3ace10);}).catch(function(e){console.warn('zone_urban_resid:',e.message);});})();</script>
-    <script>(function(){fetch('data/zone_pipeline.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#FF00AA',color:'#CC0088',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('🔩 [4] 파이프라인 제외 (0.5 km)');}}).addTo(feature_group_b5ed568a5310a3438579b6677f0cf7b1);}).catch(function(e){console.warn('zone_pipeline:',e.message);});})();</script>
-    <script>(function(){fetch('data/zone_comm.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#0088FF',color:'#0055CC',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('📡 [5] 통신탑·기지국 제외 (0.5 km)');}}).addTo(feature_group_ba90bac19fe63983e962c54c70e4064b);}).catch(function(e){console.warn('zone_comm:',e.message);});})();</script>
-    <script>(function(){fetch('data/zone_wind.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#00CCAA',color:'#009977',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('💨 [6] 풍력발전기 제외 (0.5 km)');}}).addTo(feature_group_fe7d7fe34a86d33b580896631dfead98);}).catch(function(e){console.warn('zone_wind:',e.message);});})();</script>
-    <script>(function(){fetch('data/zone_quarry.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#AA6600',color:'#774400',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('⛏️ [7] 채석장·광산 제외 (1.0 km)');}}).addTo(feature_group_a79f3c5663bf9a45d4d1ab36b26aca20);}).catch(function(e){console.warn('zone_quarry:',e.message);});})();</script>
-    <script>(function(){fetch('data/zone_anomaly.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#0044FF',color:'#0022CC',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('🧲 [8] 자기이상도 고변화 제외 (KIGAM)');}}).addTo(feature_group_35cf10a97da0b77012c5de311d61da18);}).catch(function(e){console.warn('zone_anomaly:',e.message);});})();</script>
-    <script>(function(){fetch('data/grid_sample.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){return L.circleMarker(ll,{radius:2,color:'#888888',fillColor:'#AAAAAA',fillOpacity:0.3,weight:0});}}).addTo(feature_group_d4f9cba970eb6969d09e6e36bd31b33a);}).catch(function(e){console.warn('grid:',e.message);});})();</script>
-    <script>(function(){fetch('data/candidates_p1.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){return L.circleMarker(ll,{radius:7,color:'#CC0000',fillColor:'#FF0000',fillOpacity:0.85,weight:1.5});},onEachFeature:function(f,l){var p=f.properties;var vn=function(x){return(x===null||x===undefined||isNaN(+x))?'-':(+x).toFixed(1);};var lat=(p.lat!=null)?p.lat:f.geometry.coordinates[1];var lon=(p.lon!=null)?p.lon:f.geometry.coordinates[0];var html='<div style="font-family:sans-serif;font-size:12.5px;min-width:250px;">'+'<b style="color:#CC0000;">측정 후보지 #'+p.idx+'</b>&nbsp;'+'<span style="background:#FF0000;color:white;padding:1px 5px;border-radius:3px;font-size:11px;">최우선</span><br>'+'<hr style="margin:4px 0;">'+'<b>위도:</b> '+lat.toFixed(5)+'° N &nbsp; <b>경도:</b> '+lon.toFixed(5)+'° E<br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>입지 점수: '+vn(p.score)+' / 100</b><br>'+'<span style="font-size:11.5px;color:#333;">'+'&nbsp;① 희소성: '+vn(p.s1)+' / 25<br>'+'&nbsp;② 지형적 대표성: '+vn(p.s2)+' / 15<br>'+'&nbsp;③ 전력·철도 이격: '+vn(p.s3)+' / 15 '+'<span style="color:#888;">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '+'<span style="color:#888;">(도시 '+vn(p.du)+'km)</span><br>'+'&nbsp;⑤ 자기균일: '+vn(p.s5)+' / 10<br>'+'&nbsp;<span style="color:#999;">⑦ 부지 지속성: 현장검토 / 10</span><br>'+'&nbsp;<span style="color:#999;">⑧ 관리 접근성: 현장검토 / 5</span><br>'+'&nbsp;<span style="color:#999;">⑥암상: 미산정</span>'+'</span></div>';l.bindPopup(html,{maxWidth:270});l.bindTooltip('후보지 #'+p.idx+' P1 ('+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E)');}}).addTo(feature_group_b88452bc2d53655ac1968b3b65a5c6fb);}).catch(function(e){console.warn('candidates_p1:',e.message);});})();</script>
-    <script>(function(){fetch('data/candidates_p2.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){return L.circleMarker(ll,{radius:6,color:'#CC5500',fillColor:'#FF8800',fillOpacity:0.85,weight:1.5});},onEachFeature:function(f,l){var p=f.properties;var vn=function(x){return(x===null||x===undefined||isNaN(+x))?'-':(+x).toFixed(1);};var lat=(p.lat!=null)?p.lat:f.geometry.coordinates[1];var lon=(p.lon!=null)?p.lon:f.geometry.coordinates[0];var html='<div style="font-family:sans-serif;font-size:12.5px;min-width:250px;">'+'<b style="color:#CC5500;">측정 후보지 #'+p.idx+'</b>&nbsp;'+'<span style="background:#FF8800;color:white;padding:1px 5px;border-radius:3px;font-size:11px;">우선</span><br>'+'<hr style="margin:4px 0;">'+'<b>위도:</b> '+lat.toFixed(5)+'° N &nbsp; <b>경도:</b> '+lon.toFixed(5)+'° E<br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>입지 점수: '+vn(p.score)+' / 100</b><br>'+'<span style="font-size:11.5px;color:#333;">'+'&nbsp;① 희소성: '+vn(p.s1)+' / 25<br>'+'&nbsp;② 지형적 대표성: '+vn(p.s2)+' / 15<br>'+'&nbsp;③ 전력·철도 이격: '+vn(p.s3)+' / 15 '+'<span style="color:#888;">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '+'<span style="color:#888;">(도시 '+vn(p.du)+'km)</span><br>'+'&nbsp;⑤ 자기균일: '+vn(p.s5)+' / 10<br>'+'&nbsp;<span style="color:#999;">⑦ 부지 지속성: 현장검토 / 10</span><br>'+'&nbsp;<span style="color:#999;">⑧ 관리 접근성: 현장검토 / 5</span><br>'+'&nbsp;<span style="color:#999;">⑥암상: 미산정</span>'+'</span></div>';l.bindPopup(html,{maxWidth:270});l.bindTooltip('후보지 #'+p.idx+' P2 ('+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E)');}}).addTo(feature_group_9a046ccdbebc228fb214bfc8c0f6f89f);}).catch(function(e){console.warn('candidates_p2:',e.message);});})();</script>
-    <script>(function(){fetch('data/candidates_p3.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){return L.circleMarker(ll,{radius:5,color:'#008800',fillColor:'#00BB00',fillOpacity:0.85,weight:1.5});},onEachFeature:function(f,l){var p=f.properties;var vn=function(x){return(x===null||x===undefined||isNaN(+x))?'-':(+x).toFixed(1);};var lat=(p.lat!=null)?p.lat:f.geometry.coordinates[1];var lon=(p.lon!=null)?p.lon:f.geometry.coordinates[0];var html='<div style="font-family:sans-serif;font-size:12.5px;min-width:250px;">'+'<b style="color:#008800;">측정 후보지 #'+p.idx+'</b>&nbsp;'+'<span style="background:#00BB00;color:white;padding:1px 5px;border-radius:3px;font-size:11px;">일반</span><br>'+'<hr style="margin:4px 0;">'+'<b>위도:</b> '+lat.toFixed(5)+'° N &nbsp; <b>경도:</b> '+lon.toFixed(5)+'° E<br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>입지 점수: '+vn(p.score)+' / 100</b><br>'+'<span style="font-size:11.5px;color:#333;">'+'&nbsp;① 희소성: '+vn(p.s1)+' / 25<br>'+'&nbsp;② 지형적 대표성: '+vn(p.s2)+' / 15<br>'+'&nbsp;③ 전력·철도 이격: '+vn(p.s3)+' / 15 '+'<span style="color:#888;">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '+'<span style="color:#888;">(도시 '+vn(p.du)+'km)</span><br>'+'&nbsp;⑤ 자기균일: '+vn(p.s5)+' / 10<br>'+'&nbsp;<span style="color:#999;">⑦ 부지 지속성: 현장검토 / 10</span><br>'+'&nbsp;<span style="color:#999;">⑧ 관리 접근성: 현장검토 / 5</span><br>'+'&nbsp;<span style="color:#999;">⑥암상: 미산정</span>'+'</span></div>';l.bindPopup(html,{maxWidth:270});l.bindTooltip('후보지 #'+p.idx+' P3 ('+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E)');}}).addTo(feature_group_c06c9b61278723633652f4c7c4ff05c4);}).catch(function(e){console.warn('candidates_p3:',e.message);});})();</script>
-    <script>(function(){fetch('data/existing_sites.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){var icon=L.divIcon({html:'<div style="font-size:22px;line-height:1;text-shadow:1px 1px 2px rgba(0,0,0,0.4);">⭐</div>',className:'',iconAnchor:[11,11]});return L.marker(ll,{icon:icon});},onEachFeature:function(f,l){var p=f.properties;var vf=function(x,fmt){return(x===null||x===undefined)?'-':fmt(x);};var html='<div style="font-family:sans-serif;font-size:12.5px;min-width:260px;">'+'<b style="color:#8B4513;">⭐ 기존 측정점: '+p.name+'</b><br>'+'<hr style="margin:4px 0;">'+'<b>위도:</b> '+p.lat.toFixed(6)+'° N &nbsp; <b>경도:</b> '+p.lon.toFixed(6)+'° E<br>'+'<b>주소:</b> <span style="font-size:11px;">'+(p.address||'-')+'</span><br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>최초설치:</b> '+(p.inst_year?p.inst_year+'년':'-')+' &nbsp; <b>최신관측:</b> '+p.obs_year+'년<br>'+'<b>표고:</b> '+vf(p.elev,function(x){return x.toFixed(1)+' m'})+'<br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>측정값 ('+p.obs_year+'년)</b><br>'+'<span style="font-size:11.5px;color:#333;">'+'&nbsp;편각: '+vf(p.decl,function(x){return x.toFixed(4)+'°'})+'<br>'+'&nbsp;복각: '+vf(p.incl,function(x){return x.toFixed(4)+'°'})+'<br>'+'&nbsp;총자력: '+vf(p.total,function(x){return x.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1})+' nT';})+'</span></div>';l.bindPopup(html,{maxWidth:290});l.bindTooltip('⭐ '+p.name+' ('+p.obs_year+'년 관측)');}}).addTo(feature_group_2fbeb63cfc66d0ba7f642796a63e23d4);}).catch(function(e){console.warn('existing_sites:',e.message);});})();</script>
+    <script>(function(){fetch('data/zone_power.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#FF3300',color:'#CC0000',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('⚡ [1] 고압철탑·송전탑 제외 (1.0 km)');}}).addTo(feature_group_9143b22cef83a5e433303e9e5941f922);}).catch(function(e){console.warn('zone_power:',e.message);});})();</script>
+    <script>(function(){fetch('data/zone_railway.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#FF7700',color:'#CC4400',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('🚆 [2] 철도 제외 (5.0 km)');}}).addTo(feature_group_6c0a2f11feeb417bf9bf9f2b0681fd74);}).catch(function(e){console.warn('zone_railway:',e.message);});})();</script>
+    <script>(function(){fetch('data/zone_urban_dense.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#AA00FF',color:'#7700CC',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('🏙️ [3a] 핵심도심·산업 제외 (500m)');}}).addTo(feature_group_3f6919a4f105ed26621df8769699dafa);}).catch(function(e){console.warn('zone_urban_dense:',e.message);});})();</script>
+    <script>(function(){fetch('data/zone_urban_resid.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#CC66FF',color:'#9933CC',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('🏘️ [3b] 주거·취락 제외 (300m)');}}).addTo(feature_group_6ee46b3ec44ada557b3a3d1faf45e133);}).catch(function(e){console.warn('zone_urban_resid:',e.message);});})();</script>
+    <script>(function(){fetch('data/zone_pipeline.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#FF00AA',color:'#CC0088',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('🔩 [4] 파이프라인 제외 (0.5 km)');}}).addTo(feature_group_e6a715e49736200a75e8148b237d0ae2);}).catch(function(e){console.warn('zone_pipeline:',e.message);});})();</script>
+    <script>(function(){fetch('data/zone_comm.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#0088FF',color:'#0055CC',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('📡 [5] 통신탑·기지국 제외 (0.5 km)');}}).addTo(feature_group_257ede34cd4c6623ba2a331c41ca6dcc);}).catch(function(e){console.warn('zone_comm:',e.message);});})();</script>
+    <script>(function(){fetch('data/zone_wind.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#00CCAA',color:'#009977',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('💨 [6] 풍력발전기 제외 (0.5 km)');}}).addTo(feature_group_ecdc3e010a22cc974bac49d16d6b7161);}).catch(function(e){console.warn('zone_wind:',e.message);});})();</script>
+    <script>(function(){fetch('data/zone_quarry.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#AA6600',color:'#774400',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('⛏️ [7] 채석장·광산 제외 (1.0 km)');}}).addTo(feature_group_d88043785e74e92dc1933495485b0294);}).catch(function(e){console.warn('zone_quarry:',e.message);});})();</script>
+    <script>(function(){fetch('data/zone_anomaly.geojson').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){L.geoJSON(d,{style:function(){return{fillColor:'#0044FF',color:'#0022CC',weight:1,fillOpacity:0.32}},onEachFeature:function(f,l){l.bindTooltip('🧲 [8] 자기이상도 고변화 제외 (KIGAM)');}}).addTo(feature_group_d2898310f73cda8ea48f1bcbefad7e75);}).catch(function(e){console.warn('zone_anomaly:',e.message);});})();</script>
+    <script>(function(){fetch('data/grid_sample.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){return L.circleMarker(ll,{radius:2,color:'#888888',fillColor:'#AAAAAA',fillOpacity:0.3,weight:0});}}).addTo(feature_group_98a43256ca0d6be361295ce381b1baa8);}).catch(function(e){console.warn('grid:',e.message);});})();</script>
+    <script>(function(){fetch('data/candidates_p1.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){return L.circleMarker(ll,{radius:7,color:'#CC0000',fillColor:'#FF0000',fillOpacity:0.85,weight:1.5});},onEachFeature:function(f,l){var p=f.properties;var vn=function(x){return(x===null||x===undefined||isNaN(+x))?'-':(+x).toFixed(1);};var lat=(p.lat!=null)?p.lat:f.geometry.coordinates[1];var lon=(p.lon!=null)?p.lon:f.geometry.coordinates[0];var html='<div style="font-family:sans-serif;font-size:12.5px;min-width:250px;">'+'<b style="color:#CC0000;">측정 후보지 #'+p.idx+'</b>&nbsp;'+'<span style="background:#FF0000;color:white;padding:1px 5px;border-radius:3px;font-size:11px;">최우선</span><br>'+'<hr style="margin:4px 0;">'+'<b>위도:</b> '+lat.toFixed(5)+'° N &nbsp; <b>경도:</b> '+lon.toFixed(5)+'° E<br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>입지 점수: '+vn(p.score)+' / 100</b><br>'+'<span style="font-size:11.5px;color:#333;">'+'&nbsp;① 희소성: '+vn(p.s1)+' / 25<br>'+'&nbsp;② 지형 경사도: '+vn(p.s2)+' / 15 '+'<span style="color:#888;">(경사 '+vn(p.dem)+'°)</span><br>'+'&nbsp;③ 전력·철도 이격: '+vn(p.s3)+' / 15 '+'<span style="color:#888;">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '+'<span style="color:#888;">(도시 '+vn(p.du)+'km)</span><br>'+'&nbsp;⑤ 자기균일: '+vn(p.s5)+' / 10<br>'+'&nbsp;<span style="color:#999;">⑦ 부지 지속성: 현장검토 / 10</span><br>'+'&nbsp;<span style="color:#999;">⑧ 관리 접근성: 현장검토 / 5</span><br>'+'&nbsp;<span style="color:#999;">⑥암상: 미산정</span>'+'</span></div>';l.bindPopup(html,{maxWidth:270});l.bindTooltip('후보지 #'+p.idx+' P1 ('+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E)');}}).addTo(feature_group_176464cb7833ade739c3a293e88cd210);}).catch(function(e){console.warn('candidates_p1:',e.message);});})();</script>
+    <script>(function(){fetch('data/candidates_p2.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){return L.circleMarker(ll,{radius:6,color:'#CC5500',fillColor:'#FF8800',fillOpacity:0.85,weight:1.5});},onEachFeature:function(f,l){var p=f.properties;var vn=function(x){return(x===null||x===undefined||isNaN(+x))?'-':(+x).toFixed(1);};var lat=(p.lat!=null)?p.lat:f.geometry.coordinates[1];var lon=(p.lon!=null)?p.lon:f.geometry.coordinates[0];var html='<div style="font-family:sans-serif;font-size:12.5px;min-width:250px;">'+'<b style="color:#CC5500;">측정 후보지 #'+p.idx+'</b>&nbsp;'+'<span style="background:#FF8800;color:white;padding:1px 5px;border-radius:3px;font-size:11px;">우선</span><br>'+'<hr style="margin:4px 0;">'+'<b>위도:</b> '+lat.toFixed(5)+'° N &nbsp; <b>경도:</b> '+lon.toFixed(5)+'° E<br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>입지 점수: '+vn(p.score)+' / 100</b><br>'+'<span style="font-size:11.5px;color:#333;">'+'&nbsp;① 희소성: '+vn(p.s1)+' / 25<br>'+'&nbsp;② 지형 경사도: '+vn(p.s2)+' / 15 '+'<span style="color:#888;">(경사 '+vn(p.dem)+'°)</span><br>'+'&nbsp;③ 전력·철도 이격: '+vn(p.s3)+' / 15 '+'<span style="color:#888;">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '+'<span style="color:#888;">(도시 '+vn(p.du)+'km)</span><br>'+'&nbsp;⑤ 자기균일: '+vn(p.s5)+' / 10<br>'+'&nbsp;<span style="color:#999;">⑦ 부지 지속성: 현장검토 / 10</span><br>'+'&nbsp;<span style="color:#999;">⑧ 관리 접근성: 현장검토 / 5</span><br>'+'&nbsp;<span style="color:#999;">⑥암상: 미산정</span>'+'</span></div>';l.bindPopup(html,{maxWidth:270});l.bindTooltip('후보지 #'+p.idx+' P2 ('+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E)');}}).addTo(feature_group_9a0525fe69212b7f267e4d57630328a1);}).catch(function(e){console.warn('candidates_p2:',e.message);});})();</script>
+    <script>(function(){fetch('data/candidates_p3.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){return L.circleMarker(ll,{radius:5,color:'#008800',fillColor:'#00BB00',fillOpacity:0.85,weight:1.5});},onEachFeature:function(f,l){var p=f.properties;var vn=function(x){return(x===null||x===undefined||isNaN(+x))?'-':(+x).toFixed(1);};var lat=(p.lat!=null)?p.lat:f.geometry.coordinates[1];var lon=(p.lon!=null)?p.lon:f.geometry.coordinates[0];var html='<div style="font-family:sans-serif;font-size:12.5px;min-width:250px;">'+'<b style="color:#008800;">측정 후보지 #'+p.idx+'</b>&nbsp;'+'<span style="background:#00BB00;color:white;padding:1px 5px;border-radius:3px;font-size:11px;">일반</span><br>'+'<hr style="margin:4px 0;">'+'<b>위도:</b> '+lat.toFixed(5)+'° N &nbsp; <b>경도:</b> '+lon.toFixed(5)+'° E<br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>입지 점수: '+vn(p.score)+' / 100</b><br>'+'<span style="font-size:11.5px;color:#333;">'+'&nbsp;① 희소성: '+vn(p.s1)+' / 25<br>'+'&nbsp;② 지형 경사도: '+vn(p.s2)+' / 15 '+'<span style="color:#888;">(경사 '+vn(p.dem)+'°)</span><br>'+'&nbsp;③ 전력·철도 이격: '+vn(p.s3)+' / 15 '+'<span style="color:#888;">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '+'<span style="color:#888;">(도시 '+vn(p.du)+'km)</span><br>'+'&nbsp;⑤ 자기균일: '+vn(p.s5)+' / 10<br>'+'&nbsp;<span style="color:#999;">⑦ 부지 지속성: 현장검토 / 10</span><br>'+'&nbsp;<span style="color:#999;">⑧ 관리 접근성: 현장검토 / 5</span><br>'+'&nbsp;<span style="color:#999;">⑥암상: 미산정</span>'+'</span></div>';l.bindPopup(html,{maxWidth:270});l.bindTooltip('후보지 #'+p.idx+' P3 ('+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E)');}}).addTo(feature_group_f231e75599e75754a112d532c5978dd8);}).catch(function(e){console.warn('candidates_p3:',e.message);});})();</script>
+    <script>(function(){fetch('data/existing_sites.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){var icon=L.divIcon({html:'<div style="font-size:22px;line-height:1;text-shadow:1px 1px 2px rgba(0,0,0,0.4);">⭐</div>',className:'',iconAnchor:[11,11]});return L.marker(ll,{icon:icon});},onEachFeature:function(f,l){var p=f.properties;var vf=function(x,fmt){return(x===null||x===undefined)?'-':fmt(x);};var html='<div style="font-family:sans-serif;font-size:12.5px;min-width:260px;">'+'<b style="color:#8B4513;">⭐ 기존 측정점: '+p.name+'</b><br>'+'<hr style="margin:4px 0;">'+'<b>위도:</b> '+p.lat.toFixed(6)+'° N &nbsp; <b>경도:</b> '+p.lon.toFixed(6)+'° E<br>'+'<b>주소:</b> <span style="font-size:11px;">'+(p.address||'-')+'</span><br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>최초설치:</b> '+(p.inst_year?p.inst_year+'년':'-')+' &nbsp; <b>최신관측:</b> '+p.obs_year+'년<br>'+'<b>표고:</b> '+vf(p.elev,function(x){return x.toFixed(1)+' m'})+'<br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>측정값 ('+p.obs_year+'년)</b><br>'+'<span style="font-size:11.5px;color:#333;">'+'&nbsp;편각: '+vf(p.decl,function(x){return x.toFixed(4)+'°'})+'<br>'+'&nbsp;복각: '+vf(p.incl,function(x){return x.toFixed(4)+'°'})+'<br>'+'&nbsp;총자력: '+vf(p.total,function(x){return x.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1})+' nT';})+'</span></div>';l.bindPopup(html,{maxWidth:290});l.bindTooltip('⭐ '+p.name+' ('+p.obs_year+'년 관측)');}}).addTo(feature_group_96388d546b5f4c8273bb737b769dd21d);}).catch(function(e){console.warn('existing_sites:',e.message);});})();</script>
     
     <div style="
         position:fixed; bottom:30px; left:30px; width:280px;
@@ -185,7 +185,7 @@
       </span>
     </div>
     
-    <script>(function(){fetch('data/topo_sheets.geojson').then(function(r){return r.json();}).then(function(fc){fc.features.forEach(function(f){var props=f.properties;var nm=props.sheet_name||'';var code=props.sheet_code||'';var mcd=props.sheet_mapidcd||'';var tipCode=mcd?mcd+'  /  '+code:code;var tip='<b>'+nm+'</b><br><span style="color:#555;font-size:11px;">NGII No.&nbsp;'+tipCode+'</span>';var coords=f.geometry.coordinates[0].map(function(c){return[c[1],c[0]];});L.polygon(coords,{color:'#1A4A8A',weight:1.2,fill:true,fillColor:'#4A90D9',fillOpacity:0.06}).bindTooltip(tip,{sticky:true}).addTo(feature_group_f48c32c8212eacaab2d8752f3416a9b1);var cx=props.cx||0,cy=props.cy||0;var sub=mcd?'<br><span style="font-weight:normal;font-size:0.85em;color:#336;">'+mcd+'</span>':'';var lbl='<div class="topo-label" style="display:none;pointer-events:none;text-align:center;font-family:Malgun Gothic,sans-serif;color:#1A3A6A;white-space:nowrap;font-weight:bold;line-height:1.3;text-shadow:1px 1px 0 white,-1px -1px 0 white,1px -1px 0 white,-1px 1px 0 white;">'+nm+sub+'</div>';L.marker([cy,cx],{icon:L.divIcon({html:lbl,className:'',iconAnchor:[45,15],iconSize:[90,30]})}).addTo(feature_group_f48c32c8212eacaab2d8752f3416a9b1);});});})();</script>
+    <script>(function(){fetch('data/topo_sheets.geojson').then(function(r){return r.json();}).then(function(fc){fc.features.forEach(function(f){var props=f.properties;var nm=props.sheet_name||'';var code=props.sheet_code||'';var mcd=props.sheet_mapidcd||'';var tipCode=mcd?mcd+'  /  '+code:code;var tip='<b>'+nm+'</b><br><span style="color:#555;font-size:11px;">NGII No.&nbsp;'+tipCode+'</span>';var coords=f.geometry.coordinates[0].map(function(c){return[c[1],c[0]];});L.polygon(coords,{color:'#1A4A8A',weight:1.2,fill:true,fillColor:'#4A90D9',fillOpacity:0.06}).bindTooltip(tip,{sticky:true}).addTo(feature_group_67077e95b6737f03477bdf2479965ae7);var cx=props.cx||0,cy=props.cy||0;var sub=mcd?'<br><span style="font-weight:normal;font-size:0.85em;color:#336;">'+mcd+'</span>':'';var lbl='<div class="topo-label" style="display:none;pointer-events:none;text-align:center;font-family:Malgun Gothic,sans-serif;color:#1A3A6A;white-space:nowrap;font-weight:bold;line-height:1.3;text-shadow:1px 1px 0 white,-1px -1px 0 white,1px -1px 0 white,-1px 1px 0 white;">'+nm+sub+'</div>';L.marker([cy,cx],{icon:L.divIcon({html:lbl,className:'',iconAnchor:[45,15],iconSize:[90,30]})}).addTo(feature_group_67077e95b6737f03477bdf2479965ae7);});});})();</script>
     
         <script>
         (function() {
@@ -307,9 +307,9 @@
           var lon    = parseFloat(item.lon);
           var safe   = item.display_name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
           html += '<div style="padding:5px 2px;border-bottom:1px solid #f0f0f0;cursor:pointer;" '
-               +  'onmouseover="this.style.background='#eef3ff'"'
-               +  ' onmouseout="this.style.background=''"'
-               +  ' onclick="gcJump(' + lat + ',' + lon + ','' + safe + '')">'
+               +  'onmouseover="this.style.background=\x27#eef3ff\x27"'
+               +  ' onmouseout="this.style.background=\x27\x27"'
+               +  ' onclick="gcJump(' + lat + ',' + lon + ',\x27' + safe + '\x27)">'
                +  '<span style="color:#336699;font-weight:bold;">' + (i+1) + '.</span> ' + label;
           if (badge) html += ' <span style="background:#ddeeff;color:#336;font-size:9px;'
                            + 'padding:1px 3px;border-radius:3px;">' + badge + '</span>';
@@ -448,14 +448,14 @@
     </script>
     
     
-            <div class="folium-map" id="map_1f0d58a0070e49c52460592a24ab799a" ></div>
+            <div class="folium-map" id="map_2dab30136b559b5aa48ba7019c85f818" ></div>
         
 </body>
 <script>
     
     
-            var map_1f0d58a0070e49c52460592a24ab799a = L.map(
-                "map_1f0d58a0070e49c52460592a24ab799a",
+            var map_2dab30136b559b5aa48ba7019c85f818 = L.map(
+                "map_2dab30136b559b5aa48ba7019c85f818",
                 {
                     center: [36.5, 127.5],
                     crs: L.CRS.EPSG3857,
@@ -472,7 +472,7 @@
 
         
     
-            var tile_layer_68702ed8872f08b85051ece5e40f78c7 = L.tileLayer(
+            var tile_layer_40888079ab529c708b2498f1881e3026 = L.tileLayer(
                 "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -489,10 +489,10 @@
             );
         
     
-            tile_layer_68702ed8872f08b85051ece5e40f78c7.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            tile_layer_40888079ab529c708b2498f1881e3026.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var tile_layer_32175f9210f503a0ae5f08578a04d2a7 = L.tileLayer(
+            var tile_layer_9db4dfd30fc2565d3b46ebad61d732cd = L.tileLayer(
                 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
                 {
   "minZoom": 0,
@@ -509,170 +509,170 @@
             );
         
     
-            tile_layer_32175f9210f503a0ae5f08578a04d2a7.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            tile_layer_9db4dfd30fc2565d3b46ebad61d732cd.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_a2eed3d7ca77ff9f04d291cf8cfe4ac4 = L.featureGroup(
+            var feature_group_9143b22cef83a5e433303e9e5941f922 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_a2eed3d7ca77ff9f04d291cf8cfe4ac4.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_9143b22cef83a5e433303e9e5941f922.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_93c163c4386396c05fa908ec0af2eb52 = L.featureGroup(
+            var feature_group_6c0a2f11feeb417bf9bf9f2b0681fd74 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_93c163c4386396c05fa908ec0af2eb52.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_6c0a2f11feeb417bf9bf9f2b0681fd74.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_0ef8073fd0f69847a793cd5875e116c1 = L.featureGroup(
+            var feature_group_3f6919a4f105ed26621df8769699dafa = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_0ef8073fd0f69847a793cd5875e116c1.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_3f6919a4f105ed26621df8769699dafa.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_9da563cccea6370444904d442c3ace10 = L.featureGroup(
+            var feature_group_6ee46b3ec44ada557b3a3d1faf45e133 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_9da563cccea6370444904d442c3ace10.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_6ee46b3ec44ada557b3a3d1faf45e133.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_b5ed568a5310a3438579b6677f0cf7b1 = L.featureGroup(
+            var feature_group_e6a715e49736200a75e8148b237d0ae2 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_b5ed568a5310a3438579b6677f0cf7b1.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_e6a715e49736200a75e8148b237d0ae2.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_ba90bac19fe63983e962c54c70e4064b = L.featureGroup(
+            var feature_group_257ede34cd4c6623ba2a331c41ca6dcc = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_ba90bac19fe63983e962c54c70e4064b.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_257ede34cd4c6623ba2a331c41ca6dcc.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_fe7d7fe34a86d33b580896631dfead98 = L.featureGroup(
+            var feature_group_ecdc3e010a22cc974bac49d16d6b7161 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_fe7d7fe34a86d33b580896631dfead98.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_ecdc3e010a22cc974bac49d16d6b7161.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_a79f3c5663bf9a45d4d1ab36b26aca20 = L.featureGroup(
+            var feature_group_d88043785e74e92dc1933495485b0294 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_a79f3c5663bf9a45d4d1ab36b26aca20.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_d88043785e74e92dc1933495485b0294.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_35cf10a97da0b77012c5de311d61da18 = L.featureGroup(
+            var feature_group_d2898310f73cda8ea48f1bcbefad7e75 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_35cf10a97da0b77012c5de311d61da18.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_d2898310f73cda8ea48f1bcbefad7e75.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_d4f9cba970eb6969d09e6e36bd31b33a = L.featureGroup(
+            var feature_group_98a43256ca0d6be361295ce381b1baa8 = L.featureGroup(
                 {
 }
             );
         
     
-            var feature_group_b88452bc2d53655ac1968b3b65a5c6fb = L.featureGroup(
+            var feature_group_176464cb7833ade739c3a293e88cd210 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_b88452bc2d53655ac1968b3b65a5c6fb.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_176464cb7833ade739c3a293e88cd210.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_9a046ccdbebc228fb214bfc8c0f6f89f = L.featureGroup(
+            var feature_group_9a0525fe69212b7f267e4d57630328a1 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_9a046ccdbebc228fb214bfc8c0f6f89f.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_9a0525fe69212b7f267e4d57630328a1.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_c06c9b61278723633652f4c7c4ff05c4 = L.featureGroup(
+            var feature_group_f231e75599e75754a112d532c5978dd8 = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_c06c9b61278723633652f4c7c4ff05c4.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_f231e75599e75754a112d532c5978dd8.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_2fbeb63cfc66d0ba7f642796a63e23d4 = L.featureGroup(
+            var feature_group_96388d546b5f4c8273bb737b769dd21d = L.featureGroup(
                 {
 }
             );
         
     
-            feature_group_2fbeb63cfc66d0ba7f642796a63e23d4.addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            feature_group_96388d546b5f4c8273bb737b769dd21d.addTo(map_2dab30136b559b5aa48ba7019c85f818);
         
     
-            var feature_group_f48c32c8212eacaab2d8752f3416a9b1 = L.featureGroup(
+            var feature_group_67077e95b6737f03477bdf2479965ae7 = L.featureGroup(
                 {
 }
             );
         
     
-            var layer_control_2d43857591da09cf9c30959c599f13a2_layers = {
+            var layer_control_3be997c58f296b0c801d28ddb9e70d56_layers = {
                 base_layers : {
-                    "OpenStreetMap" : tile_layer_68702ed8872f08b85051ece5e40f78c7,
-                    "\uc704\uc131 \uc774\ubbf8\uc9c0 (Esri)" : tile_layer_32175f9210f503a0ae5f08578a04d2a7,
+                    "OpenStreetMap" : tile_layer_40888079ab529c708b2498f1881e3026,
+                    "\uc704\uc131 \uc774\ubbf8\uc9c0 (Esri)" : tile_layer_9db4dfd30fc2565d3b46ebad61d732cd,
                 },
                 overlays :  {
-                    "\u26a1 [1] \uace0\uc555\ucca0\ud0d1\u00b7\uc1a1\uc804\ud0d1 \uc81c\uc678 (1.0 km)" : feature_group_a2eed3d7ca77ff9f04d291cf8cfe4ac4,
-                    "\ud83d\ude86 [2] \ucca0\ub3c4 \uc81c\uc678 (5.0 km)" : feature_group_93c163c4386396c05fa908ec0af2eb52,
-                    "\ud83c\udfd9\ufe0f [3a] \ud575\uc2ec\ub3c4\uc2ec\u00b7\uc0b0\uc5c5 \uc81c\uc678 (500m)" : feature_group_0ef8073fd0f69847a793cd5875e116c1,
-                    "\ud83c\udfd8\ufe0f [3b] \uc8fc\uac70\u00b7\ucde8\ub77d \uc81c\uc678 (300m)" : feature_group_9da563cccea6370444904d442c3ace10,
-                    "\ud83d\udd29 [4] \ud30c\uc774\ud504\ub77c\uc778 \uc81c\uc678 (0.5 km)" : feature_group_b5ed568a5310a3438579b6677f0cf7b1,
-                    "\ud83d\udce1 [5] \ud1b5\uc2e0\ud0d1\u00b7\uae30\uc9c0\uad6d \uc81c\uc678 (0.5 km)" : feature_group_ba90bac19fe63983e962c54c70e4064b,
-                    "\ud83d\udca8 [6] \ud48d\ub825\ubc1c\uc804\uae30 \uc81c\uc678 (0.5 km)" : feature_group_fe7d7fe34a86d33b580896631dfead98,
-                    "\u26cf\ufe0f [7] \ucc44\uc11d\uc7a5\u00b7\uad11\uc0b0 \uc81c\uc678 (1.0 km)" : feature_group_a79f3c5663bf9a45d4d1ab36b26aca20,
-                    "\ud83e\uddf2 [8] \uc790\uae30\uc774\uc0c1\ub3c4 \uace0\ubcc0\ud654 \uc81c\uc678 (KIGAM)" : feature_group_35cf10a97da0b77012c5de311d61da18,
-                    "\uaca9\uc790\uc810 \uc804\uccb4 (\ucc38\uace0)" : feature_group_d4f9cba970eb6969d09e6e36bd31b33a,
-                    "\ud83d\udd34 \uc6b0\uc120\uc21c\uc704 1\ub4f1\uae09 (\ucd5c\uc6b0\uc120, \ubaa8\ub378 \uacf5\ubc31 \uc9c0\uc5ed)" : feature_group_b88452bc2d53655ac1968b3b65a5c6fb,
-                    "\ud83d\udfe0 \uc6b0\uc120\uc21c\uc704 2\ub4f1\uae09 (\uc6b0\uc120)" : feature_group_9a046ccdbebc228fb214bfc8c0f6f89f,
-                    "\ud83d\udfe2 \uc6b0\uc120\uc21c\uc704 3\ub4f1\uae09 (\uc77c\ubc18)" : feature_group_c06c9b61278723633652f4c7c4ff05c4,
-                    "\u2b50 \uae30\uc874 \uce21\uc815\uc810 (22-25\ub144)" : feature_group_2fbeb63cfc66d0ba7f642796a63e23d4,
-                    "\ud83d\udcd0 1:50,000 \uc9c0\ud615\ub3c4 \ub3c4\uc5fd (15\u0027\u00d715\u0027)" : feature_group_f48c32c8212eacaab2d8752f3416a9b1,
+                    "\u26a1 [1] \uace0\uc555\ucca0\ud0d1\u00b7\uc1a1\uc804\ud0d1 \uc81c\uc678 (1.0 km)" : feature_group_9143b22cef83a5e433303e9e5941f922,
+                    "\ud83d\ude86 [2] \ucca0\ub3c4 \uc81c\uc678 (5.0 km)" : feature_group_6c0a2f11feeb417bf9bf9f2b0681fd74,
+                    "\ud83c\udfd9\ufe0f [3a] \ud575\uc2ec\ub3c4\uc2ec\u00b7\uc0b0\uc5c5 \uc81c\uc678 (500m)" : feature_group_3f6919a4f105ed26621df8769699dafa,
+                    "\ud83c\udfd8\ufe0f [3b] \uc8fc\uac70\u00b7\ucde8\ub77d \uc81c\uc678 (300m)" : feature_group_6ee46b3ec44ada557b3a3d1faf45e133,
+                    "\ud83d\udd29 [4] \ud30c\uc774\ud504\ub77c\uc778 \uc81c\uc678 (0.5 km)" : feature_group_e6a715e49736200a75e8148b237d0ae2,
+                    "\ud83d\udce1 [5] \ud1b5\uc2e0\ud0d1\u00b7\uae30\uc9c0\uad6d \uc81c\uc678 (0.5 km)" : feature_group_257ede34cd4c6623ba2a331c41ca6dcc,
+                    "\ud83d\udca8 [6] \ud48d\ub825\ubc1c\uc804\uae30 \uc81c\uc678 (0.5 km)" : feature_group_ecdc3e010a22cc974bac49d16d6b7161,
+                    "\u26cf\ufe0f [7] \ucc44\uc11d\uc7a5\u00b7\uad11\uc0b0 \uc81c\uc678 (1.0 km)" : feature_group_d88043785e74e92dc1933495485b0294,
+                    "\ud83e\uddf2 [8] \uc790\uae30\uc774\uc0c1\ub3c4 \uace0\ubcc0\ud654 \uc81c\uc678 (KIGAM)" : feature_group_d2898310f73cda8ea48f1bcbefad7e75,
+                    "\uaca9\uc790\uc810 \uc804\uccb4 (\ucc38\uace0)" : feature_group_98a43256ca0d6be361295ce381b1baa8,
+                    "\ud83d\udd34 \uc6b0\uc120\uc21c\uc704 1\ub4f1\uae09 (\ucd5c\uc6b0\uc120, \ubaa8\ub378 \uacf5\ubc31 \uc9c0\uc5ed)" : feature_group_176464cb7833ade739c3a293e88cd210,
+                    "\ud83d\udfe0 \uc6b0\uc120\uc21c\uc704 2\ub4f1\uae09 (\uc6b0\uc120)" : feature_group_9a0525fe69212b7f267e4d57630328a1,
+                    "\ud83d\udfe2 \uc6b0\uc120\uc21c\uc704 3\ub4f1\uae09 (\uc77c\ubc18)" : feature_group_f231e75599e75754a112d532c5978dd8,
+                    "\u2b50 \uae30\uc874 \uce21\uc815\uc810 (22-25\ub144)" : feature_group_96388d546b5f4c8273bb737b769dd21d,
+                    "\ud83d\udcd0 1:50,000 \uc9c0\ud615\ub3c4 \ub3c4\uc5fd (15\u0027\u00d715\u0027)" : feature_group_67077e95b6737f03477bdf2479965ae7,
                 },
             };
-            let layer_control_2d43857591da09cf9c30959c599f13a2 = L.control.layers(
-                layer_control_2d43857591da09cf9c30959c599f13a2_layers.base_layers,
-                layer_control_2d43857591da09cf9c30959c599f13a2_layers.overlays,
+            let layer_control_3be997c58f296b0c801d28ddb9e70d56 = L.control.layers(
+                layer_control_3be997c58f296b0c801d28ddb9e70d56_layers.base_layers,
+                layer_control_3be997c58f296b0c801d28ddb9e70d56_layers.overlays,
                 {
   "position": "topright",
   "collapsed": false,
   "autoZIndex": true,
 }
-            ).addTo(map_1f0d58a0070e49c52460592a24ab799a);
+            ).addTo(map_2dab30136b559b5aa48ba7019c85f818);
 
         
 </script>
