@@ -1328,13 +1328,34 @@ def filter_candidates(
     return candidates
 
 
+def _slope_from_five(center, north, south, east, west,
+                     lat_c: float, radius_deg: float) -> float:
+    """
+    중심(center) + 4방향(N/S/E/W) 표고 5점으로 경사도(°) 계산.
+    중앙차분(central difference) 기반.
+
+    dz/dy = (north - south) / (2 * d_lat_m)
+    dz/dx = (east  - west)  / (2 * d_lon_m)
+    slope  = arctan(sqrt(dz/dy² + dz/dx²))  [°]
+    """
+    lat_m = 111_000.0                                     # 위도 1° ≈ 111 km
+    lon_m = 111_000.0 * np.cos(np.radians(lat_c))        # 경도 1° — 위도 보정
+    d_lat_m = radius_deg * lat_m
+    d_lon_m = radius_deg * lon_m
+    if d_lat_m == 0 or d_lon_m == 0:
+        return np.nan
+    dz_dy = (north - south) / (2.0 * d_lat_m)
+    dz_dx = (east  - west)  / (2.0 * d_lon_m)
+    return float(np.degrees(np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))))
+
+
 def _fetch_dem_via_srtm(lats, lons, radius_deg) -> np.ndarray | None:
     """
-    로컬 SRTM GeoTIFF에서 표고 표준편차 계산.
+    로컬 SRTM GeoTIFF에서 경사도(°) 계산.
     data/srtm/ 디렉토리에 한반도 SRTM3 타일 배치 시 자동 사용.
     예: data/srtm/N33E124.hgt, N34E125.hgt, ...  (HGT 또는 GeoTIFF 가능)
 
-    반환: shape (n,) 표고 std 배열, 또는 rasterio 미설치/파일 없음 시 None
+    반환: shape (n,) 경사도 배열(°), 또는 rasterio 미설치/파일 없음 시 None
     """
     try:
         import rasterio
@@ -1361,15 +1382,15 @@ def _fetch_dem_via_srtm(lats, lons, radius_deg) -> np.ndarray | None:
 
         n = len(lats)
         r = radius_deg
-        stds = np.full(n, np.nan)
+        slopes = np.full(n, np.nan)
         for i in range(n):
             lat_c, lon_c = lats[i], lons[i]
             sample_pts = [
-                (lat_c,       lon_c),
-                (lat_c + r,   lon_c),
-                (lat_c - r,   lon_c),
-                (lat_c,       lon_c + r),
-                (lat_c,       lon_c - r),
+                (lat_c,      lon_c),       # center
+                (lat_c + r,  lon_c),       # north
+                (lat_c - r,  lon_c),       # south
+                (lat_c,      lon_c + r),   # east
+                (lat_c,      lon_c - r),   # west
             ]
             elevs = []
             for slat, slon in sample_pts:
@@ -1377,30 +1398,31 @@ def _fetch_dem_via_srtm(lats, lons, radius_deg) -> np.ndarray | None:
                     row, col = rowcol(transform, slon, slat)
                     if 0 <= row < elev_arr.shape[0] and 0 <= col < elev_arr.shape[1]:
                         v = elev_arr[row, col]
-                        if not np.isnan(v):
-                            elevs.append(v)
+                        elevs.append(float(v) if not np.isnan(v) else np.nan)
+                    else:
+                        elevs.append(np.nan)
                 except Exception:
-                    pass
-            if elevs:
-                stds[i] = float(np.std(elevs))
+                    elevs.append(np.nan)
+            if len(elevs) == 5 and not any(np.isnan(e) for e in elevs):
+                slopes[i] = _slope_from_five(*elevs, lat_c=lat_c, radius_deg=r)
 
         for src in src_list:
             src.close()
-        valid = (~np.isnan(stds)).sum()
-        print(f"    SRTM 표고 std 계산 완료: {valid}/{n}개 유효")
-        return stds
+        valid = (~np.isnan(slopes)).sum()
+        print(f"    SRTM 경사도 계산 완료: {valid}/{n}개 유효")
+        return slopes
     except Exception as exc:
         print(f"    ⚠ SRTM 처리 실패: {exc}")
         return None
 
 
-def fetch_dem_elevations(
+def fetch_dem_slopes(
     candidates_wgs: gpd.GeoDataFrame,
     radius_deg: float = 0.045,   # ~5 km at Korea latitudes
-    cache_file: Path = DATA_DIR / "dem_elevations.json",
+    cache_file: Path = DATA_DIR / "dem_slopes.json",
 ) -> np.ndarray:
     """
-    후보 지점의 지형적 대표성 산정용 표고 표준편차 취득.
+    후보 지점의 지형 경사도(°) 취득.
 
     우선순위:
       1. 로컬 SRTM GeoTIFF (data/srtm/*.hgt 또는 *.tif)
@@ -1409,9 +1431,12 @@ def fetch_dem_elevations(
          → SRTM 로컬 파일 없을 때 폴백
 
     각 후보점에 대해 중심 + 4방향(N/S/E/W, ~5 km) 총 5개 지점의 표고를 조회.
-    표고 표준편차(std) → 지형 기복 지표.
+    중앙차분으로 경사도(°) 계산:
+        dz/dx = (E - W) / (2 × d_lon_m)
+        dz/dy = (N - S) / (2 × d_lat_m)
+        slope = arctan(√(dz/dx² + dz/dy²))  [°]
 
-    반환: shape (n,) numpy array — 후보점별 표고 표준편차 (m)
+    반환: shape (n,) numpy array — 후보점별 경사도 (°)
     """
     import json
 
@@ -1438,29 +1463,29 @@ def fetch_dem_elevations(
             if (cached.get("n") == n
                     and cached.get("radius_deg") == radius_deg
                     and cached.get("coord_hash") == coord_hash):
-                print(f"    DEM 캐시 로드: {cache_file.name} ({n}개 지점)")
-                return np.array(cached["stds"])
+                print(f"    DEM 경사도 캐시 로드: {cache_file.name} ({n}개 지점)")
+                return np.array(cached["slopes"])
             else:
                 print(f"    DEM 캐시 무효 (좌표/설정 변경) — 재취득")
         except Exception:
             pass
 
     # ── 1단계: 로컬 SRTM ─────────────────────────────────────
-    stds = _fetch_dem_via_srtm(lats, lons, radius_deg)
+    slopes = _fetch_dem_via_srtm(lats, lons, radius_deg)
 
     # ── 2단계: Open-Elevation API fallback ───────────────────
-    if stds is None:
+    if slopes is None:
         print(f"    Open-Elevation API 조회 중 ({n}개 후보점 × 5방향)...")
         print(f"    ※ 로컬 SRTM 사용 시 data/srtm/ 에 한반도 HGT/GeoTIFF 타일 배치 권장")
         r = radius_deg
         all_locations = []
         for i in range(n):
             all_locations += [
-                {"latitude": round(lats[i],      5), "longitude": round(lons[i],      5)},
-                {"latitude": round(lats[i] + r,  5), "longitude": round(lons[i],      5)},
-                {"latitude": round(lats[i] - r,  5), "longitude": round(lons[i],      5)},
-                {"latitude": round(lats[i],       5), "longitude": round(lons[i] + r, 5)},
-                {"latitude": round(lats[i],       5), "longitude": round(lons[i] - r, 5)},
+                {"latitude": round(lats[i],      5), "longitude": round(lons[i],      5)},  # center
+                {"latitude": round(lats[i] + r,  5), "longitude": round(lons[i],      5)},  # north
+                {"latitude": round(lats[i] - r,  5), "longitude": round(lons[i],      5)},  # south
+                {"latitude": round(lats[i],       5), "longitude": round(lons[i] + r, 5)},  # east
+                {"latitude": round(lats[i],       5), "longitude": round(lons[i] - r, 5)},  # west
             ]
         chunk_size = 1000
         elevations = []
@@ -1491,30 +1516,33 @@ def fetch_dem_elevations(
                         print(f"\n      ✗ 청크 실패 — 0m 대체")
                         elevations += [0] * len(chunk)
 
-        print(f"\n    DEM 취득 완료: {len(elevations)}개 표고값")
-        stds_list = []
+        print(f"\n    DEM 표고 취득 완료: {len(elevations)}개")
+        slopes_list = []
         elev_arr = np.array(elevations, dtype=float)
         for i in range(n):
             s = i * 5
             five = elev_arr[s : s + 5]
             if len(five) == 5 and not np.any(np.isnan(five)):
-                stds_list.append(float(np.std(five)))
+                # center=five[0], north=five[1], south=five[2], east=five[3], west=five[4]
+                deg = _slope_from_five(five[0], five[1], five[2], five[3], five[4],
+                                       lat_c=lats[i], radius_deg=r)
+                slopes_list.append(deg)
             else:
-                stds_list.append(float(np.nanstd(five)) if len(five) > 0 else np.nan)
-        stds = np.array(stds_list)
+                slopes_list.append(np.nan)
+        slopes = np.array(slopes_list)
 
     # ── 캐시 저장 ─────────────────────────────────────────────
     try:
         with open(cache_file, "w") as f:
             json.dump({
                 **cache_key,
-                "stds": [float(v) for v in stds],
+                "slopes": [float(v) for v in slopes],
             }, f)
-        print(f"    DEM 캐시 저장: {cache_file.name}")
+        print(f"    DEM 경사도 캐시 저장: {cache_file.name}")
     except Exception as exc:
         print(f"    ⚠ DEM 캐시 저장 실패: {exc}")
 
-    return stds
+    return slopes
 
 
 def compute_priority(
@@ -1529,7 +1557,7 @@ def compute_priority(
     │ 평가 항목    │ 세부 지표         │배점│ 가용 여부                     │
     ├─────────────┼──────────────────┼────┼──────────────────────────────┤
     │ 공간 대표성  │ 격자 데이터 희소성 │ 25 │ ✅ 후보점 분포 분석            │
-    │             │ 지형적 대표성      │ 15 │ ⚠  Open-Elevation API        │
+    │             │ 지형 경사도        │ 15 │ ⚠  Open-Elevation API        │
     │ 환경 정온도  │ 전력/철도 이격도   │ 15 │ ✅ OSM 데이터                 │
     │             │ 인구 밀집 이격도   │ 15 │ ✅ OSM 데이터                 │
     │ 지질 안정성  │ 자기 이상 균일도   │ 10 │ ⚠  KIGAM/EMAG2 배치 시       │
@@ -1565,27 +1593,29 @@ def compute_priority(
     result["s1_희소성"] = np.round(s1, 1)
     print(f"    ① 희소성: 평균 {s1.mean():.1f} / 25점")
 
-    # ── ② 지형적 대표성 (15점) — Open-Elevation API ──────────
-    # 후보점 중심 + 4방향(~5km) 표고 표준편차 → 지형 기복 지표
-    # std 높음 = 고저 변화 큼 = 지형 대표성 높음 (산지 등)
-    # std 낮음 = 평탄지 — 측정은 유리하지만 지형 대표성 낮음
+    # ── ② 지형 경사도 (15점) — Open-Elevation API / SRTM ────
+    # 후보점 중심 + 4방향(~5km) 표고 5점으로 중앙차분 경사도(°) 산정
+    # 경사도 낮음(평탄) → 설치·측정 유리 → 높은 점수
+    # 경사도 높음(급경사) → 불리 → 낮은 점수
+    # 정규화: s2 = clip(1 - slope / SLOPE_MAX, 0, 1) × 15
+    #   SLOPE_MAX = 30° (한국 산지 기준 실질적 상한)
+    SLOPE_MAX_DEG = 30.0
     s2 = np.full(n, np.nan)
     dem_available = False
     try:
         cands_wgs = candidates.to_crs(WGS84_CRS)
-        dem_stds = fetch_dem_elevations(cands_wgs)
-        valid_dem = ~np.isnan(dem_stds)
+        dem_slopes = fetch_dem_slopes(cands_wgs)
+        valid_dem = ~np.isnan(dem_slopes)
         if valid_dem.sum() > 0:
-            mx_std = np.nanmax(dem_stds)
-            if mx_std > 0:
-                s2[valid_dem] = (dem_stds[valid_dem] / mx_std) * 15
-            else:
-                s2[valid_dem] = 7.5  # 모두 평탄지인 경우 중간값
+            s2[valid_dem] = np.clip(
+                (1.0 - dem_slopes[valid_dem] / SLOPE_MAX_DEG) * 15.0,
+                0.0, 15.0,
+            )
             s2[~valid_dem] = 7.5    # 취득 실패 지점 중간값 대체
             dem_available = True
-            result["dem_std_m"] = np.round(dem_stds, 1)
-            print(f"    ② 지형적대표성: 평균 {np.nanmean(s2):.1f} / 15점  "
-                  f"(표고 std 평균 {np.nanmean(dem_stds):.0f} m)")
+            result["dem_slope_deg"] = np.round(dem_slopes, 2)
+            print(f"    ② 지형 경사도: 평균 {np.nanmean(s2):.1f} / 15점  "
+                  f"(경사도 평균 {np.nanmean(dem_slopes):.1f}°)")
     except Exception as exc:
         print(f"    ⚠ DEM 취득 실패 ({exc}) — ② 지형 미산정")
     result["s2_지형"] = np.round(s2, 1)
@@ -1715,11 +1745,172 @@ def _geom_to_wgs84(geom_utm, crs=UTM_CRS) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(geometry=[geom_utm], crs=crs).to_crs(WGS84_CRS)
 
 
+def load_existing_sites() -> "pd.DataFrame | None":
+    """
+    지자기측량 성과정리(22_25).xlsx 에서 기존 15개 측정점 정보를 로드.
+    각 측점별 최신 관측연도 행을 반환한다.
+    """
+    xlsx_path = DATA_DIR / "지자기측량 성과정리(22_25).xlsx"
+    if not xlsx_path.exists():
+        print(f"  ⚠ 기존 측정점 파일 없음: {xlsx_path}")
+        return None
+    try:
+        df = pd.read_excel(xlsx_path, sheet_name="Sheet1", header=0, engine="openpyxl")
+        # 열 인덱스(0-based) 기준 필요 컬럼 추출
+        # A=0연번, B=1도엽명, C=2주소, D=3최초설치, E=4관측연도
+        # I=8위도실수, M=12경도실수, N=13표고
+        # R=17편각실수, V=21복각실수, W=22총자력
+        df_work = pd.DataFrame({
+            "연번":     df.iloc[:, 0],
+            "도엽명":   df.iloc[:, 1],
+            "주소":     df.iloc[:, 2],
+            "최초설치": df.iloc[:, 3],
+            "관측연도": df.iloc[:, 4],
+            "위도":     df.iloc[:, 8],
+            "경도":     df.iloc[:, 12],
+            "표고":     df.iloc[:, 13],
+            "편각":     df.iloc[:, 17],
+            "복각":     df.iloc[:, 21],
+            "총자력":   df.iloc[:, 22],
+        })
+        # 도엽명·주소·최초설치는 첫 행에만 존재 → forward fill
+        df_work["도엽명"]   = df_work["도엽명"].ffill()
+        df_work["주소"]     = df_work["주소"].ffill()
+        df_work["최초설치"] = df_work["최초설치"].ffill()
+        # 위도·경도·관측연도가 유효한 행만 유지
+        df_work["위도"]     = pd.to_numeric(df_work["위도"],     errors="coerce")
+        df_work["경도"]     = pd.to_numeric(df_work["경도"],     errors="coerce")
+        df_work["관측연도"] = pd.to_numeric(df_work["관측연도"], errors="coerce")
+        df_work = df_work.dropna(subset=["위도", "경도", "관측연도"])
+        # 각 도엽명별 최신 관측연도 행 선택
+        idx_max    = df_work.groupby("도엽명")["관측연도"].idxmax()
+        df_latest  = df_work.loc[idx_max].reset_index(drop=True)
+        print(f"  ✅ 기존 측정점 {len(df_latest)}개 로드 완료 (최신 관측연도 기준)")
+        return df_latest
+    except Exception as exc:
+        print(f"  ⚠ 기존 측정점 로드 실패: {exc}")
+        return None
+
+
+def save_map_data(
+    zones:          dict,
+    grid:           gpd.GeoDataFrame,
+    final_cands:    gpd.GeoDataFrame,
+    existing_sites: "pd.DataFrame | None",
+    korea_gdf:      "gpd.GeoDataFrame | None",
+    data_dir:       Path,
+) -> None:
+    """
+    지도 레이어 데이터를 output/data/ 에 GeoJSON/JSON 파일로 저장.
+    HTML 의 JS 가 fetch() 로 로드하여 지도에 표시한다.
+    """
+    data_dir.mkdir(parents=True, exist_ok=True)
+    print(f"  데이터 파일 저장 중: {data_dir.resolve()}")
+
+    # ── 제외 구역 (UTM → WGS84 변환 후 저장) ─────────────────
+    for key in ("power", "railway", "urban_dense", "urban_resid",
+                "pipeline", "comm", "wind", "quarry", "anomaly"):
+        geom = zones.get(key)
+        if geom is None or geom.is_empty:
+            continue
+        gdf = gpd.GeoDataFrame(geometry=[geom], crs=UTM_CRS).to_crs(WGS84_CRS)
+        out = data_dir / f"zone_{key}.geojson"
+        gdf.to_file(str(out), driver="GeoJSON")
+
+    # ── 격자점 샘플 ─────────────────────────────────────────
+    grid_wgs = grid.to_crs(WGS84_CRS)
+    sample   = grid_wgs.sample(min(len(grid_wgs), 600), random_state=42)
+    gpd.GeoDataFrame(geometry=sample.geometry, crs=WGS84_CRS).to_file(
+        str(data_dir / "grid_sample.geojson"), driver="GeoJSON"
+    )
+
+    # ── 후보 지점 (우선순위별, 속성 포함) ────────────────────
+    final_wgs    = final_cands.to_crs(WGS84_CRS).copy().reset_index(drop=True)
+    has_priority = "priority" in final_wgs.columns
+    final_wgs["idx"] = final_wgs.index + 1
+    final_wgs["lat"] = final_wgs.geometry.y
+    final_wgs["lon"] = final_wgs.geometry.x
+    rename_map = {
+        "s1_희소성": "s1", "s2_지형": "s2", "s3_전력철도": "s3",
+        "s4_인구이격": "s4", "s5_자기균일": "s5",
+        "d_power_km": "dp", "d_railway_km": "dr", "d_urban_km": "du",
+        "dem_slope_deg": "dem", "d_public_km": "dpub", "d_road_km": "drd",
+    }
+    prop_cols = ["idx", "lat", "lon"]
+    for c in ["priority", "score"] + list(rename_map.keys()):
+        if c in final_wgs.columns:
+            prop_cols.append(c)
+    for p in (1, 2, 3):
+        if has_priority:
+            sub = final_wgs[final_wgs["priority"] == p][prop_cols].copy()
+        else:
+            sub = final_wgs[prop_cols].copy() if p == 3 else pd.DataFrame()
+        if len(sub) == 0:
+            continue
+        sub = sub.rename(columns={k: v for k, v in rename_map.items() if k in sub.columns})
+        geom_col = final_wgs.geometry.iloc[sub.index]
+        out_gdf  = gpd.GeoDataFrame(sub, geometry=geom_col.values, crs=WGS84_CRS)
+        out_gdf.to_file(str(data_dir / f"candidates_p{p}.geojson"), driver="GeoJSON")
+
+    # ── 기존 측정점 ─────────────────────────────────────────
+    if existing_sites is not None and len(existing_sites) > 0:
+        features = []
+        for _, r in existing_sites.iterrows():
+            props = {
+                "name":      str(r["도엽명"]),
+                "address":   str(r["주소"])     if pd.notna(r["주소"])     else None,
+                "inst_year": int(r["최초설치"]) if pd.notna(r["최초설치"]) else None,
+                "obs_year":  int(r["관측연도"]),
+                "lat":       float(r["위도"]),
+                "lon":       float(r["경도"]),
+                "elev":      float(r["표고"])   if pd.notna(r["표고"])   else None,
+                "decl":      float(r["편각"])   if pd.notna(r["편각"])   else None,
+                "incl":      float(r["복각"])   if pd.notna(r["복각"])   else None,
+                "total":     float(r["총자력"]) if pd.notna(r["총자력"]) else None,
+            }
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [props["lon"], props["lat"]]},
+                "properties": props,
+            })
+        with open(str(data_dir / "existing_sites.geojson"), "w", encoding="utf-8") as fh:
+            json.dump({"type": "FeatureCollection", "features": features}, fh,
+                      ensure_ascii=False, indent=None)
+
+    # ── 1:50,000 도엽 격자 ──────────────────────────────────
+    if korea_gdf is not None:
+        try:
+            print("  1:50,000 도엽 GeoJSON 저장 중...")
+            topo_gdf = create_topo_sheet_grid(korea_gdf)
+            topo_gdf = topo_gdf.copy()
+            topo_gdf["cx"] = topo_gdf.geometry.centroid.x
+            topo_gdf["cy"] = topo_gdf.geometry.centroid.y
+            for col in ["sheet_mapidcd", "sheet_name", "sheet_code"]:
+                if col not in topo_gdf.columns:
+                    topo_gdf[col] = ""
+            topo_gdf["sheet_mapidcd"] = (
+                topo_gdf["sheet_mapidcd"].astype(str).str.strip()
+                .replace({"nan": "", "None": ""})
+            )
+            keep = [c for c in ["sheet_name", "sheet_code", "sheet_mapidcd", "cx", "cy"]
+                    if c in topo_gdf.columns]
+            topo_gdf[keep + ["geometry"]].to_file(
+                str(data_dir / "topo_sheets.geojson"), driver="GeoJSON"
+            )
+            print(f"  ✅ 도엽 GeoJSON 저장: {len(topo_gdf)}개")
+        except Exception as exc:
+            print(f"  ⚠ 도엽 GeoJSON 저장 실패: {exc}")
+
+    print(f"  ✅ 데이터 저장 완료 ({data_dir.resolve()})")
+
+
 def create_folium_map(
-    zones:        dict,
-    grid:         gpd.GeoDataFrame,
-    final_cands:  gpd.GeoDataFrame,   # UTM, priority 컬럼 포함
-    korea_gdf:    gpd.GeoDataFrame | None = None,
+    zones:          dict,
+    grid:           gpd.GeoDataFrame,
+    final_cands:    gpd.GeoDataFrame,   # UTM, priority 컬럼 포함
+    korea_gdf:      gpd.GeoDataFrame | None = None,
+    existing_sites: "pd.DataFrame | None" = None,
+    data_subdir:    str = "data",
 ) -> folium.Map:
     """대화형 Folium 지도 생성 (OSM 기반)"""
     print("\n지도 생성 중...")
@@ -1752,7 +1943,7 @@ def create_folium_map(
         control=True,
     ).add_to(m)
 
-    # ── 제외 구역 레이어 ─────────────────────────────────────
+    # ── 제외 구역 레이어 (외부 GeoJSON fetch) ───────────────────
     _excl = {
         "power":       ("#FF3300", "#CC0000", "⚡ [1] 고압철탑·송전탑 제외 (1.0 km)",    True),
         "railway":     ("#FF7700", "#CC4400", "🚆 [2] 철도 제외 (5.0 km)",               True),
@@ -1764,114 +1955,155 @@ def create_folium_map(
         "quarry":      ("#AA6600", "#774400", "⛏️ [7] 채석장·광산 제외 (1.0 km)",        True),
         "anomaly":     ("#0044FF", "#0022CC", "🧲 [8] 자기이상도 고변화 제외 (KIGAM)",    True),
     }
-    for key, (fc, ec, name, show) in _excl.items():
+    for key, (fc, ec, lname, show) in _excl.items():
         geom = zones.get(key)
         if geom is None or geom.is_empty:
             continue
-        layer = folium.FeatureGroup(name=name, show=show)
-        folium.GeoJson(
-            _geom_to_wgs84(geom).__geo_interface__,
-            style_function=lambda x, f=fc, e=ec: {
-                "fillColor": f, "color": e, "weight": 1, "fillOpacity": 0.32,
-            },
-            tooltip=name,
-        ).add_to(layer)
+        layer = folium.FeatureGroup(name=lname, show=show)
         layer.add_to(m)
+        lv  = layer.get_name()
+        tip = lname.replace("'", "\\'")
+        js  = (
+            "<script>(function(){"
+            "fetch('%s/zone_%s.geojson')"
+            ".then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})"
+            ".then(function(d){"
+            "L.geoJSON(d,{"
+            "style:function(){return{fillColor:'%s',color:'%s',weight:1,fillOpacity:0.32}},"
+            "onEachFeature:function(f,l){l.bindTooltip('%s');}"
+            "}).addTo(%s);"
+            "}).catch(function(e){console.warn('zone_%s:',e.message);});"
+            "})();</script>"
+        ) % (data_subdir, key, fc, ec, tip, lv, key)
+        m.get_root().html.add_child(folium.Element(js))
 
-    # ── 전체 격자점 (참고용) ──────────────────────────────────
+    # ── 전체 격자점 (참고용, 외부 GeoJSON fetch) ─────────────
     grid_layer = folium.FeatureGroup(name="격자점 전체 (참고)", show=False)
-    grid_wgs   = grid.to_crs(WGS84_CRS)
-    sample     = grid_wgs.sample(min(len(grid_wgs), 600), random_state=42)
-    for _, row in sample.iterrows():
-        folium.CircleMarker(
-            location=[row.geometry.y, row.geometry.x],
-            radius=2, color="#888888", fill=True,
-            fill_color="#AAAAAA", fill_opacity=0.3, weight=0,
-        ).add_to(grid_layer)
     grid_layer.add_to(m)
+    gv  = grid_layer.get_name()
+    js  = (
+        "<script>(function(){"
+        "fetch('%s/grid_sample.geojson')"
+        ".then(function(r){return r.json();})"
+        ".then(function(d){"
+        "L.geoJSON(d,{pointToLayer:function(f,ll){"
+        "return L.circleMarker(ll,{radius:2,color:'#888888',"
+        "fillColor:'#AAAAAA',fillOpacity:0.3,weight:0});"
+        "}}).addTo(%s);"
+        "}).catch(function(e){console.warn('grid:',e.message);});"
+        "})();</script>"
+    ) % (data_subdir, gv)
+    m.get_root().html.add_child(folium.Element(js))
 
-    # ── 최종 후보 지점 (우선순위별 3개 레이어) ──────────────────
+    # ── 최종 후보 지점 (우선순위별, 외부 GeoJSON fetch) ────────
     priority_cfg = {
         1: ("#FF0000", "#CC0000", "🔴 우선순위 1등급 (최우선, 모델 공백 지역)"),
         2: ("#FF8800", "#CC5500", "🟠 우선순위 2등급 (우선)"),
         3: ("#00BB00", "#008800", "🟢 우선순위 3등급 (일반)"),
     }
-
-    final_wgs = final_cands.to_crs(WGS84_CRS)
+    final_wgs    = final_cands.to_crs(WGS84_CRS)
     has_priority = "priority" in final_wgs.columns
 
     for p, (fc, ec, pname) in priority_cfg.items():
         if has_priority:
-            subset = final_wgs[final_wgs["priority"] == p]
+            has_data = int((final_wgs["priority"] == p).sum()) > 0
         else:
-            subset = final_wgs if p == 3 else gpd.GeoDataFrame()
-
-        if len(subset) == 0:
+            has_data = (p == 3) and len(final_wgs) > 0
+        if not has_data:
             continue
-
+        plabel = "최우선" if p == 1 else ("우선" if p == 2 else "일반")
+        radius = 7 if p == 1 else (6 if p == 2 else 5)
         p_layer = folium.FeatureGroup(name=pname, show=True)
-        for idx, row in subset.iterrows():
-            lat, lon = row.geometry.y, row.geometry.x
-            score_str = f"{row.get('score', 0):.0f}" if has_priority else "-"
-            v1 = f"{row.get('s1_희소성',   0):.1f}" if has_priority else "-"
-            v2 = row.get('s2_지형', np.nan) if has_priority else np.nan
-            v2s = f"{v2:.1f}" if not (isinstance(v2, float) and np.isnan(v2)) else "-"
-            v3 = f"{row.get('s3_전력철도', 0):.1f}" if has_priority else "-"
-            v4 = f"{row.get('s4_인구이격', 0):.1f}" if has_priority else "-"
-            v5 = row.get('s5_자기균일', np.nan) if has_priority else np.nan
-            v5s = f"{v5:.1f}" if not (isinstance(v5, float) and np.isnan(v5)) else "-"
-            v7 = row.get('s7_부지', np.nan) if has_priority else np.nan
-            v7s = f"{v7:.1f}" if not (isinstance(v7, float) and np.isnan(v7)) else "-"
-            v8 = row.get('s8_접근성', np.nan) if has_priority else np.nan
-            v8s = f"{v8:.1f}" if not (isinstance(v8, float) and np.isnan(v8)) else "-"
-            dp = f"{row.get('d_power_km',  0):.1f}" if has_priority else "-"
-            dr = f"{row.get('d_railway_km',0):.1f}" if has_priority else "-"
-            du = f"{row.get('d_urban_km',  0):.1f}" if has_priority else "-"
-            dpub = row.get('d_public_km', np.nan) if has_priority else np.nan
-            dpub_str = (f" <span style='color:#888;'>({dpub:.1f}km)</span>"
-                        if not (isinstance(dpub, float) and np.isnan(dpub)) else "")
-            drd = row.get('d_road_km', np.nan) if has_priority else np.nan
-            drd_str = (f" <span style='color:#888;'>({drd:.1f}km)</span>"
-                       if not (isinstance(drd, float) and np.isnan(drd)) else "")
-            dem_std = row.get('dem_std_m', np.nan) if has_priority else np.nan
-            dem_str = (f" <span style='color:#888;'>({dem_std:.0f}m std)</span>"
-                       if not (isinstance(dem_std, float) and np.isnan(dem_std)) else "")
-            popup_html = (
-                f'<div style="font-family:sans-serif;font-size:12.5px;min-width:250px;">'
-                f'<b style="color:{ec};">측정 후보지 #{idx+1}</b>'
-                f'&nbsp;<span style="background:{fc};color:white;padding:1px 5px;'
-                f'border-radius:3px;font-size:11px;">'
-                f'{"최우선" if p==1 else "우선" if p==2 else "일반"}</span><br>'
-                f'<hr style="margin:4px 0;">'
-                f'<b>위도:</b> {lat:.5f}° N &nbsp; '
-                f'<b>경도:</b> {lon:.5f}° E<br>'
-                f'<hr style="margin:4px 0;border-color:#ddd;">'
-                f'<b>입지 점수: {score_str} / 100</b><br>'
-                f'<span style="font-size:11.5px;color:#333;">'
-                f'&nbsp;① 희소성: {v1} / 25<br>'
-                f'&nbsp;② 지형적 대표성: {v2s} / 15{dem_str}<br>'
-                f'&nbsp;③ 전력·철도 이격: {v3} / 15'
-                f' <span style="color:#888;">(전력 {dp}km, 철도 {dr}km)</span><br>'
-                f'&nbsp;④ 인구 이격: {v4} / 15'
-                f' <span style="color:#888;">(도시 {du}km)</span><br>'
-                f'&nbsp;⑤ 자기균일: {v5s} / 10<br>'
-                f'&nbsp;<span style="color:#999;">⑦ 부지 지속성: 현장검토 / 10</span><br>'
-                f'&nbsp;<span style="color:#999;">⑧ 관리 접근성: 현장검토 / 5</span><br>'
-                f'&nbsp;<span style="color:#999;">⑥암상: 미산정</span>'
-                f'</span></div>'
-            )
-            folium.CircleMarker(
-                location=[lat, lon],
-                radius=7 if p == 1 else (6 if p == 2 else 5),
-                color=ec,
-                fill=True,
-                fill_color=fc,
-                fill_opacity=0.85,
-                weight=1.5,
-                popup=folium.Popup(popup_html, max_width=270),
-                tooltip=f"후보지 #{idx+1}  P{p}  ({lat:.4f}°N, {lon:.4f}°E)",
-            ).add_to(p_layer)
         p_layer.add_to(m)
+        pv  = p_layer.get_name()
+        js  = (
+            "<script>(function(){"
+            "fetch('%s/candidates_p%d.geojson')"
+            ".then(function(r){return r.json();})"
+            ".then(function(d){"
+            "L.geoJSON(d,{"
+            "pointToLayer:function(f,ll){"
+            "return L.circleMarker(ll,{radius:%d,color:'%s',"
+            "fillColor:'%s',fillOpacity:0.85,weight:1.5});"
+            "},"
+            "onEachFeature:function(f,l){"
+            "var p=f.properties;"
+            "var vn=function(x){return(x===null||x===undefined||isNaN(+x))?'-':(+x).toFixed(1);};"
+            "var lat=(p.lat!=null)?p.lat:f.geometry.coordinates[1];"
+            "var lon=(p.lon!=null)?p.lon:f.geometry.coordinates[0];"
+            "var html='<div style=\"font-family:sans-serif;font-size:12.5px;min-width:250px;\">'"
+            "+'<b style=\"color:%s;\">측정 후보지 #'+p.idx+'</b>&nbsp;'"
+            "+'<span style=\"background:%s;color:white;padding:1px 5px;border-radius:3px;font-size:11px;\">%s</span><br>'"
+            "+'<hr style=\"margin:4px 0;\">'"
+            "+'<b>위도:</b> '+lat.toFixed(5)+'° N &nbsp; <b>경도:</b> '+lon.toFixed(5)+'° E<br>'"
+            "+'<hr style=\"margin:4px 0;border-color:#ddd;\">'"
+            "+'<b>입지 점수: '+vn(p.score)+' / 100</b><br>'"
+            "+'<span style=\"font-size:11.5px;color:#333;\">'"
+            "+'&nbsp;① 희소성: '+vn(p.s1)+' / 25<br>'"
+            "+'&nbsp;② 지형적 대표성: '+vn(p.s2)+' / 15<br>'"
+            "+'&nbsp;③ 전력·철도 이격: '+vn(p.s3)+' / 15 '"
+            "+'<span style=\"color:#888;\">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'"
+            "+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '"
+            "+'<span style=\"color:#888;\">(도시 '+vn(p.du)+'km)</span><br>'"
+            "+'&nbsp;⑤ 자기균일: '+vn(p.s5)+' / 10<br>'"
+            "+'&nbsp;<span style=\"color:#999;\">⑦ 부지 지속성: 현장검토 / 10</span><br>'"
+            "+'&nbsp;<span style=\"color:#999;\">⑧ 관리 접근성: 현장검토 / 5</span><br>'"
+            "+'&nbsp;<span style=\"color:#999;\">⑥암상: 미산정</span>'"
+            "+'</span></div>';"
+            "l.bindPopup(html,{maxWidth:270});"
+            "l.bindTooltip('후보지 #'+p.idx+' P%d ('+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E)');"
+            "}"
+            "}).addTo(%s);"
+            "}).catch(function(e){console.warn('candidates_p%d:',e.message);});"
+            "})();</script>"
+        ) % (data_subdir, p, radius, ec, fc, ec, fc, plabel, p, pv, p)
+        m.get_root().html.add_child(folium.Element(js))
+
+    # ── 기존 측정점 레이어 (외부 GeoJSON fetch) ──────────────
+    exist_layer = folium.FeatureGroup(name="⭐ 기존 측정점 (22-25년)", show=True)
+    exist_layer.add_to(m)
+    ev  = exist_layer.get_name()
+    js  = (
+        "<script>(function(){"
+        "fetch('%s/existing_sites.geojson')"
+        ".then(function(r){return r.json();})"
+        ".then(function(d){"
+        "L.geoJSON(d,{"
+        "pointToLayer:function(f,ll){"
+        "var icon=L.divIcon({"
+        "html:'<div style=\"font-size:22px;line-height:1;"
+              "text-shadow:1px 1px 2px rgba(0,0,0,0.4);\">⭐</div>',"
+        "className:'',iconAnchor:[11,11]});"
+        "return L.marker(ll,{icon:icon});"
+        "},"
+        "onEachFeature:function(f,l){"
+        "var p=f.properties;"
+        "var vf=function(x,fmt){return(x===null||x===undefined)?'-':fmt(x);};"
+        "var html='<div style=\"font-family:sans-serif;font-size:12.5px;min-width:260px;\">'"
+        "+'<b style=\"color:#8B4513;\">⭐ 기존 측정점: '+p.name+'</b><br>'"
+        "+'<hr style=\"margin:4px 0;\">'"
+        "+'<b>위도:</b> '+p.lat.toFixed(6)+'° N &nbsp; <b>경도:</b> '+p.lon.toFixed(6)+'° E<br>'"
+        "+'<b>주소:</b> <span style=\"font-size:11px;\">'+(p.address||'-')+'</span><br>'"
+        "+'<hr style=\"margin:4px 0;border-color:#ddd;\">'"
+        "+'<b>최초설치:</b> '+(p.inst_year?p.inst_year+'년':'-')+' &nbsp; <b>최신관측:</b> '+p.obs_year+'년<br>'"
+        "+'<b>표고:</b> '+vf(p.elev,function(x){return x.toFixed(1)+' m'})+'<br>'"
+        "+'<hr style=\"margin:4px 0;border-color:#ddd;\">'"
+        "+'<b>측정값 ('+p.obs_year+'년)</b><br>'"
+        "+'<span style=\"font-size:11.5px;color:#333;\">'"
+        "+'&nbsp;편각: '+vf(p.decl,function(x){return x.toFixed(4)+'°'})+'<br>'"
+        "+'&nbsp;복각: '+vf(p.incl,function(x){return x.toFixed(4)+'°'})+'<br>'"
+        "+'&nbsp;총자력: '+vf(p.total,function(x){"
+        "return x.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1})+' nT';"
+        "})"
+        "+'</span></div>';"
+        "l.bindPopup(html,{maxWidth:290});"
+        "l.bindTooltip('⭐ '+p.name+' ('+p.obs_year+'년 관측)');"
+        "}"
+        "}).addTo(%s);"
+        "}).catch(function(e){console.warn('existing_sites:',e.message);});"
+        "})();</script>"
+    ) % (data_subdir, ev)
+    m.get_root().html.add_child(folium.Element(js))
 
     # ── 범례 ─────────────────────────────────────────────────
     n_cands = len(final_wgs)
@@ -1913,6 +2145,9 @@ def create_folium_map(
       {_dot('#FF0000',f'1등급 최우선 (데이터 공백): {n_p1}개')}
       {_dot('#FF8800',f'2등급 우선: {n_p2}개')}
       {_dot('#00BB00',f'3등급 일반: {n_p3}개')}
+      <hr style="margin:6px 0;border-color:#ccc;">
+      <b>▸ 기존 측정점</b><br>
+      <span style="display:inline-block;vertical-align:middle;margin-right:4px;">⭐</span>기존 측정점 15개 (최신 관측연도)<br>
       <hr style="margin:6px 0;border-color:#ccc;">
       <small style="color:#555;">
         격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/EPSG:5179<br>
@@ -1959,7 +2194,7 @@ def create_folium_map(
             <td>① 격자 데이터 희소성</td>
             <td style="text-align:center;">25</td>
             <td style="text-align:center;">✅</td></tr>
-        <tr><td>② 지형적 대표성</td>
+        <tr><td>② 지형 경사도</td>
             <td style="text-align:center;">15</td>
             <td style="text-align:center;">✅</td></tr>
         <tr style="border-top:1px solid #eee;">
@@ -1991,7 +2226,7 @@ def create_folium_map(
       <span style="color:#444;font-size:10.5px;">
       <b>산정 방식:</b><br>
       ① 후보점 간 평균 이격 거리 역산 (KDTree K=5)<br>
-      ② 중심+4방향(5km) 표고 표준편차 (Open-Elevation)<br>
+      ② 중심+4방향(5km) 표고 → 중앙차분 경사도(°) (Open-Elevation)<br>
       ③ log(전력·철도 이격 거리) 정규화<br>
       ④ log(도시·주거 이격 거리) 정규화<br>
       ⑤ KIGAM 반경 20km 내 자기이상 표준편차 역산<br>
@@ -2011,129 +2246,91 @@ def create_folium_map(
     """
     m.get_root().html.add_child(folium.Element(scoring_html))
 
-    # ── 1:50,000 도엽 격자 레이어 ────────────────────────────
-    if korea_gdf is not None:
-        try:
-            print("  1:50,000 도엽 격자 생성 중...")
-            topo_gdf = create_topo_sheet_grid(korea_gdf)
-            topo_layer = folium.FeatureGroup(
-                name="📐 1:50,000 지형도 도엽 (15'×15')", show=False
-            )
-            for _, row in topo_gdf.iterrows():
-                geom = row.geometry
-                coords = list(geom.exterior.coords)
-                # ── 폴리곤 경계선 ─────────────────────────────────────
-                mapidcd  = str(row.get("sheet_mapidcd", "")).strip()
-                mapidcd  = mapidcd if mapidcd not in ("", "nan", "None") else ""
-                # tooltip: NGII 형식 "도엽명 MAPIDCD_NO / MAPID_NO"
-                tip_name  = row["sheet_name"]
-                tip_code  = f"{mapidcd}  /  {row['sheet_code']}" if mapidcd else row["sheet_code"]
-                folium.Polygon(
-                    locations=[(lat, lon) for lon, lat in coords],
-                    color="#1A4A8A",
-                    weight=1.2,
-                    fill=True,
-                    fill_color="#4A90D9",
-                    fill_opacity=0.06,
-                    tooltip=(
-                        f"<b>{tip_name}</b>"
-                        f"<br><span style='color:#555;font-size:11px;'>"
-                        f"NGII No.&nbsp;{tip_code}</span>"
-                    ),
-                ).add_to(topo_layer)
+    # ── 1:50,000 도엽 격자 레이어 (외부 GeoJSON fetch) ──────────
+    topo_file = OUTPUT_DIR / data_subdir / "topo_sheets.geojson"
+    if topo_file.exists():
+        topo_layer = folium.FeatureGroup(
+            name="📐 1:50,000 지형도 도엽 (15'×15')", show=False
+        )
+        topo_layer.add_to(m)
+        tv  = topo_layer.get_name()
+        # fetch GeoJSON, draw each polygon + zoom-responsive label
+        topo_js = (
+            "<script>(function(){"
+            "fetch('%s/topo_sheets.geojson')"
+            ".then(function(r){return r.json();})"
+            ".then(function(fc){"
+            "fc.features.forEach(function(f){"
+            "var props=f.properties;"
+            "var nm=props.sheet_name||'';"
+            "var code=props.sheet_code||'';"
+            "var mcd=props.sheet_mapidcd||'';"
+            "var tipCode=mcd?mcd+'  /  '+code:code;"
+            "var tip='<b>'+nm+'</b><br><span style=\"color:#555;font-size:11px;\">NGII No.&nbsp;'+tipCode+'</span>';"
+            "var coords=f.geometry.coordinates[0].map(function(c){return[c[1],c[0]];});"
+            "L.polygon(coords,{color:'#1A4A8A',weight:1.2,fill:true,"
+            "fillColor:'#4A90D9',fillOpacity:0.06}).bindTooltip(tip,{sticky:true}).addTo(%s);"
+            "var cx=props.cx||0,cy=props.cy||0;"
+            "var sub=mcd?'<br><span style=\"font-weight:normal;font-size:0.85em;color:#336;\">'+mcd+'</span>':'';"
+            "var lbl='<div class=\"topo-label\" style=\"display:none;pointer-events:none;"
+            "text-align:center;font-family:Malgun Gothic,sans-serif;color:#1A3A6A;"
+            "white-space:nowrap;font-weight:bold;line-height:1.3;"
+            "text-shadow:1px 1px 0 white,-1px -1px 0 white,1px -1px 0 white,-1px 1px 0 white;\">'"
+            "+nm+sub+'</div>';"
+            "L.marker([cy,cx],{icon:L.divIcon({html:lbl,className:'',iconAnchor:[45,15],"
+            "iconSize:[90,30]})}).addTo(%s);"
+            "});"
+            "});"
+            "})();</script>"
+        ) % (data_subdir, tv, tv)
+        m.get_root().html.add_child(folium.Element(topo_js))
 
-                # ── 셀 중심 도엽명 라벨 (줌 반응형) ────────────────────
-                cx = geom.centroid.x
-                cy = geom.centroid.y
-                # 라벨: "도엽명\nMAPIDCD_NO" (NGII 표기 형식)
-                label_line1 = row["sheet_name"]
-                label_line2 = mapidcd  # 5자리 번호 (예: 36807)
-                name_esc    = label_line1.replace("'", "\\'").replace('"', "&quot;")
-                sub_span    = (
-                    '<br><span style="font-weight:normal;font-size:0.85em;color:#336;">'
-                    + label_line2 + "</span>"
-                ) if label_line2 else ""
-                html_label  = (
-                    f'<div class="topo-label" data-name="{name_esc}"'
-                    f' style="display:none;pointer-events:none;text-align:center;'
-                    f"font-family:'Malgun Gothic',sans-serif;"
-                    f'color:#1A3A6A;white-space:nowrap;font-weight:bold;line-height:1.3;'
-                    f'text-shadow:1px 1px 0 white,-1px -1px 0 white,'
-                    f'1px -1px 0 white,-1px 1px 0 white,0 0 4px white;">'
-                    f'{label_line1}{sub_span}</div>'
-                )
-                folium.Marker(
-                    location=[cy, cx],
-                    icon=folium.DivIcon(
-                        html=html_label,
-                        icon_size=(90, 30),
-                        icon_anchor=(45, 15),
-                    ),
-                ).add_to(topo_layer)
-            topo_layer.add_to(m)
-
-            # 줌 레벨별 도엽명 라벨 크기·표시 동적 조절
-            zoom_js = """
-            <script>
-            (function() {
-                // 줌 레벨별 라벨 스타일 설정
-                // zoom  7 이하: 숨김
-                // zoom  8~9  : 7px — 전국 뷰
-                // zoom 10    : 10px
-                // zoom 11    : 13px
-                // zoom 12+   : 16px — 시/군 뷰
-                function applyTopoLabels(zoom) {
-                    var labels = document.querySelectorAll('.topo-label');
-                    var display, size, weight, shadow;
-                    if (zoom <= 7) {
-                        display = 'none';
-                    } else if (zoom === 8) {
-                        display = 'block'; size = '7px'; weight = 'normal';
-                    } else if (zoom === 9) {
-                        display = 'block'; size = '9px'; weight = 'bold';
-                    } else if (zoom === 10) {
-                        display = 'block'; size = '12px'; weight = 'bold';
-                    } else if (zoom === 11) {
-                        display = 'block'; size = '14px'; weight = 'bold';
-                    } else {
-                        display = 'block'; size = '17px'; weight = 'bold';
-                    }
-                    labels.forEach(function(el) {
-                        el.style.display = display;
-                        if (display !== 'none') {
-                            el.style.fontSize   = size;
-                            el.style.fontWeight = weight;
-                        }
-                    });
+        # 줌 레벨별 도엽명 라벨 크기·표시 동적 조절
+        zoom_js = """
+        <script>
+        (function() {
+            function applyTopoLabels(zoom) {
+                var labels = document.querySelectorAll('.topo-label');
+                var display, size, weight;
+                if (zoom <= 7) {
+                    display = 'none';
+                } else if (zoom === 8) {
+                    display = 'block'; size = '7px'; weight = 'normal';
+                } else if (zoom === 9) {
+                    display = 'block'; size = '9px'; weight = 'bold';
+                } else if (zoom === 10) {
+                    display = 'block'; size = '12px'; weight = 'bold';
+                } else if (zoom === 11) {
+                    display = 'block'; size = '14px'; weight = 'bold';
+                } else {
+                    display = 'block'; size = '17px'; weight = 'bold';
                 }
-                document.addEventListener('DOMContentLoaded', function() {
-                    var mapVarName = Object.keys(window).find(
-                        function(k) { return /^map_[a-f0-9]+$/.test(k); }
-                    );
-                    if (!mapVarName) return;
-                    var leafletMap = window[mapVarName];
-                    // 초기 적용
-                    setTimeout(function() {
-                        applyTopoLabels(leafletMap.getZoom());
-                    }, 300);
-                    // 줌 변경 시 적용
-                    leafletMap.on('zoomend', function() {
-                        applyTopoLabels(leafletMap.getZoom());
-                    });
-                    // 레이어 토글 시에도 적용
-                    leafletMap.on('overlayadd overlayremove', function() {
-                        setTimeout(function() {
-                            applyTopoLabels(leafletMap.getZoom());
-                        }, 100);
-                    });
+                labels.forEach(function(el) {
+                    el.style.display = display;
+                    if (display !== 'none') {
+                        el.style.fontSize   = size;
+                        el.style.fontWeight = weight;
+                    }
                 });
-            })();
-            </script>
-            """
-            m.get_root().html.add_child(folium.Element(zoom_js))
-
-        except Exception as exc:
-            print(f"  ⚠ 도엽 격자 생성 실패: {exc}")
+            }
+            document.addEventListener('DOMContentLoaded', function() {
+                var mapVarName = Object.keys(window).find(
+                    function(k) { return /^map_[a-f0-9]+$/.test(k); }
+                );
+                if (!mapVarName) return;
+                var leafletMap = window[mapVarName];
+                setTimeout(function() { applyTopoLabels(leafletMap.getZoom()); }, 300);
+                leafletMap.on('zoomend', function() {
+                    applyTopoLabels(leafletMap.getZoom());
+                });
+                leafletMap.on('overlayadd overlayremove', function() {
+                    setTimeout(function() { applyTopoLabels(leafletMap.getZoom()); }, 100);
+                });
+            });
+        })();
+        </script>
+        """
+        m.get_root().html.add_child(folium.Element(zoom_js))
 
     # ── 주소 검색 창 — 좌상단 고정 ──────────────────────────────
     # Nominatim OSM geocoder — 한국 도로명·지번·지명 검색
@@ -2145,11 +2342,10 @@ def create_folium_map(
         border-radius:8px; padding:9px 11px;
         font-family:'Malgun Gothic',sans-serif; font-size:12px;
         box-shadow:2px 2px 8px rgba(0,0,0,0.25); width:278px;">
-      <b style="font-size:12px;color:#224;">&#128269; 주소 / 지명 검색</b>
-      <span style="font-size:10px;color:#888;margin-left:3px;">도로명&#183;지번&#183;지명</span>
+      <b style="font-size:12px;color:#224;">&#128269; 주소 / 지명 / 좌표 검색</b>
       <div style="display:flex;gap:4px;margin-top:6px;">
         <input id="gc-input" type="text"
-          placeholder="예: 태백시, 홍성군, 설악산, 안동시..."
+          placeholder="예: 태백시 / 37.5665,126.9780"
           style="flex:1;padding:5px 7px;border:1px solid #aac;
                  border-radius:5px;font-size:11.5px;outline:none;
                  font-family:'Malgun Gothic',sans-serif;">
@@ -2159,7 +2355,7 @@ def create_folium_map(
                  font-size:11.5px;white-space:nowrap;flex-shrink:0;">검색</button>
       </div>
       <div style="margin-top:3px;font-size:9.5px;color:#aaa;">
-        ※ 시&#183;군&#183;구 / 산&#183;강 / 지명 위주 검색 권장 (리&#183;동 단위는 생략)
+        위경도 직접 입력 가능: <i>37.5665, 126.9780</i> (위도, 경도)
       </div>
       <div id="gc-result" style="margin-top:5px;font-size:11px;color:#444;
            max-height:200px;overflow-y:auto;border-top:1px solid #eee;
@@ -2184,7 +2380,8 @@ def create_folium_map(
       }
 
       /* ── 결과 렌더링 ─────────────────────────────────────── */
-      function gcRender(items, query) {
+      /* note: 상단에 표시할 안내 문자열 (optional) */
+      function gcRender(items, query, note) {
         var div = document.getElementById('gc-result');
         if (!div) return;
         div.style.display = 'block';
@@ -2203,7 +2400,10 @@ def create_folium_map(
           building:'건물', highway:'도로', residential:'주거',
           peak:'산', water:'수계', forest:'산림'
         };
-        var html = '';
+        var html = note
+          ? '<div style="color:#886;font-size:10px;padding:2px 0 4px;">'
+            + '&#128161; ' + note + '</div>'
+          : '';
         items.slice(0, 8).forEach(function(item, i) {
           var parts  = item.display_name.split(',');
           var label  = parts.slice(0, Math.min(3, parts.length)).join(', ').trim();
@@ -2226,22 +2426,52 @@ def create_folium_map(
 
       /* ── fetch 래퍼 (에러 시 null 반환) ─────────────────────── */
       function nomFetch(url, cb) {
-        fetch(url, {method:'GET', mode:'cors', cache:'no-cache'})
+        fetch(url)
           .then(function(r) {
             if (!r.ok) { console.warn('[GC] HTTP', r.status, url); cb(null); return; }
             return r.json();
           })
-          .then(function(d) { cb(d || null); })
+          .then(function(d) { if (d !== undefined) cb(d || null); })
           .catch(function(e) { console.warn('[GC] fetch error:', e.message); cb(null); });
       }
 
-      /* ── 검색 메인 (3단계 폴백) ─────────────────────────────── */
+      /* ── 좌표 파싱 헬퍼 ──────────────────────────────────────── */
+      /* "33.524, 126.894" / "33.524480,126.894162" 등 다양한 구분자 지원 */
+      function parseCoords(q) {
+        /* 숫자 두 개를 쉼표·공백·세미콜론 중 하나로 구분 */
+        var re = /^(-?[0-9]+[.]?[0-9]*)[,; ]+(-?[0-9]+[.]?[0-9]*)$/;
+        var m = q.trim().match(re);
+        if (!m) return null;
+        var a = parseFloat(m[1]), b = parseFloat(m[2]);
+        if (isNaN(a) || isNaN(b)) return null;
+        /* 한반도 범위: 위도 33-38°, 경도 124-132° */
+        if (a >= 33 && a <= 39 && b >= 124 && b <= 132) return {lat:a, lon:b};
+        /* 입력이 경도·위도 순서로 뒤바뀐 경우 */
+        if (b >= 33 && b <= 39 && a >= 124 && a <= 132) return {lat:b, lon:a};
+        /* 한반도 범위 밖이지만 위경도 형식으로 판단되면 그대로 사용 */
+        if (a >= -90 && a <= 90 && b >= -180 && b <= 180) return {lat:a, lon:b};
+        return null;
+      }
+
+      /* ── 검색 메인 (좌표 우선 → 3단계 Nominatim 폴백) ───────── */
       window.gcSearch = function() {
         var inp = document.getElementById('gc-input');
         var div = document.getElementById('gc-result');
         if (!inp || !div) return;
         var q = inp.value.trim();
         if (!q) return;
+
+        /* ① 좌표 직접 입력 감지 ───────────────────────────────── */
+        var coords = parseCoords(q);
+        if (coords) {
+          div.style.display = 'block';
+          div.innerHTML = '<div style="color:#226;padding:3px 0;">'
+            + '&#128205; 좌표 이동: ' + coords.lat.toFixed(5) + '°N, '
+            + coords.lon.toFixed(5) + '°E</div>';
+          gcJump(coords.lat, coords.lon,
+            coords.lat.toFixed(5) + ', ' + coords.lon.toFixed(5));
+          return;
+        }
 
         div.style.display = 'block';
         div.innerHTML = '<span style="color:#888;"><i>&#128269; 검색 중...</i></span>';
@@ -2262,7 +2492,7 @@ def create_folium_map(
             if (d2 && d2.length > 0) { gcRender(d2, q); return; }
 
             /* 시도3: 상위 행정구역만 (공백 기준 앞 2토큰) */
-            var tokens = q.split(/\\s+/);
+            var tokens = q.trim().split(' ').filter(function(t){return t.length>0;});
             var short  = tokens.slice(0, Math.min(2, tokens.length)).join(' ');
             if (short === q) { gcRender([], q); return; }   // 이미 단어 1개
             console.log('[GC] try3 simplified:', short);
@@ -2270,21 +2500,7 @@ def create_folium_map(
             nomFetch(u3, function(d3) {
               console.log('[GC] try3 count:', d3 ? d3.length : 'null');
               if (d3 && d3.length > 0) {
-                /* 결과에 "간략화 안내" 표시 */
-                div.style.display = 'block';
-                div.innerHTML = '<div style="color:#886;font-size:10px;padding:2px 0 4px;">'
-                  + '&#128161; <i>"' + short + '"</i> 기준 결과 (주소 단순화)</div>';
-                var tmp = document.createElement('div');
-                document.body.appendChild(tmp);
-                /* gcRender를 임시 div에 쓰고 내용만 가져오기 */
-                var prev = document.getElementById('gc-result');
-                tmp.id = 'gc-result';
-                gcRender(d3, short);
-                tmp.id = '';
-                prev.innerHTML += tmp.innerHTML;
-                document.body.removeChild(tmp);
-                /* 다시 원래 id 복원 */
-                prev.id = 'gc-result';
+                gcRender(d3, short, '<i>"' + short + '"</i> 기준 결과 (주소 단순화)');
               } else {
                 gcRender([], q);
               }
@@ -2392,7 +2608,7 @@ def estimate_runtime() -> None:
     raw_pts      = 100_000 / (grid_km ** 2)
     est_cands    = int(raw_pts * 0.30)
 
-    dem_cache    = DATA_DIR / "dem_elevations.json"
+    dem_cache    = DATA_DIR / "dem_slopes.json"
     dem_per_pt   = 0.05 if dem_cache.exists() else 1.5
     dem_time     = est_cands * dem_per_pt
 
@@ -2493,7 +2709,19 @@ def main():
 
     # ── 7. 지도 생성 ─────────────────────────────────────────
     t_step = time.time()
-    m = create_folium_map(zones, grid, final_candidates, korea_gdf=korea)
+    print("\n▶ 기존 측정점 로드")
+    existing_sites = load_existing_sites()
+
+    print("\n▶ 지도 데이터 파일 저장 (output/data/)")
+    data_dir = OUTPUT_DIR / "data"
+    save_map_data(zones, grid, final_candidates, existing_sites, korea, data_dir)
+
+    m = create_folium_map(
+        zones, grid, final_candidates,
+        korea_gdf=korea,
+        existing_sites=existing_sites,
+        data_subdir="data",
+    )
 
     # ── 8. HTML 저장 ─────────────────────────────────────────
     html_path = OUTPUT_DIR / "geomag_site_selection.html"
@@ -2511,7 +2739,7 @@ def main():
         for c in ["priority", "score",
                   "s1_희소성", "s2_지형", "s3_전력철도", "s4_인구이격",
                   "s5_자기균일",
-                  "dem_std_m", "d_power_km", "d_railway_km", "d_urban_km"]:
+                  "dem_slope_deg", "d_power_km", "d_railway_km", "d_urban_km"]:
             if c in result.columns:
                 cols.append(c)
 
@@ -2533,6 +2761,21 @@ def main():
 
     elapsed = time.time() - t_total_start
     print(f"\n✅ 완료!  총 소요 시간: {_fmt_time(elapsed)}")
+
+    # ── 로컬 서버 실행 안내 ──────────────────────────────────
+    print("\n" + "=" * 66)
+    print("  ⚠  HTML 파일은 직접 열기(file://) 대신 로컬 HTTP 서버로 열어야")
+    print("     fetch() 가 정상 동작합니다.")
+    print()
+    print("  방법 1 — Python 내장 서버 (권장):")
+    print(f"    cd \"{OUTPUT_DIR.resolve()}\"")
+    print(f"    python -m http.server 8000")
+    print(f"    → 브라우저: http://localhost:8000/geomag_site_selection.html")
+    print()
+    print("  방법 2 — 스크립트 폴더에서 실행:")
+    print(f"    python -m http.server 8000 --directory \"{OUTPUT_DIR.resolve()}\"")
+    print("=" * 66)
+
     return final_candidates
 
 
