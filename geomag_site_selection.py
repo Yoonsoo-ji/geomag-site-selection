@@ -1745,10 +1745,110 @@ def _geom_to_wgs84(geom_utm, crs=UTM_CRS) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(geometry=[geom_utm], crs=crs).to_crs(WGS84_CRS)
 
 
+def _dms_str_to_dd(s) -> float:
+    """'128° 51′ 34.0000' 형식의 도분초 문자열 → 소수도(DD)"""
+    import re as _re
+    if pd.isna(s):
+        return float("nan")
+    m = _re.search(r"([\d.]+)[°\s]\s*([\d.]+)[′'\s]\s*([\d.]+)", str(s))
+    if not m:
+        return float("nan")
+    d, mn, sc = float(m.group(1)), float(m.group(2)), float(m.group(3))
+    return d + mn / 60.0 + sc / 3600.0
+
+
+def _load_old_sites(existing_names: set) -> "pd.DataFrame":
+    """
+    '10~'19년 지자기점 관측현황(최종).xls 에서
+    22_25 파일에 없는 측정점만 추출하여 반환.
+    """
+    xls_path = DATA_DIR / "'10~'19년 지자기점 관측현황(최종).xls"
+    if not xls_path.exists():
+        return pd.DataFrame()
+    try:
+        raw = pd.read_excel(xls_path, header=0, engine="xlrd")
+        # 첫 2행은 서브헤더 → 스킵, 컬럼은 정수 인덱스로 재설정
+        data = raw.iloc[2:].reset_index(drop=True)
+        data.columns = range(len(data.columns))
+        # col[2]=도엽명, col[3]=관할지자체, col[4]=소재지, col[5]=매설일자
+        # col[6]=경도(DMS), col[7]=위도(DMS), col[8]=표고
+        # col[9]=편각(DMS 양수), col[10]=복각(DMS), col[11]=전자력(총자력)
+        # col[15..25]=10년~20년 관측여부(ㅇ)
+        year_map = {15: 2010, 16: 2011, 17: 2012, 18: 2013, 19: 2014,
+                    20: 2015, 21: 2016, 22: 2017, 23: 2018, 24: 2019, 25: 2020}
+
+        rows = []
+        for _, row in data.iterrows():
+            name = str(row[2]).strip() if pd.notna(row[2]) else ""
+            if not name or name == "nan":
+                continue
+            if name in existing_names:
+                continue  # 22_25에 이미 있는 측정점은 제외
+            lat = _dms_str_to_dd(row[7])
+            lon = _dms_str_to_dd(row[6])
+            if pd.isna(lat) or pd.isna(lon):
+                continue
+            # 마지막으로 'ㅇ'가 기록된 연도
+            obs_year = None
+            for ci, yr in year_map.items():
+                if ci < len(row) and pd.notna(row[ci]) and str(row[ci]).startswith("ㅇ"):
+                    obs_year = yr
+            if obs_year is None:
+                obs_year = 2019  # 기본값
+            # 표고 파싱 ('97.24m' → 97.24)
+            elev_raw = str(row[8]).replace("m", "").strip() if pd.notna(row[8]) else ""
+            try:
+                elev = float(elev_raw)
+            except ValueError:
+                elev = float("nan")
+            # 편각: 구 파일은 양수 DMS → 한국 서편각이므로 음수로 변환
+            decl = _dms_str_to_dd(row[9])
+            if not pd.isna(decl):
+                decl = -decl
+            incl  = _dms_str_to_dd(row[10])
+            try:
+                total = float(row[11]) if pd.notna(row[11]) else float("nan")
+            except (ValueError, TypeError):
+                total = float("nan")
+            # 총자력이 정상 범위(40000~60000 nT)를 벗어나면 nan 처리
+            if not pd.isna(total) and not (40000 <= total <= 60000):
+                total = float("nan")
+            # 최초설치 연도 파싱
+            inst_raw = str(row[5]).strip() if pd.notna(row[5]) else ""
+            try:
+                inst_year = int(float(inst_raw))
+            except (ValueError, TypeError):
+                inst_year = None
+            addr = str(row[4]).strip() if pd.notna(row[4]) else ""
+            # 관할지자체를 주소 앞에 보완
+            region = str(row[3]).strip() if pd.notna(row[3]) else ""
+            if region and not addr.startswith(region):
+                addr = region + " " + addr
+            rows.append({
+                "연번":     None,
+                "도엽명":   name,
+                "주소":     addr,
+                "최초설치": inst_year,
+                "관측연도": obs_year,
+                "위도":     lat,
+                "경도":     lon,
+                "표고":     elev,
+                "편각":     decl,
+                "복각":     incl,
+                "총자력":   total,
+            })
+        df_old = pd.DataFrame(rows)
+        print(f"  ✅ 구 파일 추가 측정점 {len(df_old)}개 로드 완료 (10~19년)")
+        return df_old
+    except Exception as exc:
+        print(f"  ⚠ 구 파일 로드 실패: {exc}")
+        return pd.DataFrame()
+
+
 def load_existing_sites() -> "pd.DataFrame | None":
     """
-    지자기측량 성과정리(22_25).xlsx 에서 기존 15개 측정점 정보를 로드.
-    각 측점별 최신 관측연도 행을 반환한다.
+    22_25.xlsx (기본) + '10~'19년.xls (보완) 두 파일을 병합하여
+    전체 기존 측정점 정보를 반환한다. 중복(도엽명 기준)은 22_25 우선.
     """
     xlsx_path = DATA_DIR / "지자기측량 성과정리(22_25).xlsx"
     if not xlsx_path.exists():
@@ -1783,9 +1883,17 @@ def load_existing_sites() -> "pd.DataFrame | None":
         df_work["관측연도"] = pd.to_numeric(df_work["관측연도"], errors="coerce")
         df_work = df_work.dropna(subset=["위도", "경도", "관측연도"])
         # 각 도엽명별 최신 관측연도 행 선택
-        idx_max    = df_work.groupby("도엽명")["관측연도"].idxmax()
-        df_latest  = df_work.loc[idx_max].reset_index(drop=True)
-        print(f"  ✅ 기존 측정점 {len(df_latest)}개 로드 완료 (최신 관측연도 기준)")
+        idx_max   = df_work.groupby("도엽명")["관측연도"].idxmax()
+        df_latest = df_work.loc[idx_max].reset_index(drop=True)
+        print(f"  ✅ 22_25 측정점 {len(df_latest)}개 로드 완료")
+
+        # 구 파일(10~19년)에서 추가 측정점 병합
+        existing_names = set(df_latest["도엽명"].dropna().unique())
+        df_old = _load_old_sites(existing_names)
+        if not df_old.empty:
+            df_latest = pd.concat([df_latest, df_old], ignore_index=True)
+
+        print(f"  ✅ 기존 측정점 총 {len(df_latest)}개 (22_25 + 구파일 병합)")
         return df_latest
     except Exception as exc:
         print(f"  ⚠ 기존 측정점 로드 실패: {exc}")
