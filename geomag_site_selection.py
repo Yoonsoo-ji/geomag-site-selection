@@ -2168,7 +2168,7 @@ def create_folium_map(
         m.get_root().html.add_child(folium.Element(js))
 
     # ── 기존 측정점 레이어 (외부 GeoJSON fetch) ──────────────
-    exist_layer = folium.FeatureGroup(name="⭐ 기존 측정점 (22-25년)", show=True)
+    exist_layer = folium.FeatureGroup(name="⭐ 기존 측정점 (10~25년)", show=True)
     exist_layer.add_to(m)
     ev  = exist_layer.get_name()
     js  = (
