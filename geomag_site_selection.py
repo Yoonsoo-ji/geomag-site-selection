@@ -43,6 +43,13 @@ Korea Geomagnetic Field Model — Measurement Site Selection Tool
         ▸ 100~200 nT: 현장 검토 필요
         ▸ > 200 nT : 제외 (hard cut)
         ▸ ※ 광역 자력이상도 예비선정이며, 최종 확정은 현장 정밀 자력측량 필요
+  [9] 지질 — 자성 암종 (수치지질도 1:250,000, KIGAM)
+        ▸ 현무암(Qb*, Tb, Jb), 반려암·휘록암(Jgb, Kgb, Jda, Kdi 등),
+          화산암류(Kv*, Tav, Kav, bg, v 등), 각섬암(am) — 폴리곤 직접 제외
+        ▸ 출처: KIGAM 수치지질도 1:250,000 전국 (Geology_250K_Litho.shp)
+  [10] 지질 — 단층 버퍼 (수치지질도 1:250,000)
+        ▸ 파쇄대 인근 자화 불균질·국소 이상 위험 반경 0.5 km
+        ▸ 출처: KIGAM 수치지질도 1:250,000 전국 (Geology_250K_Fault.shp)
 
 ━━━ 모델 구축 우선순위 가중치 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
   - 후보점 공간 희소성 (전국 균일 분포, 제13조① 기준)
@@ -91,7 +98,23 @@ KOREA_BBOX = (124.5, 33.0, 129.6, 38.9)
 #                고압철탑 1 km / 송전탑 0.5 km
 #   OSM 단순화:  철도 종류 구분 불가 → 직류 기준 5 km (보수적)
 #                철탑 종류 구분 불가 → 고압철탑 기준 1 km (보수적)
-POWER_BUFFER_M      = 1_000   # [1] 고압철탑·송전탑 통합  1.0 km  (제13조)
+# [1] 전력 인프라 — 전압별 차등 버퍼 (제13조, HTML 실측 데이터 기반)
+POWER_LINE_BUFFER = {
+    765: 2_000,   # 765kV 초고압 송전선  2.0 km
+    500: 2_000,   # 500kV               2.0 km
+    380: 1_500,   # 380kV               1.5 km
+    345: 1_500,   # 345kV               1.5 km
+    220: 1_000,   # 220kV               1.0 km
+    154: 1_000,   # 154kV               1.0 km
+}
+POWER_BUFFER_M      = 1_000   # 기본 버퍼 (하위 호환)
+PLANT_BUFFER = {
+    'nuclear': 5_000,  # 원자력 발전소 5 km
+    'coal':    2_000,  # 석탄 발전소   2 km
+    'gas':     1_500,  # 가스 발전소   1.5 km
+    'hydro':     500,  # 수력          0.5 km
+    'other':     500,  # 기타          0.5 km
+}
 RAILWAY_BUFFER_M    = 5_000   # [2] 철도 통합             5.0 km  (제13조 직류철도 기준)
 # [3] 도시·주거       → 폴리곤 직접 제외             (제14조①)
 PIPELINE_BUFFER_M   =   500   # [4] 파이프라인             0.5 km
@@ -135,6 +158,49 @@ ANOMALY_VARIATION_THRESHOLD  = ANOMALY_EXCLUDE_THRESHOLD_NT
 TOPO50K_SHP = DATA_DIR / "국가기본도_도엽인덱스50K" / "TN_MAPINDX_50K.shp"
 NGII_SHEETS_CSV = DATA_DIR / "ngii_50k_sheets.csv"  # 백업용 CSV (SHP 없을 때)
 KIGAM_MAG_DAT = DATA_DIR / "mag_1982-2018_1.5min_ed.dat"
+
+# ── 수치지질도 (1:250,000) ────────────────────────────────────────────
+# 출처: 한국지질자원연구원(KIGAM) 수치지질도_25만축척_전국
+# CRS: EPSG:4326 (WGS84)
+GEOLOGY_DIR   = DATA_DIR / "수치지질도_25만축척_전국"
+GEOLOGY_LITHO = GEOLOGY_DIR / "Geology_250K_Litho.shp"
+GEOLOGY_FAULT = GEOLOGY_DIR / "Geology_250K_Fault.shp"
+
+# 단층 버퍼 — 단층대 인근은 파쇄대·자화 불균질 위험
+FAULT_BUFFER_M = 500   # [지질] 단층선 0.5 km
+
+# 자성 암종 lithoidx 코드 (한국 지질도 기호 표준)
+# 이들 암종은 자철광 함유 또는 높은 잔류자화로 국소 자기이상을 유발함.
+# ■ 현무암류 (Basalt)       : 잔류자화 수백~수천 nT
+# ■ 반려암·휘록암 (Gabbro/Diabase): 자철광 함량 높아 자기이상 수십~수백 nT
+# ■ 화산암류 (Volcanic)     : 용암 냉각 시 자화 고정 → 국소이상
+# ■ 각섬암 (Amphibolite)    : 변성 과정 자화 보존 가능
+# ※ 적용 기준: 자기이상도에서 해당 암종과 이상대 일치 빈도가 높은 코드만 포함
+#   (전문가 의견 기반 — 광역 이상도 보완 수단, 현장 정밀측량으로 최종 확인 필요)
+MAGNETIC_ROCK_CODES: set = {
+    # 현무암 (Quaternary basalt — 제주도·포천 등)
+    "Qb", "Qb(I)", "Qb(I)(T)", "Qb(II)", "Qb(II)(S)", "Qb(III)", "Qb(III)(S)",
+    "Qtb", "Qtb(I)", "Qtb(I)(T)", "Qtb(II)", "Qtb(II)(S)", "Qtb(III)", "Qtb(III)(S)",
+    "Qtb(IV)", "Qtb(IV)(S)", "Qtb(V)", "Qtb(V)(S)", "Qtb(VI)", "Qtb(VI)(S)",
+    "Qtb(VII)", "Qtb(VII)(S)", "Qtb(VIII)", "Qtb(VIII)(S)", "Qtb(VIII)(T)",
+    "Qtb(VIII)((T)", "Qtt",
+    # 신생대 현무암·화산암 (Tertiary basalt/volcanic)
+    "Tb", "Tbv", "Tav", "Teo", "Te1", "Te2", "Te3",
+    # 쥐라기 현무암 (Jurassic basalt)
+    "Jb",
+    # 반려암 (Gabbro)
+    "Jgb", "Jga", "Kgb",
+    # 휘록암·반려암질 (Diabase/Doleritic)
+    "Jda", "Jdi", "Kdi", "Kdd",
+    # 안산암·안산암질 화산암 (Andesite/Andesitic volcanic)
+    "Kan", "Kav",
+    # 백악기 화산암류 (Cretaceous volcanic)
+    "Kv", "Kkv", "Kjv", "Kgsv", "Khsv", "Kpsv", "Kssv", "Ktsv", "Kchv", "Kcv",
+    # 미분류 염기성암·화산암
+    "bg", "v",
+    # 각섬암 (Amphibolite — 철감람석·자철광 포함 변성암)
+    "am",
+}
 
 
 # ============================================================
@@ -416,30 +482,77 @@ def get_korea_boundary() -> gpd.GeoDataFrame:
 
 def get_power_infrastructure() -> gpd.GeoDataFrame:
     """
-    송전탑 (power=tower/pole) 및 송전선 (power=line/cable) 취득
-    OSM 대한민국 전역 쿼리
+    전력 인프라 데이터 로드 (HTML 추출 GeoJSON 우선, OSM fallback).
+
+    전압별 버퍼 거리:
+      765/500kV → 2 km, 345/380kV → 1.5 km, 154/220kV → 1 km
     """
-    print("\n[2/6] 송전 인프라 데이터 취득...")
-    s, w, n, e = KOREA_BBOX[1], KOREA_BBOX[0], KOREA_BBOX[3], KOREA_BBOX[2]
-    query = f"""
-    [out:json][timeout:300];
-    (
-      node["power"="tower"]({s},{w},{n},{e});
-      node["power"="pole"]({s},{w},{n},{e});
-      way["power"="line"]({s},{w},{n},{e});
-      way["power"="cable"]({s},{w},{n},{e});
-      way["power"="minor_line"]({s},{w},{n},{e});
-    );
-    out body;
-    >;
-    out skel qt;
-    """
-    gdf = elements_to_gdf(
-        query_overpass(query, DATA_DIR / "power_infra.json"),
-        keep_tags=["power"],
-    )
-    print(f"    송전 인프라: {len(gdf)}개 요소")
-    return gdf
+    print("\n[2/6] 전력 인프라 데이터 취득...")
+
+    lines_path  = DATA_DIR / "power_lines.geojson"
+    plants_path = DATA_DIR / "power_plants.geojson"
+    subs_path   = DATA_DIR / "power_subs.geojson"
+
+    gdfs = []
+
+    # ── 송전선 ────────────────────────────────────────────────────────────
+    if lines_path.exists():
+        lines_gdf = gpd.read_file(str(lines_path))
+        # 전압별 버퍼 컬럼 추가
+        lines_gdf["buffer_m"] = lines_gdf["voltage_kv"].map(
+            lambda kv: POWER_LINE_BUFFER.get(int(kv) if kv else 0, POWER_BUFFER_M)
+        )
+        lines_gdf["power_type"] = "line"
+        gdfs.append(lines_gdf)
+        kv_counts = lines_gdf["voltage_kv"].value_counts().to_dict()
+        print(f"    송전선 로드: {len(lines_gdf)}건 | {kv_counts}")
+    else:
+        print("    ⚠ power_lines.geojson 없음 — OSM fallback")
+        s, w, n, e = KOREA_BBOX[1], KOREA_BBOX[0], KOREA_BBOX[3], KOREA_BBOX[2]
+        query = f"""
+        [out:json][timeout:300];
+        (
+          node["power"="tower"]({s},{w},{n},{e});
+          node["power"="pole"]({s},{w},{n},{e});
+          way["power"="line"]({s},{w},{n},{e});
+          way["power"="cable"]({s},{w},{n},{e});
+        );
+        out body;>;out skel qt;
+        """
+        fallback = elements_to_gdf(
+            query_overpass(query, DATA_DIR / "power_infra.json"),
+            keep_tags=["power"],
+        )
+        fallback["buffer_m"] = POWER_BUFFER_M
+        fallback["power_type"] = "line_osm"
+        gdfs.append(fallback)
+
+    # ── 발전소 ────────────────────────────────────────────────────────────
+    if plants_path.exists():
+        plants_gdf = gpd.read_file(str(plants_path))
+        plants_gdf["buffer_m"] = plants_gdf["fuel"].map(
+            lambda f: PLANT_BUFFER.get(str(f), 500)
+        )
+        plants_gdf["power_type"] = "plant"
+        gdfs.append(plants_gdf)
+        fuel_counts = plants_gdf["fuel"].value_counts().to_dict()
+        print(f"    발전소 로드: {len(plants_gdf)}건 | {fuel_counts}")
+
+    # ── 변전소 ────────────────────────────────────────────────────────────
+    if subs_path.exists():
+        subs_gdf = gpd.read_file(str(subs_path))
+        subs_gdf["buffer_m"] = POWER_BUFFER_M
+        subs_gdf["power_type"] = "substation"
+        gdfs.append(subs_gdf)
+        print(f"    변전소 로드: {len(subs_gdf)}건")
+
+    if not gdfs:
+        raise RuntimeError("전력 인프라 데이터를 로드할 수 없습니다.")
+
+    combined = pd.concat(gdfs, ignore_index=True)
+    combined = combined.set_crs(WGS84_CRS, allow_override=True)
+    print(f"    전력 인프라 총계: {len(combined)}건")
+    return combined
 
 
 def get_railways() -> gpd.GeoDataFrame:
@@ -687,6 +800,96 @@ def get_water_bodies() -> gpd.GeoDataFrame:
     )
     print(f"    수계/수면: {len(gdf)}개 요소")
     return gdf
+
+
+def get_geology() -> "tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]":
+    """
+    [지질] 수치지질도 1:250,000 로드.
+
+    반환:
+      (mag_rocks_gdf, faults_gdf)
+      mag_rocks_gdf : 자성 암종 폴리곤 (WGS84)
+      faults_gdf    : 단층선 (WGS84)
+
+    ■ 자성 암종 적용 기준 (MAGNETIC_ROCK_CODES):
+      - 현무암 (Qb*, Tb, Jb) — 잔류자화 매우 높음
+      - 반려암·휘록암 (Jgb, Kgb, Jda, Jdi, Kdi, Kdd) — 자철광 함량 높음
+      - 화산암류 (Kv*, Tav, Kan, Kav, bg, v 등) — 용암 냉각 시 자화 고정
+      - 각섬암 (am) — 변성 과정 자화 보존
+    ■ 단층 버퍼 (FAULT_BUFFER_M = 500 m):
+      파쇄대 인근 자화 불균질 및 국소 이상 위험.
+    ■ 주의: 광역(25만분의1) 기반 예비 필터이며, 최종 확정은 현장 정밀 자력측량 필요.
+    """
+    print("\n[지질] 수치지질도 1:250,000 로드...")
+
+    empty_poly  = gpd.GeoDataFrame(geometry=[], crs=WGS84_CRS)
+    empty_line  = gpd.GeoDataFrame(geometry=[], crs=WGS84_CRS)
+
+    # ── 암종 폴리곤 ─────────────────────────────────────────────
+    if not GEOLOGY_LITHO.exists():
+        print(f"    ⚠ 파일 없음: {GEOLOGY_LITHO}")
+        print(f"    ⚠ 수치지질도 미적용 — {GEOLOGY_DIR} 에 배치 필요")
+        return empty_poly, empty_line
+
+    try:
+        for _enc in ("utf-8", "cp949", "euc-kr"):
+            try:
+                litho = gpd.read_file(str(GEOLOGY_LITHO), encoding=_enc)
+                break
+            except Exception:
+                continue
+        else:
+            raise RuntimeError("암종 파일 인코딩 인식 불가")
+        litho = litho[litho.geometry.notna()].copy()
+        if litho.crs is None:
+            litho = litho.set_crs(WGS84_CRS)
+        elif str(litho.crs) != WGS84_CRS:
+            litho = litho.to_crs(WGS84_CRS)
+
+        total_polys = len(litho)
+        # 자성 암종 필터
+        mag_mask = litho["lithoidx"].isin(MAGNETIC_ROCK_CODES)
+        mag_rocks = litho[mag_mask].copy()
+        print(f"    암종 폴리곤: 전체 {total_polys}개 → 자성 암종 {len(mag_rocks)}개")
+
+        # 자성 암종 분류 요약
+        if len(mag_rocks) > 0:
+            code_counts = mag_rocks["lithoidx"].value_counts()
+            top5 = code_counts.head(5)
+            print(f"    자성 암종 상위 코드: {dict(top5)}")
+            area_km2 = mag_rocks.to_crs("EPSG:5179").geometry.area.sum() / 1e6
+            print(f"    자성 암종 총 면적: {area_km2:.0f} km²")
+    except Exception as exc:
+        print(f"    ⚠ 암종 폴리곤 로드 실패: {exc}")
+        mag_rocks = empty_poly
+
+    # ── 단층선 ──────────────────────────────────────────────────
+    if not GEOLOGY_FAULT.exists():
+        print(f"    ⚠ 단층 파일 없음: {GEOLOGY_FAULT}")
+        faults = empty_line
+    else:
+        try:
+            # 단층 파일은 cp949 인코딩 (Litho는 utf-8)
+            for _enc in ("cp949", "euc-kr", "utf-8"):
+                try:
+                    faults = gpd.read_file(str(GEOLOGY_FAULT), encoding=_enc)
+                    break
+                except Exception:
+                    continue
+            else:
+                raise RuntimeError("단층 파일 인코딩 인식 불가")
+            faults = faults[faults.geometry.notna()].copy()
+            if faults.crs is None:
+                faults = faults.set_crs(WGS84_CRS)
+            elif str(faults.crs) != WGS84_CRS:
+                faults = faults.to_crs(WGS84_CRS)
+            total_len_km = faults.to_crs("EPSG:5179").geometry.length.sum() / 1000
+            print(f"    단층선: {len(faults)}개 (총 {total_len_km:.0f} km)")
+        except Exception as exc:
+            print(f"    ⚠ 단층선 로드 실패: {exc}")
+            faults = empty_line
+
+    return mag_rocks, faults
 
 
 def get_public_land() -> gpd.GeoDataFrame:
@@ -1235,6 +1438,36 @@ def _build_zone(gdf: gpd.GeoDataFrame, buffer_m: float | None, label: str):
     return result
 
 
+def _build_zone_variable(gdf: gpd.GeoDataFrame,
+                         buffer_col: str,
+                         label: str):
+    """
+    각 행마다 다른 버퍼 거리(buffer_col)를 적용하여 제외구역 생성.
+    반환값: shapely geometry (None 가능) — _build_zone과 동일한 인터페이스.
+    """
+    if gdf is None or len(gdf) == 0:
+        print(f"    {label}: 데이터 없음 (건너뜀)")
+        return None
+
+    gdf_p = gdf.to_crs(UTM_CRS).copy()
+    buffered = []
+    for _, row in gdf_p.iterrows():
+        buf_m = row.get(buffer_col, 1000)
+        if buf_m and buf_m > 0 and row.geometry and not row.geometry.is_empty:
+            try:
+                buffered.append(row.geometry.buffer(float(buf_m)))
+            except Exception:
+                pass
+
+    if not buffered:
+        return None
+
+    union = unary_union(buffered)
+    total_area_km2 = union.area / 1e6
+    print(f"    {label}: {total_area_km2:.0f} km²")
+    return union
+
+
 def build_exclusion_zones(
     power_gdf:        gpd.GeoDataFrame,
     railway_gdf:      gpd.GeoDataFrame,
@@ -1246,17 +1479,19 @@ def build_exclusion_zones(
     quarry_gdf:       gpd.GeoDataFrame,
     anomaly_gdf:      gpd.GeoDataFrame | None,
     water_gdf:        gpd.GeoDataFrame | None = None,
+    mag_rocks_gdf:    gpd.GeoDataFrame | None = None,
+    faults_gdf:       gpd.GeoDataFrame | None = None,
 ) -> dict:
     """
     각 제외 조건별 단일 유니온 폴리곤 반환 (UTM CRS, EPSG:5179)
     키: power, railway, urban_dense, urban_resid, pipeline, comm, wind, quarry,
-        water, anomaly
+        water, anomaly, geology, fault
     """
     print("\n제외 구역 구축 중...")
     zones = {}
 
-    zones["power"]    = _build_zone(power_gdf,    POWER_BUFFER_M,
-                                     "[1] 송전 인프라")
+    zones["power"]    = _build_zone_variable(power_gdf, "buffer_m",
+                                              "[1] 전력 인프라 (전압별 차등)")
     zones["railway"]  = _build_zone(
         railway_gdf[railway_gdf.geometry.geom_type.isin(
             ["LineString", "MultiLineString"])
@@ -1291,6 +1526,26 @@ def build_exclusion_zones(
         zones["anomaly"] = None
         print("    [9] 자기이상도: KIGAM/EMAG2 파일 배치 시 활성화")
 
+    # ── 지질 — 자성 암종 (폴리곤 직접 제외) ──────────────────────
+    if mag_rocks_gdf is not None and len(mag_rocks_gdf) > 0:
+        zones["geology"] = _build_zone(mag_rocks_gdf, None,
+                                        "[지질-암종] 자성 암종 (현무암·반려암·화산암류)")
+    else:
+        zones["geology"] = None
+        print("    [지질-암종] 수치지질도 파일 배치 시 활성화")
+
+    # ── 지질 — 단층 버퍼 ─────────────────────────────────────────
+    if faults_gdf is not None and len(faults_gdf) > 0:
+        # 단층선만 추출 (LineString/MultiLineString)
+        fault_lines = faults_gdf[faults_gdf.geometry.geom_type.isin(
+            ["LineString", "MultiLineString"]
+        )] if len(faults_gdf) > 0 else faults_gdf
+        zones["fault"] = _build_zone(fault_lines, FAULT_BUFFER_M,
+                                      f"[지질-단층] 단층 버퍼 ({FAULT_BUFFER_M}m)")
+    else:
+        zones["fault"] = None
+        print("    [지질-단층] 단층 데이터 없음 (건너뜀)")
+
     return zones
 
 
@@ -1303,7 +1558,7 @@ def filter_candidates(
     candidates = grid.copy()
 
     labels = {
-        "power":       f"[1] 송전 인프라 ({POWER_BUFFER_M//1000} km)",
+        "power":       "[1] 전력 인프라 (전압별 차등: 154kV=1km, 345kV=1.5km, 765kV=2km)",
         "railway":     f"[2] 철도 ({RAILWAY_BUFFER_M//1000} km)",
         "urban_dense": f"[3a] 핵심도심·산업 ({URBAN_DENSE_BUFFER_M}m)",
         "urban_resid": f"[3b] 주거·취락 ({URBAN_RESIDENT_BUFFER_M}m)",
@@ -1313,6 +1568,8 @@ def filter_candidates(
         "quarry":      f"[8] 채석장/광산 ({QUARRY_BUFFER_M//1000} km)",
         "water":       "[수계] 호수·저수지·강수면",
         "anomaly":     f"[9] 자기이상도 P90-P10 >{ANOMALY_EXCLUDE_THRESHOLD_NT} nT",
+        "geology":     "[지질] 자성 암종 (현무암·반려암·화산암류) 제외",
+        "fault":       f"[지질] 단층 버퍼 ({FAULT_BUFFER_M}m) 제외",
     }
     for key, geom in zones.items():
         if geom is None or geom.is_empty:
@@ -2009,6 +2266,16 @@ def save_map_data(
         except Exception as exc:
             print(f"  ⚠ 도엽 GeoJSON 저장 실패: {exc}")
 
+    # ── 지질 제외 구역 GeoJSON (folium fetch용) ────────────────
+    for zone_key in ("geology", "fault"):
+        geom = zones.get(zone_key)
+        if geom is not None and not geom.is_empty:
+            try:
+                gz = gpd.GeoDataFrame(geometry=[geom], crs=UTM_CRS).to_crs(WGS84_CRS)
+                gz.to_file(str(data_dir / f"zone_{zone_key}.geojson"), driver="GeoJSON")
+            except Exception as exc:
+                print(f"  ⚠ zone_{zone_key}.geojson 저장 실패: {exc}")
+
     print(f"  ✅ 데이터 저장 완료 ({data_dir.resolve()})")
 
 
@@ -2062,6 +2329,8 @@ def create_folium_map(
         "wind":        ("#00CCAA", "#009977", "💨 [6] 풍력발전기 제외 (0.5 km)",         True),
         "quarry":      ("#AA6600", "#774400", "⛏️ [7] 채석장·광산 제외 (1.0 km)",        True),
         "anomaly":     ("#0044FF", "#0022CC", "🧲 [8] 자기이상도 고변화 제외 (KIGAM)",    True),
+        "geology":     ("#8B0000", "#660000", "🪨 [지질] 자성 암종 제외 (현무암·반려암·화산암류)", True),
+        "fault":       ("#CC4400", "#993300", "〰️ [지질] 단층 버퍼 제외 (500m)",         True),
     }
     for key, (fc, ec, lname, show) in _excl.items():
         geom = zones.get(key)
@@ -2772,6 +3041,7 @@ def main():
     wind_gdf        = get_wind_turbines()         # [6] 풍력발전기
     quarry_gdf      = get_quarries_mines()        # [7] 채석장·광산
     water_gdf       = get_water_bodies()          # [수계] 호수·저수지·강수면
+    mag_rocks_gdf, faults_gdf = get_geology()    # [지질] 자성 암종·단층
     # ⑦ 국공유지 / ⑧ 일반도로 → 최종 선정 후 현장·지도 육안 확인 (계산 제외)
     print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
 
@@ -2805,6 +3075,8 @@ def main():
         pipeline_gdf, comm_gdf,
         wind_gdf, quarry_gdf, anomaly_gdf,
         water_gdf=water_gdf,
+        mag_rocks_gdf=mag_rocks_gdf,
+        faults_gdf=faults_gdf,
     )
     final_candidates = filter_candidates(grid, zones)
     print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
