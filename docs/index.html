@@ -87,7 +87,7 @@
       <span style="background:#0088FF;display:inline-block;width:12px;height:12px;opacity:0.8;vertical-align:middle;margin-right:4px;"></span>[5] 통신탑·기지국 0.5 km<br>
       <span style="background:#00CCAA;display:inline-block;width:12px;height:12px;opacity:0.8;vertical-align:middle;margin-right:4px;"></span>[6] 풍력발전기 0.5 km<br>
       <span style="background:#AA6600;display:inline-block;width:12px;height:12px;opacity:0.8;vertical-align:middle;margin-right:4px;"></span>[7] 채석장·광산 1.0 km<br>
-      <span style="background:#0044FF;display:inline-block;width:12px;height:12px;opacity:0.8;vertical-align:middle;margin-right:4px;"></span>[8] 자기이상도 P90-P10&gt;200nT *<br>
+      <span style="background:#0044FF;display:inline-block;width:12px;height:12px;opacity:0.8;vertical-align:middle;margin-right:4px;"></span>[8] 자기이상도 P90-P10&gt;800nT *<br>
       <span style="background:#8B0000;display:inline-block;width:12px;height:12px;opacity:0.8;vertical-align:middle;margin-right:4px;"></span>[지질] 자성 암종 직접 제외 †<br>
       <span style="background:#CC4400;display:inline-block;width:12px;height:12px;opacity:0.8;vertical-align:middle;margin-right:4px;"></span>[지질] 단층 0.5 km 버퍼 †<br>
       <hr style="margin:6px 0;border-color:#ccc;">
@@ -102,7 +102,8 @@
       <small style="color:#555;">
         격자 간격: 10 km | 좌표계: WGS84/EPSG:5179<br>
         데이터: OpenStreetMap (Overpass API)<br>
-        * KIGAM 자기이상도 P90-P10 기반 사전 제외<br>
+        * KIGAM P90-P10 &gt;800 nT (극단값 약 1%) 사전 제외<br>
+        &nbsp;&nbsp;나머지는 모델 기여도 기준 점수화 (자문의견 반영)<br>
         † 수치지질도(1:250,000, KIGAM): 화산암류·<br>
         &nbsp;&nbsp;자성광물 분포지역·광화대·단층·관입암<br>
         &nbsp;&nbsp;경계부·전도성 퇴적층 — 국지 자기이상<br>
@@ -156,7 +157,7 @@
             <td style="text-align:center;">✅</td></tr>
         <tr style="border-top:1px solid #eee;">
             <td rowspan="2">지질 안정성</td>
-            <td>⑤ 자기 이상 균일도</td>
+            <td>⑤ 자기이상 그레디언트</td>
             <td style="text-align:center;">10</td>
             <td style="text-align:center;">⚠</td></tr>
         <tr><td>⑥ 암상 적합성</td>
@@ -178,7 +179,9 @@
       ② 중심+4방향(5km) 표고 → 중앙차분 경사도(°) (Open-Elevation)<br>
       ③ log(전력·철도 이격 거리) 정규화<br>
       ④ log(도시·주거 이격 거리) 정규화<br>
-      ⑤ KIGAM 반경 0.05° 내 P90-P10 고정 임계값 점수화<br>
+      ⑤ 자기이상 그레디언트 (모델 기여도 기준, 자문의견 반영)<br>
+      &nbsp;&nbsp;P90-P10: &lt;30nT→7점 | 30~150→10점(최적)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;150~400→8점 | 400~800→4점 | &gt;800→제외<br>
       ⑥ 암상 적합성: 수치지질도(1:250,000)<br>
       &nbsp;&nbsp;🚫 사전 필터: 자성 암종 폴리곤 내부·단층 500m 이내 제외<br>
       &nbsp;&nbsp;✅ 점수화: log(자성암종 경계 거리) × 0.5<br>

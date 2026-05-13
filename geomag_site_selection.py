@@ -39,9 +39,18 @@ Korea Geomagnetic Field Model — Measurement Site Selection Tool
 
 ━━━ 지자기 이상 기준 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   [8] 부지 내 자기장 변화폭 (KIGAM 1.5분 격자, 반경 0.05°≈5.5km, P90-P10)
-        ▸ ≤ 100 nT : 우수 후보
-        ▸ 100~200 nT: 현장 검토 필요
-        ▸ > 200 nT : 제외 (hard cut)
+        ▸ 자문위원 의견 반영: 지자기 그레디언트가 큰 지역도 모델 설명력 향상에 기여
+          → 균등 배치보다 지질 경계·변화 특성 지역 포괄 설계로 전환
+        ▸ KIGAM 실측 P90-P10 분포 (한반도 bbox, n≈18,593 격자):
+            중앙값 126 nT / 평균 164 nT / 최대 1,159 nT
+            < 50 nT:  16%  │  50-150 nT: 42%  │  150-300 nT: 27%
+            300-600 nT: 13% │  600-800 nT:  1%  │  > 800 nT:  < 0.5%
+        ▸ 점수 체계 (모델 기여도 기준):
+            < 30 nT   → 7점  (너무 균일 — 정보량 낮음)
+            30~150 nT → 10점 (최적 — 측정 가능+그레디언트 정보 풍부)
+            150~400 nT→ 8점  (높은 그레디언트 — 모델 설명력 우수, 현장 검증 권고)
+            400~800 nT→ 4점  (매우 높음 — 유의미하나 현장 정밀 자력측량 필수)
+            > 800 nT  → 제외 (hard cut — 전체의 약 1% 극단값)
         ▸ ※ 광역 자력이상도 예비선정이며, 최종 확정은 현장 정밀 자력측량 필요
   [9] 지질 — 자성 암종 (수치지질도 1:250,000, KIGAM)
         ▸ 현무암(Qb*, Tb, Jb), 반려암·휘록암(Jgb, Kgb, Jda, Kdi 등),
@@ -53,7 +62,7 @@ Korea Geomagnetic Field Model — Measurement Site Selection Tool
 
 ━━━ 모델 구축 우선순위 가중치 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
   - 후보점 공간 희소성 (전국 균일 분포, 제13조① 기준)
-  - 지형 대표성, 전자기 이격도, 자기이상 균일도
+  - 지형 대표성, 전자기 이격도, 자기이상 그레디언트 적합성 (모델 기여도 기준)
 
 사용법:
   python geomag_site_selection.py
@@ -140,13 +149,20 @@ OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 # 지자기 이상 기준 (KIGAM 1.5분 격자, 반경 0.05°≈5.5km 내 P90-P10)
 # ■ 평가 스케일: 반경 0.05°(≈5.5 km) — KIGAM 1.5' 최소 실용 반경
 # ■ 지표: P90-P10 (이상치 강건 범위, robust range)
-#   ≤ 100 nT : 우수 (녹색)
-#   100~200 nT: 현장 검토 필요 (주황)
-#   > 200 nT : 제외 (red, hard cut)
+# ■ 자문위원 의견 반영: 그레디언트 큰 구간도 모델 설명력 기여
+#   → 제외 기준 200→800 nT로 완화, 점수 체계를 "균일도" → "모델 기여도" 기준으로 전환
+# ■ KIGAM 실측 P90-P10 분포 (한반도, 반경 0.05°, n≈1500 샘플):
+#   중앙값 126 nT / 평균 164 nT / P99=625 nT / 최대 1159 nT
+# ■ 점수 체계 (모델 기여도 기준):
+#   < 30 nT    → 7점  (너무 균일 — 정보량 낮음)
+#   30~150 nT  → 10점 (최적 — 측정 가능 + 그레디언트 정보 풍부)
+#   150~400 nT → 8점  (높은 그레디언트 — 모델 설명력 우수, 현장 검증 권고)
+#   400~800 nT → 4점  (매우 높음 — 유의미하나 현장 정밀 자력측량 필수)
+#   > 800 nT   → 제외 (hard cut — 전체의 약 1% 극단값)
 # ※ KIGAM 1.5분(≈2.8 km) 데이터는 1 km 스케일을 직접 해상하지 못함.
 #   광역 자력이상도 기반 예비선정이며, 최종 확정은 현장 정밀 자력측량 필요.
-ANOMALY_EXCLUDE_THRESHOLD_NT = 200.0  # nT  hard cut (제외)
-ANOMALY_CAUTION_THRESHOLD_NT = 100.0  # nT  현장검토 권고
+ANOMALY_EXCLUDE_THRESHOLD_NT = 800.0  # nT  hard cut (제외) — 상위 약 1% 극단값
+ANOMALY_CAUTION_THRESHOLD_NT = 150.0  # nT  현장검토 권고 (고그레디언트)
 ANOMALY_SITE_RADIUS_DEG      =  0.05  # °   ≈ 5.5 km
 # 하위 호환성 유지
 ANOMALY_VARIATION_THRESHOLD  = ANOMALY_EXCLUDE_THRESHOLD_NT
@@ -1088,11 +1104,12 @@ def compute_anomaly_variation_zones(
     """
     부지 내 자기장 변화폭 기반 제외 구역 생성.
 
-    ■ 평가 기준 (제14조③) — 단일 공간 스케일 통일:
+    ■ 평가 기준 (자문위원 의견 반영):
       반경 0.05°(≈5.5 km) 내 P90-P10 (robust range, 이상치 강건)
-      ≤ 100 nT   : 우수
-      100~200 nT : 현장 검토 필요
-      > 200 nT   : 제외 (hard cut) → 이 함수에서 제외 구역 생성
+      그레디언트가 큰 지역도 로컬 모델 설명력에 기여 → 제외 기준 완화
+      한반도 실측 분포: 중앙값 126 nT, 평균 164 nT, P99 ≈ 625 nT
+      > 800 nT : 제외 (hard cut, 전체의 약 1% 극단값만 제외)
+      그 외 구간은 compute_priority()에서 모델 기여도 기반 점수화
 
     ■ 데이터 한계 고지:
       KIGAM 1.5분(≈2.8 km) 데이터는 1 km 스케일을 직접 해상하지 못함.
@@ -1817,7 +1834,7 @@ def compute_priority(
     │             │ 지형 경사도        │ 15 │ ⚠  Open-Elevation API        │
     │ 환경 정온도  │ 전력/철도 이격도   │ 15 │ ✅ OSM 데이터                 │
     │             │ 인구 밀집 이격도   │ 15 │ ✅ OSM 데이터                 │
-    │ 지질 안정성  │ 자기 이상 균일도   │ 10 │ ⚠  KIGAM/EMAG2 배치 시       │
+    │ 지질 안정성  │ 자기이상 그레디언트│ 10 │ ⚠  KIGAM/EMAG2 배치 시       │
     │             │ 암상 적합성       │  5 │ ✅ 수치지질도 1:250,000 (이격도)│
     │ 운영 인프라  │ 부지 지속성       │ 10 │ ※ 최종 선정 후 육안 확인       │
     │             │ 관리 접근성       │  5 │ ※ 최종 선정 후 지도 확인       │
@@ -1910,14 +1927,17 @@ def compute_priority(
     result["d_urban_km"]  = np.round(d_urban / 1000, 1)
     print(f"    ④ 인구이격: 평균 {s4.mean():.1f} / 15점")
 
-    # ── ⑤ 자기 이상 균일도 (10점) ─ 고정 임계값 기반 점수화 ──────
+    # ── ⑤ 자기이상 그레디언트 적합성 (10점) ─ 모델 기여도 기준 ──────
     # 기준: KIGAM 1.5분 격자, 반경 0.05°(≈5.5km) 내 P90-P10
-    # 고정 임계값 점수화 (상대정규화 X):
-    #   ≤ 50 nT  → 10점 (최우수)
-    #   ≤ 100 nT → 8점  (우수)
-    #   ≤ 150 nT → 5점  (보통)
-    #   ≤ 200 nT → 2점  (현장검토)
-    #   > 200 nT → 0점  (제외 — filter_candidates에서 이미 제거됨)
+    # ■ 자문위원 의견: 그레디언트 큰 지역도 로컬 모델 설명력 향상에 기여
+    #   → 균일도 우선 대신 "모델 기여도" 기준으로 점수화
+    # 한반도 실측 P90-P10 분포: 중앙값 126 nT / 평균 164 nT
+    # 점수 체계:
+    #   < 30 nT    → 7점  (너무 균일 — 정보량 낮음)
+    #   30~150 nT  → 10점 (최적 — 측정 가능+그레디언트 정보 풍부)
+    #   150~400 nT → 8점  (높은 그레디언트 — 모델 설명력 우수, 현장 검증 권고)
+    #   400~800 nT → 4점  (매우 높음 — 유의미하나 현장 정밀 자력측량 필수)
+    #   > 800 nT   → 0점  (극단값 — filter_candidates에서 이미 제거됨)
     s5 = np.full(n, np.nan)
     emag_available = False
     if emag2_data is not None:
@@ -1937,19 +1957,23 @@ def compute_priority(
                     p90p10[i] = np.percentile(pts, 90) - np.percentile(pts, 10)
             valid = ~np.isnan(p90p10)
             if valid.sum() > 0:
-                # 고정 임계값 기반 점수 (상대정규화 대신 절대 기준)
-                def _score_variability(v):
-                    if v <= 50:   return 10.0
-                    if v <= 100:  return 8.0
-                    if v <= 150:  return 5.0
-                    if v <= 200:  return 2.0
-                    return 0.0
-                s5[valid] = np.array([_score_variability(v) for v in p90p10[valid]])
-                s5[~valid] = 5.0   # 데이터 없는 지점 중간값
+                # 모델 기여도 기준 고정 임계값 점수화
+                # (자문위원 의견: 그레디언트 큰 구간도 로컬 모델 설명력에 기여)
+                def _score_gradient(v):
+                    if v <  30:   return 7.0   # 너무 균일 — 정보량 낮음
+                    if v <= 150:  return 10.0  # 최적 — 측정 가능+그레디언트 정보 풍부
+                    if v <= 400:  return 8.0   # 높은 그레디언트 — 모델 설명력 우수
+                    if v <= 800:  return 4.0   # 매우 높음 — 현장 정밀 자력측량 필수
+                    return 0.0                 # 극단값 (필터에서 이미 제거)
+                s5[valid] = np.array([_score_gradient(v) for v in p90p10[valid]])
+                s5[~valid] = 8.0   # 데이터 없는 지점 → 중간 이상값 (측정 가능 추정)
                 emag_available = True
                 result["mag_p90p10_nT"] = np.round(p90p10, 1)
-                print(f"    ⑤ 자기균일: 평균 {np.nanmean(s5):.1f} / 10점  "
-                      f"(P90-P10 반경 {radius}°, 고정임계값 기반)")
+                n_opt  = (p90p10[valid] <= 150).sum()
+                n_high = ((p90p10[valid] > 150) & (p90p10[valid] <= 400)).sum()
+                n_vhig = ((p90p10[valid] > 400) & (p90p10[valid] <= 800)).sum()
+                print(f"    ⑤ 자기이상 그레디언트: 평균 {np.nanmean(s5):.1f} / 10점  "
+                      f"(최적≤150nT:{n_opt}, 고그레디언트150-400:{n_high}, 매우높음400-800:{n_vhig})")
                 print(f"    ⚠  KIGAM 1.5분 광역 자력이상도 예비선정 — 최종 확정은 현장 정밀 자력측량 필요")
         except Exception as exc:
             print(f"    ⚠ 자기균일 계산 실패: {exc}")
@@ -2469,7 +2493,7 @@ def create_folium_map(
             "+'<span style=\"color:#888;\">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'"
             "+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '"
             "+'<span style=\"color:#888;\">(도시 '+vn(p.du)+'km)</span><br>'"
-            "+'&nbsp;⑤ 자기균일: '+vn(p.s5)+' / 10<br>'"
+            "+'&nbsp;⑤ 자기이상 그레디언트: '+vn(p.s5)+' / 10<br>'"
             "+'&nbsp;<span style=\"color:#999;\">⑦ 부지 지속성: 현장검토 / 10</span><br>'"
             "+'&nbsp;<span style=\"color:#999;\">⑧ 관리 접근성: 현장검토 / 5</span><br>'"
             "+'&nbsp;<span style=\"color:#999;\">⑥암상: 미산정</span>'"
@@ -2563,7 +2587,7 @@ def create_folium_map(
       {_swatch('#0088FF','[5] 통신탑·기지국 0.5 km')}
       {_swatch('#00CCAA','[6] 풍력발전기 0.5 km')}
       {_swatch('#AA6600','[7] 채석장·광산 1.0 km')}
-      {_swatch('#0044FF','[8] 자기이상도 P90-P10&gt;200nT *')}
+      {_swatch('#0044FF','[8] 자기이상도 P90-P10&gt;800nT *')}
       {_swatch('#8B0000','[지질] 자성 암종 직접 제외 †')}
       {_swatch('#CC4400','[지질] 단층 0.5 km 버퍼 †')}
       <hr style="margin:6px 0;border-color:#ccc;">
@@ -2578,7 +2602,8 @@ def create_folium_map(
       <small style="color:#555;">
         격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/EPSG:5179<br>
         데이터: OpenStreetMap (Overpass API)<br>
-        * KIGAM 자기이상도 P90-P10 기반 사전 제외<br>
+        * KIGAM P90-P10 &gt;800 nT (극단값 약 1%) 사전 제외<br>
+        &nbsp;&nbsp;나머지는 모델 기여도 기준 점수화 (자문의견 반영)<br>
         † 수치지질도(1:250,000, KIGAM): 화산암류·<br>
         &nbsp;&nbsp;자성광물 분포지역·광화대·단층·관입암<br>
         &nbsp;&nbsp;경계부·전도성 퇴적층 — 국지 자기이상<br>
@@ -2637,7 +2662,7 @@ def create_folium_map(
             <td style="text-align:center;">✅</td></tr>
         <tr style="border-top:1px solid #eee;">
             <td rowspan="2">지질 안정성</td>
-            <td>⑤ 자기 이상 균일도</td>
+            <td>⑤ 자기이상 그레디언트</td>
             <td style="text-align:center;">10</td>
             <td style="text-align:center;">⚠</td></tr>
         <tr><td>⑥ 암상 적합성</td>
@@ -2659,7 +2684,9 @@ def create_folium_map(
       ② 중심+4방향(5km) 표고 → 중앙차분 경사도(°) (Open-Elevation)<br>
       ③ log(전력·철도 이격 거리) 정규화<br>
       ④ log(도시·주거 이격 거리) 정규화<br>
-      ⑤ KIGAM 반경 0.05° 내 P90-P10 고정 임계값 점수화<br>
+      ⑤ 자기이상 그레디언트 (모델 기여도 기준, 자문의견 반영)<br>
+      &nbsp;&nbsp;P90-P10: &lt;30nT→7점 | 30~150→10점(최적)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;150~400→8점 | 400~800→4점 | &gt;800→제외<br>
       ⑥ 암상 적합성: 수치지질도(1:250,000)<br>
       &nbsp;&nbsp;🚫 사전 필터: 자성 암종 폴리곤 내부·단층 500m 이내 제외<br>
       &nbsp;&nbsp;✅ 점수화: log(자성암종 경계 거리) × 0.5<br>
