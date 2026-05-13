@@ -160,8 +160,8 @@
             <td style="text-align:center;">10</td>
             <td style="text-align:center;">⚠</td></tr>
         <tr><td>⑥ 암상 적합성</td>
-            <td style="text-align:center;">—</td>
-            <td style="text-align:center;">🚫</td></tr>
+            <td style="text-align:center;">5</td>
+            <td style="text-align:center;">✅</td></tr>
         <tr style="border-top:1px solid #eee;">
             <td rowspan="2">운영 인프라</td>
             <td style="color:#888;">⑦ 부지 지속성</td>
@@ -178,21 +178,22 @@
       ② 중심+4방향(5km) 표고 → 중앙차분 경사도(°) (Open-Elevation)<br>
       ③ log(전력·철도 이격 거리) 정규화<br>
       ④ log(도시·주거 이격 거리) 정규화<br>
-      ⑤ KIGAM 반경 20km 내 자기이상 표준편차 역산<br>
-      🚫 ⑥ 암상 적합성: 수치지질도(1:250,000) 자성 암종<br>
-      &nbsp;&nbsp;(화산암류·반려암·휘록암·관입암 경계부 등) 및<br>
-      &nbsp;&nbsp;단층 500m 버퍼 → 사전 제외 필터 (점수 미산정)<br>
+      ⑤ KIGAM 반경 0.05° 내 P90-P10 고정 임계값 점수화<br>
+      ⑥ 암상 적합성: 수치지질도(1:250,000)<br>
+      &nbsp;&nbsp;🚫 사전 필터: 자성 암종 폴리곤 내부·단층 500m 이내 제외<br>
+      &nbsp;&nbsp;✅ 점수화: log(자성암종 경계 거리) × 0.5<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ log(단층 버퍼 경계 거리) × 0.5 → 5점<br>
       ⑦ 부지 지속성: 최종 선정 후 현장·지도 육안 확인<br>
       ⑧ 관리 접근성: 최종 선정 후 도로망 지도 확인<br>
       <br>
-      가용 항목 합산 → 100점 정규화<br>
+      가용 항목 합산 → 100점 정규화 (최대 85점)<br>
       </span>
       <hr style="margin:5px 0;border-color:#ccc;">
       <span style="color:#555;font-size:10.5px;">
       🔴 상위 34% → 1등급 최우선<br>
       🟠 34~67% → 2등급 우선<br>
       🟢 하위 33% → 3등급 일반<br>
-      <span style="color:#999;">✅ 산정완료 &nbsp; ⚠ KIGAM 필요 &nbsp; 🚫 지질 사전제외 &nbsp; ※ 현장확인</span>
+      <span style="color:#999;">✅ 산정완료 &nbsp; ⚠ KIGAM 필요 &nbsp; ※ 현장확인</span>
       </span>
     </div>
     

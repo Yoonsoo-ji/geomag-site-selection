@@ -1818,7 +1818,7 @@ def compute_priority(
     │ 환경 정온도  │ 전력/철도 이격도   │ 15 │ ✅ OSM 데이터                 │
     │             │ 인구 밀집 이격도   │ 15 │ ✅ OSM 데이터                 │
     │ 지질 안정성  │ 자기 이상 균일도   │ 10 │ ⚠  KIGAM/EMAG2 배치 시       │
-    │             │ 암상 적합성       │  5 │ ❌ 지질도 미확보               │
+    │             │ 암상 적합성       │  5 │ ✅ 수치지질도 1:250,000 (이격도)│
     │ 운영 인프라  │ 부지 지속성       │ 10 │ ※ 최종 선정 후 육안 확인       │
     │             │ 관리 접근성       │  5 │ ※ 최종 선정 후 지도 확인       │
     └─────────────┴──────────────────┴────┴──────────────────────────────┘
@@ -1955,8 +1955,52 @@ def compute_priority(
             print(f"    ⚠ 자기균일 계산 실패: {exc}")
     result["s5_자기균일"] = np.round(s5, 1)
 
-    # ── ⑥ 암상 적합성 (5점) — 지질도 미확보 ─────────────────
-    result["s6_암상"] = np.nan
+    # ── ⑥ 암상 적합성 (5점) — 지질 이격도 기반 점수화 ────────
+    # 자성 암종 폴리곤 내부 및 단층 500m 이내는 filter_candidates에서 이미 제외.
+    # 잔여 후보점은 지질 위험 구역 경계까지의 이격 거리를 log1p 정규화하여 점수화.
+    #   d_rock  : 자성 암종 경계까지의 거리(m)  → 멀수록 안전 → 높은 점수
+    #   d_fault : 단층 버퍼 경계까지의 거리(m) → 멀수록 안전 → 높은 점수
+    #   s6 = (log1p(d_rock)/max × 0.5 + log1p(d_fault)/max × 0.5) × 5   [양쪽 가용]
+    #        or log1p(d_X)/max × 5                                         [한쪽만 가용]
+    s6 = np.full(n, np.nan)
+    geo_available = False
+    geo_zone   = zones.get("geology")
+    fault_zone = zones.get("fault")
+
+    try:
+        have_rock  = (geo_zone   is not None and not geo_zone.is_empty)
+        have_fault = (fault_zone is not None and not fault_zone.is_empty)
+
+        if have_rock:
+            simp_geo = geo_zone.simplify(500)
+            d_rock  = np.array([pt.distance(simp_geo) for pt in pts])
+            lr = np.log1p(d_rock)
+            mr = lr.max() if lr.max() > 0 else 1
+            result["d_geo_rock_km"] = np.round(d_rock / 1000, 1)
+
+        if have_fault:
+            simp_flt = fault_zone.simplify(500)
+            d_fault = np.array([pt.distance(simp_flt) for pt in pts])
+            lf = np.log1p(d_fault)
+            mf = lf.max() if lf.max() > 0 else 1
+            result["d_geo_fault_km"] = np.round(d_fault / 1000, 1)
+
+        if have_rock and have_fault:
+            s6 = (lr / mr * 0.5 + lf / mf * 0.5) * 5
+        elif have_rock:
+            s6 = (lr / mr) * 5
+        elif have_fault:
+            s6 = (lf / mf) * 5
+
+        if have_rock or have_fault:
+            geo_available = True
+            print(f"    ⑥ 암상 이격: 평균 {np.nanmean(s6):.1f} / 5점  "
+                  f"(자성암종={'✅' if have_rock else '❌'}, "
+                  f"단층={'✅' if have_fault else '❌'})")
+    except Exception as exc:
+        print(f"    ⚠ 암상 이격 계산 실패: {exc}")
+
+    result["s6_암상"] = np.round(s6, 1)
     # ⑦ 부지 지속성 (10점): 최종 선정 후보지에서 국공유지 여부 육안 확인
     # ⑧ 관리 접근성  (5점): 최종 선정 후보지에서 도로망 지도 육안 확인
 
@@ -1968,7 +2012,10 @@ def compute_priority(
         available_max += 15                    # +15 = 70
     if emag_available:
         total = total + np.nan_to_num(s5, nan=0)
-        available_max += 10                    # +10 (최대 80점)
+        available_max += 10                    # +10 = 80
+    if geo_available:
+        total = total + np.nan_to_num(s6, nan=0)
+        available_max += 5                     # +5 (최대 85점)
 
     result["score"] = np.round(total / available_max * 100, 1)
     result["score_max"] = available_max
@@ -2594,8 +2641,8 @@ def create_folium_map(
             <td style="text-align:center;">10</td>
             <td style="text-align:center;">⚠</td></tr>
         <tr><td>⑥ 암상 적합성</td>
-            <td style="text-align:center;">—</td>
-            <td style="text-align:center;">🚫</td></tr>
+            <td style="text-align:center;">5</td>
+            <td style="text-align:center;">✅</td></tr>
         <tr style="border-top:1px solid #eee;">
             <td rowspan="2">운영 인프라</td>
             <td style="color:#888;">⑦ 부지 지속성</td>
@@ -2612,21 +2659,22 @@ def create_folium_map(
       ② 중심+4방향(5km) 표고 → 중앙차분 경사도(°) (Open-Elevation)<br>
       ③ log(전력·철도 이격 거리) 정규화<br>
       ④ log(도시·주거 이격 거리) 정규화<br>
-      ⑤ KIGAM 반경 20km 내 자기이상 표준편차 역산<br>
-      🚫 ⑥ 암상 적합성: 수치지질도(1:250,000) 자성 암종<br>
-      &nbsp;&nbsp;(화산암류·반려암·휘록암·관입암 경계부 등) 및<br>
-      &nbsp;&nbsp;단층 500m 버퍼 → 사전 제외 필터 (점수 미산정)<br>
+      ⑤ KIGAM 반경 0.05° 내 P90-P10 고정 임계값 점수화<br>
+      ⑥ 암상 적합성: 수치지질도(1:250,000)<br>
+      &nbsp;&nbsp;🚫 사전 필터: 자성 암종 폴리곤 내부·단층 500m 이내 제외<br>
+      &nbsp;&nbsp;✅ 점수화: log(자성암종 경계 거리) × 0.5<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ log(단층 버퍼 경계 거리) × 0.5 → 5점<br>
       ⑦ 부지 지속성: 최종 선정 후 현장·지도 육안 확인<br>
       ⑧ 관리 접근성: 최종 선정 후 도로망 지도 확인<br>
       <br>
-      가용 항목 합산 → 100점 정규화<br>
+      가용 항목 합산 → 100점 정규화 (최대 85점)<br>
       </span>
       <hr style="margin:5px 0;border-color:#ccc;">
       <span style="color:#555;font-size:10.5px;">
       🔴 상위 34% → 1등급 최우선<br>
       🟠 34~67% → 2등급 우선<br>
       🟢 하위 33% → 3등급 일반<br>
-      <span style="color:#999;">✅ 산정완료 &nbsp; ⚠ KIGAM 필요 &nbsp; 🚫 지질 사전제외 &nbsp; ※ 현장확인</span>
+      <span style="color:#999;">✅ 산정완료 &nbsp; ⚠ KIGAM 필요 &nbsp; ※ 현장확인</span>
       </span>
     </div>
     """
