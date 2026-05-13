@@ -2516,7 +2516,9 @@ def create_folium_map(
       {_swatch('#0088FF','[5] 통신탑·기지국 0.5 km')}
       {_swatch('#00CCAA','[6] 풍력발전기 0.5 km')}
       {_swatch('#AA6600','[7] 채석장·광산 1.0 km')}
-      {_swatch('#0044FF','[8] 자기이상도 P90-P10>200nT *')}
+      {_swatch('#0044FF','[8] 자기이상도 P90-P10&gt;200nT *')}
+      {_swatch('#8B0000','[지질] 자성 암종 직접 제외 †')}
+      {_swatch('#CC4400','[지질] 단층 0.5 km 버퍼 †')}
       <hr style="margin:6px 0;border-color:#ccc;">
       <b>▸ 측정 후보지 (총 {n_cands}개)</b><br>
       {_dot('#FF0000',f'1등급 최우선 (데이터 공백): {n_p1}개')}
@@ -2529,10 +2531,14 @@ def create_folium_map(
       <small style="color:#555;">
         격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/EPSG:5179<br>
         데이터: OpenStreetMap (Overpass API)<br>
-        * KIGAM 배치 시 활성화<br>
-        ⚠ 광역 자력이상도 예비선정.<br>
-        &nbsp;&nbsp;최종 확정은 현장 정밀<br>
-        &nbsp;&nbsp;자력측량으로 검증 필요.
+        * KIGAM 자기이상도 P90-P10 기반 사전 제외<br>
+        † 수치지질도(1:250,000, KIGAM): 화산암류·<br>
+        &nbsp;&nbsp;자성광물 분포지역·광화대·단층·관입암<br>
+        &nbsp;&nbsp;경계부·전도성 퇴적층 — 국지 자기이상<br>
+        &nbsp;&nbsp;및 유도전류 왜곡 사전 판별용.<br>
+        ⚠ 지질도는 도상 기반 1차 판별자료.<br>
+        &nbsp;&nbsp;최종 확정은 현장 자력탐사 및<br>
+        &nbsp;&nbsp;주변 총자력 변화량 검증 후 확정.
       </small>
     </div>
     """
@@ -2587,9 +2593,9 @@ def create_folium_map(
             <td>⑤ 자기 이상 균일도</td>
             <td style="text-align:center;">10</td>
             <td style="text-align:center;">⚠</td></tr>
-        <tr><td style="color:#999;">⑥ 암상 적합성</td>
-            <td style="text-align:center;color:#999;">5</td>
-            <td style="text-align:center;color:#999;">-</td></tr>
+        <tr><td>⑥ 암상 적합성</td>
+            <td style="text-align:center;">—</td>
+            <td style="text-align:center;">🚫</td></tr>
         <tr style="border-top:1px solid #eee;">
             <td rowspan="2">운영 인프라</td>
             <td style="color:#888;">⑦ 부지 지속성</td>
@@ -2607,6 +2613,9 @@ def create_folium_map(
       ③ log(전력·철도 이격 거리) 정규화<br>
       ④ log(도시·주거 이격 거리) 정규화<br>
       ⑤ KIGAM 반경 20km 내 자기이상 표준편차 역산<br>
+      🚫 ⑥ 암상 적합성: 수치지질도(1:250,000) 자성 암종<br>
+      &nbsp;&nbsp;(화산암류·반려암·휘록암·관입암 경계부 등) 및<br>
+      &nbsp;&nbsp;단층 500m 버퍼 → 사전 제외 필터 (점수 미산정)<br>
       ⑦ 부지 지속성: 최종 선정 후 현장·지도 육안 확인<br>
       ⑧ 관리 접근성: 최종 선정 후 도로망 지도 확인<br>
       <br>
@@ -2617,7 +2626,7 @@ def create_folium_map(
       🔴 상위 34% → 1등급 최우선<br>
       🟠 34~67% → 2등급 우선<br>
       🟢 하위 33% → 3등급 일반<br>
-      <span style="color:#999;">✅ 산정 가능 &nbsp; ⚠ KIGAM 필요 &nbsp; - 미확보 &nbsp; ※ 현장확인</span>
+      <span style="color:#999;">✅ 산정완료 &nbsp; ⚠ KIGAM 필요 &nbsp; 🚫 지질 사전제외 &nbsp; ※ 현장확인</span>
       </span>
     </div>
     """
