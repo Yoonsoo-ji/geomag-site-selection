@@ -86,6 +86,7 @@ import pandas as pd
 import geopandas as gpd
 import folium
 from folium import plugins
+import shapely
 from shapely.geometry import Point, LineString, Polygon, MultiPolygon, shape
 from shapely.ops import unary_union
 from pathlib import Path
@@ -1406,7 +1407,6 @@ def create_candidate_grid(korea_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 def _make_valid_geom(g):
     """비유효 geometry를 shapely.make_valid 또는 buffer(0)으로 복구"""
     try:
-        import shapely
         if hasattr(shapely, "make_valid"):
             v = shapely.make_valid(g)
         else:
