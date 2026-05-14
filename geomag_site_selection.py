@@ -2327,7 +2327,7 @@ def save_map_data(
     final_wgs["lon"] = final_wgs.geometry.x
     rename_map = {
         "s1_희소성": "s1", "s2_지형": "s2", "s3_전력철도": "s3",
-        "s4_인구이격": "s4", "s5_모델기여도": "s5",
+        "s4_인구이격": "s4", "s5_모델기여도": "s5", "s6_암상": "s6",
         "d_power_km": "dp", "d_railway_km": "dr", "d_urban_km": "du",
         "dem_slope_deg": "dem", "d_public_km": "dpub", "d_road_km": "drd",
     }
@@ -2596,9 +2596,9 @@ def create_folium_map(
             "+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '"
             "+'<span style=\"color:#888;\">(도시 '+vn(p.du)+'km)</span><br>'"
             "+'&nbsp;⑤ 자기이상·지질경계 모델 기여도: '+vn(p.s5)+' / 10<br>'"
+            "+'&nbsp;⑥ 암상 적합성: '+vn(p.s6)+' / 5<br>'"
             "+'&nbsp;<span style=\"color:#999;\">⑦ 부지 지속성: 현장검토 / 10</span><br>'"
-            "+'&nbsp;<span style=\"color:#999;\">⑧ 관리 접근성: 현장검토 / 5</span><br>'"
-            "+'&nbsp;<span style=\"color:#999;\">⑥암상: 미산정</span>'"
+            "+'&nbsp;<span style=\"color:#999;\">⑧ 관리 접근성: 현장검토 / 5</span>'"
             "+'</span></div>';"
             "l.bindPopup(html,{maxWidth:270});"
             "l.bindTooltip('후보지 #'+p.idx+' P%d ('+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E)');"
