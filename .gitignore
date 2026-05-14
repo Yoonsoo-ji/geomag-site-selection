@@ -5,6 +5,7 @@
 pptx/
 
 # ── 대용량 데이터 원본 ────────────────────────────────────────
+data/zone_cache/
 data/*.zip
 data/*.hwp
 data/*.pdf

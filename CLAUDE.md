@@ -86,6 +86,7 @@ git push origin HEAD:main
 - `docs/output/data/` — 대용량 원본 GeoJSON이 잘못 생성되는 폴더
 - `data/*.json`, `data/*.csv`, `data/*.dat` — Overpass API 캐시, 대용량 원본
 - `data/수치지질도_25만축척_전국/` — 대용량 shapefile
+- `data/zone_cache/` — 제외구역 유니온 WKB 캐시 (생성된 바이너리, 커밋 불필요)
 
 ---
 
@@ -171,7 +172,27 @@ git push origin HEAD:main
 
 ---
 
-## 10. 자주 발생하는 문제 및 해결
+## 10. 성능 최적화 — 제외구역 캐시
+
+`build_exclusion_zones()` 내 `unary_union`은 주거 1.17M · 수계 1.44M 피처로 약 9분 소요.
+두 번째 실행부터 `data/zone_cache/` WKB 캐시를 사용해 수 초로 단축.
+
+### 캐시 작동 방식
+- `_load_zone_cache(name, source_paths, buffer_key)`: WKB + meta JSON 확인 → 소스 파일 mtime 비교 → 유효하면 geometry 반환
+- `_save_zone_cache(name, geom, source_paths, buffer_key)`: WKB + meta JSON 저장
+- `build_exclusion_zones()` 내 `_cached()` 클로저가 자동으로 캐시 시도 → miss 시 계산 → 저장
+
+### 캐시 무효화 조건
+- 소스 JSON 파일 수정 시간이 캐시보다 최신인 경우
+- `buffer_key` (버퍼 반경 또는 임계값 문자열) 변경 시
+- `data/zone_cache/*.wkb` 수동 삭제 시 (재계산 강제)
+
+### 캐시 경로
+`data/zone_cache/` — `.gitignore`에 포함, 커밋하지 않음
+
+---
+
+## 11. 자주 발생하는 문제 및 해결
 
 | 문제 | 원인 | 해결 |
 |---|---|---|

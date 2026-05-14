@@ -190,6 +190,8 @@ GEOLOGY_FAULT = GEOLOGY_DIR / "Geology_250K_Fault.shp"
 # 단층 버퍼 — 단층대 인근은 파쇄대·자화 불균질 위험
 FAULT_BUFFER_M = 500   # [지질] 단층선 0.5 km
 
+ZONE_CACHE_DIR = DATA_DIR / "zone_cache"   # 유니온 결과 WKB 캐시
+
 # 자성 암종 lithoidx 코드 (한국 지질도 기호 표준)
 # 이들 암종은 자철광 함유 또는 높은 잔류자화로 국소 자기이상을 유발함.
 # ■ 현무암류 (Basalt)       : 잔류자화 수백~수천 nT
@@ -1414,6 +1416,45 @@ def _make_valid_geom(g):
         return None
 
 
+def _load_zone_cache(name: str, source_paths: list, buffer_key) -> "shapely.Geometry | None":
+    """캐시가 유효하면 shapely geometry 반환, 아니면 None."""
+    import json
+    wkb_path  = ZONE_CACHE_DIR / f"{name}.wkb"
+    meta_path = ZONE_CACHE_DIR / f"{name}.meta.json"
+    if not wkb_path.exists() or not meta_path.exists():
+        return None
+    try:
+        with open(meta_path) as f:
+            meta = json.load(f)
+        if meta.get("buffer_key") != str(buffer_key):
+            return None
+        src_mtime = max((p.stat().st_mtime for p in source_paths if p.exists()), default=0)
+        if src_mtime > meta.get("src_mtime", 0):
+            return None
+        geom = shapely.from_wkb(wkb_path.read_bytes())
+        km2  = geom.area / 1e6
+        print(f"    [캐시 로드] {name}: {km2:.0f} km²")
+        return geom
+    except Exception:
+        return None
+
+
+def _save_zone_cache(name: str, geom, source_paths: list, buffer_key) -> None:
+    """shapely geometry를 WKB 파일로 캐시 저장."""
+    import json
+    if geom is None:
+        return
+    try:
+        ZONE_CACHE_DIR.mkdir(exist_ok=True)
+        src_mtime = max((p.stat().st_mtime for p in source_paths if p.exists()), default=0)
+        meta = {"buffer_key": str(buffer_key), "src_mtime": src_mtime}
+        with open(ZONE_CACHE_DIR / f"{name}.meta.json", "w") as f:
+            json.dump(meta, f)
+        (ZONE_CACHE_DIR / f"{name}.wkb").write_bytes(shapely.to_wkb(geom))
+    except Exception as exc:
+        print(f"    ⚠ zone 캐시 저장 실패 ({name}): {exc}")
+
+
 def _chunked_union(geoms: list, chunk_size: int = 2_000):
     """
     대량의 shapely geometry 리스트를 청크 단위로 나누어 계층적으로 union.
@@ -1550,58 +1591,99 @@ def build_exclusion_zones(
     print("\n제외 구역 구축 중...")
     zones = {}
 
-    zones["power"]    = _build_zone_variable(power_gdf, "buffer_m",
-                                              "[1] 전력 인프라 (전압별 차등)")
-    zones["railway"]  = _build_zone(
-        railway_gdf[railway_gdf.geometry.geom_type.isin(
-            ["LineString", "MultiLineString"])
-        ] if len(railway_gdf) > 0 else railway_gdf,
-        RAILWAY_BUFFER_M, "[2] 철도")
-    zones["urban_dense"] = _build_zone(urban_dense_gdf, URBAN_DENSE_BUFFER_M,
-                                        "[3a] 핵심도심·산업")
-    zones["urban_resid"] = _build_zone(urban_resid_gdf, URBAN_RESIDENT_BUFFER_M,
-                                        "[3b] 주거·취락")
-    zones["pipeline"] = _build_zone(pipeline_gdf, PIPELINE_BUFFER_M,
-                                     "[4] 파이프라인")
-    zones["comm"]     = _build_zone(comm_gdf,     COMM_TOWER_BUFFER_M,
-                                     "[6] 통신탑/기지국")
-    zones["wind"]     = _build_zone(wind_gdf,     WIND_BUFFER_M,
-                                     "[7] 풍력발전기")
-    zones["quarry"]   = _build_zone(quarry_gdf,   QUARRY_BUFFER_M,
-                                     "[8] 채석장/광산")
+    # ── 캐시 소스 경로 매핑 ────────────────────────────────────────
+    _src = {
+        "power":       [DATA_DIR / "power_infra.json"],
+        "railway":     [DATA_DIR / "railways.json"],
+        "urban_dense": [DATA_DIR / "urban_dense.json"],
+        "urban_resid": [DATA_DIR / "urban_residential_v2.json"],
+        "pipeline":    [DATA_DIR / "pipelines.json"],
+        "comm":        [DATA_DIR / "comm_towers.json"],
+        "wind":        [DATA_DIR / "wind_turbines.json"],
+        "quarry":      [DATA_DIR / "quarries_mines.json"],
+        "water":       [DATA_DIR / "water_bodies.json"],
+        "geology":     [GEOLOGY_LITHO],
+        "fault":       [GEOLOGY_FAULT],
+        "anomaly":     [KIGAM_MAG_DAT],
+    }
 
-    # 수계 제외 (폴리곤 직접 사용 — 수면 위에 관측소 설치 불가)
+    def _cached(name, builder_fn, buffer_key):
+        geom = _load_zone_cache(name, _src.get(name, []), buffer_key)
+        if geom is not None:
+            return geom
+        geom = builder_fn()
+        _save_zone_cache(name, geom, _src.get(name, []), buffer_key)
+        return geom
+
+    zones["power"] = _cached("power",
+        lambda: _build_zone_variable(power_gdf, "buffer_m", "[1] 전력 인프라 (전압별 차등)"),
+        "variable")
+    zones["railway"] = _cached("railway",
+        lambda: _build_zone(
+            railway_gdf[railway_gdf.geometry.geom_type.isin(["LineString","MultiLineString"])]
+            if len(railway_gdf) > 0 else railway_gdf,
+            RAILWAY_BUFFER_M, "[2] 철도"),
+        RAILWAY_BUFFER_M)
+    zones["urban_dense"] = _cached("urban_dense",
+        lambda: _build_zone(urban_dense_gdf, URBAN_DENSE_BUFFER_M, "[3a] 핵심도심·산업"),
+        URBAN_DENSE_BUFFER_M)
+    zones["urban_resid"] = _cached("urban_resid",
+        lambda: _build_zone(urban_resid_gdf, URBAN_RESIDENT_BUFFER_M, "[3b] 주거·취락"),
+        URBAN_RESIDENT_BUFFER_M)
+    zones["pipeline"] = _cached("pipeline",
+        lambda: _build_zone(pipeline_gdf, PIPELINE_BUFFER_M, "[4] 파이프라인"),
+        PIPELINE_BUFFER_M)
+    zones["comm"] = _cached("comm",
+        lambda: _build_zone(comm_gdf, COMM_TOWER_BUFFER_M, "[6] 통신탑/기지국"),
+        COMM_TOWER_BUFFER_M)
+    zones["wind"] = _cached("wind",
+        lambda: _build_zone(wind_gdf, WIND_BUFFER_M, "[7] 풍력발전기"),
+        WIND_BUFFER_M)
+    zones["quarry"] = _cached("quarry",
+        lambda: _build_zone(quarry_gdf, QUARRY_BUFFER_M, "[8] 채석장/광산"),
+        QUARRY_BUFFER_M)
+
+    # 수계
     if water_gdf is not None and len(water_gdf) > 0:
-        zones["water"] = _build_zone(water_gdf, None, "[수계] 호수·저수지·강수면")
+        zones["water"] = _cached("water",
+            lambda: _build_zone(water_gdf, None, "[수계] 호수·저수지·강수면"),
+            "polygon")
     else:
         zones["water"] = None
         print("    [수계] 수계 데이터 없음 (건너뜀)")
 
+    # 자기이상
     if anomaly_gdf is not None and len(anomaly_gdf) > 0:
-        an_utm = anomaly_gdf.to_crs(UTM_CRS)
-        zones["anomaly"] = unary_union(an_utm.geometry)
-        print(f"    [9] 자기이상도: {zones['anomaly'].area/1e6:.0f} km²  "
-              f"(P90-P10 >{ANOMALY_EXCLUDE_THRESHOLD_NT} nT 제외)")
+        def _build_anomaly():
+            an_utm = anomaly_gdf.to_crs(UTM_CRS)
+            g = unary_union(an_utm.geometry)
+            print(f"    [9] 자기이상도: {g.area/1e6:.0f} km²  "
+                  f"(P90-P10 >{ANOMALY_EXCLUDE_THRESHOLD_NT} nT 제외)")
+            return g
+        zones["anomaly"] = _cached("anomaly", _build_anomaly, ANOMALY_EXCLUDE_THRESHOLD_NT)
     else:
         zones["anomaly"] = None
         print("    [9] 자기이상도: KIGAM/EMAG2 파일 배치 시 활성화")
 
-    # ── 지질 — 자성 암종 (폴리곤 직접 제외) ──────────────────────
+    # 지질 — 자성 암종
     if mag_rocks_gdf is not None and len(mag_rocks_gdf) > 0:
-        zones["geology"] = _build_zone(mag_rocks_gdf, None,
-                                        "[지질-암종] 자성 암종 (현무암·반려암·화산암류)")
+        zones["geology"] = _cached("geology",
+            lambda: _build_zone(mag_rocks_gdf, None,
+                                 "[지질-암종] 자성 암종 (현무암·반려암·화산암류)"),
+            "polygon")
     else:
         zones["geology"] = None
         print("    [지질-암종] 수치지질도 파일 배치 시 활성화")
 
-    # ── 지질 — 단층 버퍼 ─────────────────────────────────────────
+    # 지질 — 단층 버퍼
     if faults_gdf is not None and len(faults_gdf) > 0:
-        # 단층선만 추출 (LineString/MultiLineString)
         fault_lines = faults_gdf[faults_gdf.geometry.geom_type.isin(
             ["LineString", "MultiLineString"]
         )] if len(faults_gdf) > 0 else faults_gdf
-        zones["fault"] = _build_zone(fault_lines, FAULT_BUFFER_M,
-                                      f"[지질-단층] 단층 버퍼 ({FAULT_BUFFER_M}m)")
+        zones["fault"] = _cached("fault",
+            lambda: _build_zone(fault_lines, FAULT_BUFFER_M,
+                                 f"[지질-단층] 단층 버퍼 ({FAULT_BUFFER_M}m)"),
+            FAULT_BUFFER_M)
     else:
         zones["fault"] = None
         print("    [지질-단층] 단층 데이터 없음 (건너뜀)")
