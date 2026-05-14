@@ -589,12 +589,14 @@ def main():
     doc.save(str(docs_path))
     print(f"saved: {docs_path}")
 
-    # 로컬 docs/output/ — 로컬 백업
-    local_dir = Path("C:/LG_gram_backup_users/LX/2026_geomag/docs/output")
-    local_dir.mkdir(parents=True, exist_ok=True)
+    # 로컬 docs/output/ — 로컬 백업 (worktree에서 실행 시에만 복사)
     import shutil
-    shutil.copy2(docs_path, local_dir / filename)
-    print(f"saved: {local_dir / filename}")
+    local_dir = Path("C:/LG_gram_backup_users/LX/2026_geomag/docs/output")
+    local_path = local_dir / filename
+    if docs_path.resolve() != local_path.resolve():
+        local_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(docs_path, local_path)
+        print(f"saved: {local_path}")
 
 
 if __name__ == "__main__":
