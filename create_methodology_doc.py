@@ -580,11 +580,21 @@ def main():
 
     # ── 저장 ────────────────────────────────────────────────
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = Path(__file__).parent / "docs" / "output"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{ts}_site_selection_methodology_geology.docx"
-    doc.save(str(out_path))
-    print(f"saved: {out_path}")
+    filename = f"{ts}_site_selection_methodology_geology.docx"
+
+    # docs/output/ — git 커밋 대상
+    docs_dir = Path(__file__).parent / "docs" / "output"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    docs_path = docs_dir / filename
+    doc.save(str(docs_path))
+    print(f"saved: {docs_path}")
+
+    # 로컬 output/ — 로컬 백업
+    local_dir = Path("C:/LG_gram_backup_users/LX/2026_geomag/output")
+    local_dir.mkdir(parents=True, exist_ok=True)
+    import shutil
+    shutil.copy2(docs_path, local_dir / filename)
+    print(f"saved: {local_dir / filename}")
 
 
 if __name__ == "__main__":
