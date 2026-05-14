@@ -2184,7 +2184,9 @@ def compute_priority(
         label = ["최우선", "우선", "일반"][p - 1]
         print(f"  우선순위 {p}등급({label}): {cnt}개")
 
-    unavail_list = ["⑥암상(5)", "⑦부지(10,육안확인)", "⑧접근성(5,육안확인)"]
+    unavail_list = ["⑦부지(10,육안확인)", "⑧접근성(5,육안확인)"]
+    if not geo_available:
+        unavail_list.insert(0, "⑥암상(5)")
     if not dem_available:
         unavail_list.insert(0, "②지형(15)")
     print(f"  가용 항목 합계: {available_max}/100점 → 100점 정규화")
@@ -3400,8 +3402,9 @@ def main():
         cols = ["site_id", "lat", "lon"]
         for c in ["priority", "score",
                   "s1_희소성", "s2_지형", "s3_전력철도", "s4_인구이격",
-                  "s5_모델기여도",
-                  "dem_slope_deg", "d_power_km", "d_railway_km", "d_urban_km"]:
+                  "s5_모델기여도", "s6_암상",
+                  "dem_slope_deg", "d_power_km", "d_railway_km", "d_urban_km",
+                  "d_geo_rock_km", "d_geo_fault_km"]:
             if c in result.columns:
                 cols.append(c)
 
