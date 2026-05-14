@@ -580,7 +580,9 @@ def main():
 
     # ── 저장 ────────────────────────────────────────────────
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_path = Path(f"C:/LG_gram_backup_users/LX/2026_geomag/output/{ts}_site_selection_methodology_geology.docx")
+    out_dir = Path(__file__).parent / "docs" / "output"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{ts}_site_selection_methodology_geology.docx"
     doc.save(str(out_path))
     print(f"saved: {out_path}")
 
