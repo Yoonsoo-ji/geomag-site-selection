@@ -12,7 +12,15 @@ data/*.xls
 data/*.xlsx
 data/*.html
 data/*.dat
+data/*.csv
+data/*.json
 data/수치지질도_25만축척_전국/
+
+# ── docs 내 잘못 생성되는 폴더 ───────────────────────────────
+docs/output/data/
+
+# ── Claude 내부 폴더 ─────────────────────────────────────────
+.claude/
 
 # ── Python ───────────────────────────────────────────────────
 __pycache__/
