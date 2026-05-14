@@ -2660,6 +2660,7 @@ def create_folium_map(
     n_p1 = int((final_wgs["priority"] == 1).sum()) if has_priority else 0
     n_p2 = int((final_wgs["priority"] == 2).sum()) if has_priority else 0
     n_p3 = int((final_wgs["priority"] == 3).sum()) if has_priority else n_cands
+    n_exist = len(existing_sites) if existing_sites is not None else 0
 
     def _swatch(color, label):
         return (f'<span style="background:{color};display:inline-block;'
@@ -2706,7 +2707,7 @@ def create_folium_map(
       {_dot('#00BB00',f'3등급 일반: {n_p3}개')}
       <hr style="margin:6px 0;border-color:#ccc;">
       <b>▸ 기존 측정점</b><br>
-      <span style="display:inline-block;vertical-align:middle;margin-right:4px;">⭐</span>기존 측정점 15개 (최신 관측연도)<br>
+      <span style="display:inline-block;vertical-align:middle;margin-right:4px;">⭐</span>기존 측정점 {n_exist}개 (최신 관측연도)<br>
       <hr style="margin:6px 0;border-color:#ccc;">
       <small style="color:#555;">
         격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/EPSG:5179<br>
