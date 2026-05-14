@@ -1105,9 +1105,9 @@ def compute_anomaly_variation_zones(
     caution_threshold_nT: float = ANOMALY_CAUTION_THRESHOLD_NT,
     site_radius_deg:      float = ANOMALY_SITE_RADIUS_DEG,
     threshold_nT:         float | None = None,  # 하위 호환성
-) -> gpd.GeoDataFrame | None:
+) -> tuple:
     """
-    부지 내 자기장 변화폭 기반 제외 구역 생성.
+    부지 내 자기장 변화폭 기반 제외 구역 + 등급별 셀 생성.
 
     ■ 평가 기준 (자기이상·지질경계 모델 기여도 평가):
       반경 0.05°(≈5.5 km) 내 P90-P10 (robust range, 이상치 강건)
@@ -1124,25 +1124,29 @@ def compute_anomaly_variation_zones(
     Parameters
     ----------
     mag_data             : KIGAM/EMAG2 DataFrame (lon, lat, anomaly_nT 컬럼)
-    exclude_threshold_nT : 제외 임계값 (기본 200 nT, hard cut)
-    caution_threshold_nT : 현장검토 임계값 (기본 100 nT, 점수 감점용)
+    exclude_threshold_nT : 제외 임계값 (기본 800 nT, 조건부 제외)
+    caution_threshold_nT : 현장 검증 임계값 (기본 400 nT)
     site_radius_deg      : 탐색 반경 (°, 기본 0.05° ≈ 5.5 km)
 
     Returns
     -------
-    GeoDataFrame (WGS84) with column 'variability_nT' — 제외 구역(>200 nT)만 포함
+    (exclude_gdf, tiers_gdf) : 튜플
+      exclude_gdf : GeoDataFrame (WGS84, column 'variability_nT')
+                    P90-P10 > 800 nT 조건부 제외 셀
+      tiers_gdf   : GeoDataFrame (WGS84, columns 'variability_nT', 'tier', 'score')
+                    유효한 모든 셀의 등급 분류 (low/mid_low/optimal/caution/exclude)
     """
     # 하위 호환성: 구 threshold_nT 인수 → exclude_threshold_nT
     if threshold_nT is not None:
         exclude_threshold_nT = threshold_nT
 
     if mag_data is None or len(mag_data) < 4:
-        return None
+        return None, None
 
     from shapely.geometry import box as _box
 
     print(f"    자기이상 변화폭(P90-P10) 계산 중 (반경 {site_radius_deg}° ≈ "
-          f"{site_radius_deg * 111:.0f} km, 제외 기준 {exclude_threshold_nT} nT)...")
+          f"{site_radius_deg * 111:.0f} km, 조건부 제외 {exclude_threshold_nT} nT)...")
 
     if hasattr(mag_data, "columns"):
         lons = mag_data["lon"].values.astype(float)
@@ -1157,10 +1161,27 @@ def compute_anomaly_variation_zones(
     glon = np.arange(KOREA_BBOX[0], KOREA_BBOX[2] + res, res)
     glat = np.arange(KOREA_BBOX[1], KOREA_BBOX[3] + res, res)
 
+    # 등급별 셀 수집 (모델 기여도 점수 체계와 일치)
+    #   tier='low'      : <30 nT       → 5점
+    #   tier='mid_low'  : 30~150 nT    → 8점
+    #   tier='optimal'  : 150~400 nT   → 10점 (지질경계·변화 구간)
+    #   tier='caution'  : 400~800 nT   → 7점  (현장 검증 필수)
+    #   tier='exclude'  : >800 nT      → 조건부 제외 / 현장 정밀조사
     exclude_cells  = []
-    variabilities  = []
+    exclude_var    = []
+    tier_geoms     = []
+    tier_labels    = []
+    tier_scores    = []
+    tier_vars      = []
     n_valid        = 0
-    n_caution      = 0
+    n_by_tier      = {"low": 0, "mid_low": 0, "optimal": 0, "caution": 0, "exclude": 0}
+
+    def _classify(v: float):
+        if v <  30:   return ("low",     5.0)
+        if v <= 150:  return ("mid_low", 8.0)
+        if v <= 400:  return ("optimal", 10.0)
+        if v <= exclude_threshold_nT: return ("caution", 7.0)
+        return ("exclude", 0.0)
 
     for lat_c in glat:
         for lon_c in glon:
@@ -1174,35 +1195,51 @@ def compute_anomaly_variation_zones(
             n_valid += 1
             # P90-P10: robust range (이상치에 강건)
             variability = float(np.percentile(pts, 90) - np.percentile(pts, 10))
-            if variability > caution_threshold_nT:
-                n_caution += 1
-            if variability > exclude_threshold_nT:
-                exclude_cells.append(_box(
-                    lon_c - res / 2, lat_c - res / 2,
-                    lon_c + res / 2, lat_c + res / 2,
-                ))
-                variabilities.append(round(variability, 1))
+            cell = _box(
+                lon_c - res / 2, lat_c - res / 2,
+                lon_c + res / 2, lat_c + res / 2,
+            )
+            tier, score = _classify(variability)
+            n_by_tier[tier] += 1
+            tier_geoms.append(cell)
+            tier_labels.append(tier)
+            tier_scores.append(score)
+            tier_vars.append(round(variability, 1))
+            if tier == "exclude":
+                exclude_cells.append(cell)
+                exclude_var.append(round(variability, 1))
 
-    n_caution_only = n_caution - len(exclude_cells)
     pct_excl = len(exclude_cells) / n_valid * 100 if n_valid else 0
-    print(f"    자기이상 평가: {n_valid}개 격자 평가")
-    print(f"      ≤ {caution_threshold_nT} nT (우수): {n_valid - n_caution}개")
-    print(f"      {caution_threshold_nT}~{exclude_threshold_nT} nT (현장검토): {n_caution_only}개")
-    print(f"      > {exclude_threshold_nT} nT (제외): {len(exclude_cells)}개 ({pct_excl:.1f}%)")
+    print(f"    자기이상 평가: {n_valid}개 격자 평가 (모델 기여도 등급별 분포)")
+    print(f"      <30 nT (5점, 변화 작음)        : {n_by_tier['low']:5d}개")
+    print(f"      30~150 nT (8점, 저~중)         : {n_by_tier['mid_low']:5d}개")
+    print(f"      150~400 nT (10점, 지질경계·최적): {n_by_tier['optimal']:5d}개")
+    print(f"      400~800 nT (7점, 현장 검증)    : {n_by_tier['caution']:5d}개")
+    print(f"      >800 nT (조건부 제외)          : {n_by_tier['exclude']:5d}개 ({pct_excl:.1f}%)")
+
+    tiers_gdf = gpd.GeoDataFrame(
+        {
+            "variability_nT": tier_vars,
+            "tier":           tier_labels,
+            "score":          tier_scores,
+        },
+        geometry=tier_geoms,
+        crs=WGS84_CRS,
+    )
 
     if not exclude_cells:
         print(f"    ℹ 제외 구역 없음 (P90-P10 기준 {exclude_threshold_nT} nT 초과 없음)")
-        return None
+        return None, tiers_gdf
 
-    gdf = gpd.GeoDataFrame(
-        {"variability_nT": variabilities},
+    exclude_gdf = gpd.GeoDataFrame(
+        {"variability_nT": exclude_var},
         geometry=exclude_cells,
         crs=WGS84_CRS,
     )
-    print(f"    ✅ 자기이상 제외 구역 생성: {len(exclude_cells)}개 셀 "
+    print(f"    ✅ 자기이상 조건부 제외 구역 생성: {len(exclude_cells)}개 셀 "
           f"(P90-P10 > {exclude_threshold_nT} nT)")
     print(f"    ⚠  광역 자력이상도(KIGAM 1.5분) 예비선정 결과 — 최종 확정은 현장 정밀 자력측량 필요")
-    return gdf
+    return exclude_gdf, tiers_gdf
 
 
 # ============================================================
@@ -1840,8 +1877,8 @@ def compute_priority(
     │             │ 지형 경사도        │ 15 │ ⚠  Open-Elevation API        │
     │ 환경 정온도  │ 전력/철도 이격도   │ 15 │ ✅ OSM 데이터                 │
     │             │ 인구 밀집 이격도   │ 15 │ ✅ OSM 데이터                 │
-    │ 지질 안정성  │ 자기이상·지질경계  │ 10 │ ⚠  KIGAM/EMAG2 배치 시       │
-    │             │ 모델 기여도        │    │                              │
+    │ 지질 안정성  │ 자기이상·지질경계  │ 10 │ ✅ KIGAM 1.5분 격자          │
+    │             │ 모델 기여도        │    │   (P90-P10 구간별 점수화)     │
     │             │ 암상 적합성       │  5 │ ✅ 수치지질도 1:250,000 (이격도)│
     │ 운영 인프라  │ 부지 지속성       │ 10 │ ※ 최종 선정 후 육안 확인       │
     │             │ 관리 접근성       │  5 │ ※ 최종 선정 후 지도 확인       │
@@ -2245,6 +2282,7 @@ def save_map_data(
     existing_sites: "pd.DataFrame | None",
     korea_gdf:      "gpd.GeoDataFrame | None",
     data_dir:       Path,
+    anomaly_tiers_gdf: "gpd.GeoDataFrame | None" = None,
 ) -> None:
     """
     지도 레이어 데이터를 output/data/ 에 GeoJSON/JSON 파일로 저장.
@@ -2262,6 +2300,17 @@ def save_map_data(
         gdf = gpd.GeoDataFrame(geometry=[geom], crs=UTM_CRS).to_crs(WGS84_CRS)
         out = data_dir / f"zone_{key}.geojson"
         gdf.to_file(str(out), driver="GeoJSON")
+
+    # ── 자기이상·지질경계 모델 기여도 등급별 셀 (WGS84) ────────
+    if anomaly_tiers_gdf is not None and len(anomaly_tiers_gdf) > 0:
+        for tier in ("low", "mid_low", "optimal", "caution"):
+            sub = anomaly_tiers_gdf[anomaly_tiers_gdf["tier"] == tier]
+            if len(sub) == 0:
+                continue
+            sub.to_file(
+                str(data_dir / f"gradient_{tier}.geojson"),
+                driver="GeoJSON",
+            )
 
     # ── 격자점 샘플 ─────────────────────────────────────────
     grid_wgs = grid.to_crs(WGS84_CRS)
@@ -2367,6 +2416,7 @@ def create_folium_map(
     korea_gdf:      gpd.GeoDataFrame | None = None,
     existing_sites: "pd.DataFrame | None" = None,
     data_subdir:    str = "data",
+    anomaly_tiers_available: bool = False,
 ) -> folium.Map:
     """대화형 Folium 지도 생성 (OSM 기반)"""
     print("\n지도 생성 중...")
@@ -2434,6 +2484,48 @@ def create_folium_map(
             "})();</script>"
         ) % (data_subdir, key, fc, ec, tip, lv, key)
         m.get_root().html.add_child(folium.Element(js))
+
+    # ── 자기이상·지질경계 모델 기여도 등급별 셀 (입지 점수 ⑤) ──────
+    # 색상은 점수 체계와 의미를 반영:
+    #   low(5점)     : 회색 — 변화 매우 작음, 모델 보정 기여 제한
+    #   mid_low(8점) : 청록 연 — 저~중 그레디언트, 안정 측정+일정 기여
+    #   optimal(10점): 청록 진 — 지질경계·변화 구간 (최고점)
+    #   caution(7점) : 황색 — 고그레디언트, 현장 검증 필수
+    # 기본 비표시(클러터 방지) — 사용자가 레이어 컨트롤에서 켜서 확인
+    _grad = {
+        "low":      ("#B0B0B0", "#888888",
+                     "🟦 ⑤ 모델 기여도: <30 nT (5점, 변화 작음)"),
+        "mid_low":  ("#88CCEE", "#3399CC",
+                     "🟦 ⑤ 모델 기여도: 30~150 nT (8점, 저~중 그레디언트)"),
+        "optimal":  ("#2E8B57", "#1F6640",
+                     "🟢 ⑤ 모델 기여도: 150~400 nT (10점, 지질경계·최적)"),
+        "caution":  ("#DDAA00", "#AA7700",
+                     "🟡 ⑤ 모델 기여도: 400~800 nT (7점, 현장 검증 필수)"),
+    }
+    if anomaly_tiers_available:
+        for tier, (fc, ec, lname) in _grad.items():
+            layer = folium.FeatureGroup(name=lname, show=False)
+            layer.add_to(m)
+            lv = layer.get_name()
+            tip = lname.replace("'", "\\'")
+            js = (
+                "<script>(function(){"
+                "fetch('%s/gradient_%s.geojson')"
+                ".then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})"
+                ".then(function(d){"
+                "L.geoJSON(d,{"
+                "style:function(){return{fillColor:'%s',color:'%s',weight:0.5,fillOpacity:0.42}},"
+                "onEachFeature:function(f,l){"
+                "var p=f.properties||{};"
+                "var v=(p.variability_nT!=null)?p.variability_nT.toFixed(0):'-';"
+                "var s=(p.score!=null)?p.score:'-';"
+                "l.bindTooltip('%s<br>P90-P10: '+v+' nT &nbsp;|&nbsp; 점수: '+s+'/10');"
+                "}"
+                "}).addTo(%s);"
+                "}).catch(function(e){console.warn('gradient_%s:',e.message);});"
+                "})();</script>"
+            ) % (data_subdir, tier, fc, ec, tip, lv, tier)
+            m.get_root().html.add_child(folium.Element(js))
 
     # ── 전체 격자점 (참고용, 외부 GeoJSON fetch) ─────────────
     grid_layer = folium.FeatureGroup(name="격자점 전체 (참고)", show=False)
@@ -2601,6 +2693,13 @@ def create_folium_map(
       {_swatch('#8B0000','[지질] 자성 암종 직접 제외 †')}
       {_swatch('#CC4400','[지질] 단층 0.5 km 버퍼 †')}
       <hr style="margin:6px 0;border-color:#ccc;">
+      <b>▸ ⑤ 자기이상·지질경계 모델 기여도</b><br>
+      <span style="color:#666;font-size:10.5px;">(레이어 컨트롤에서 활성화)</span><br>
+      {_swatch('#B0B0B0','&lt;30 nT → 5점 (변화 작음)')}
+      {_swatch('#88CCEE','30~150 nT → 8점 (저~중)')}
+      {_swatch('#2E8B57','150~400 nT → 10점 (지질경계·최적) ★')}
+      {_swatch('#DDAA00','400~800 nT → 7점 (현장 검증 필수)')}
+      <hr style="margin:6px 0;border-color:#ccc;">
       <b>▸ 측정 후보지 (총 {n_cands}개)</b><br>
       {_dot('#FF0000',f'1등급 최우선 (데이터 공백): {n_p1}개')}
       {_dot('#FF8800',f'2등급 우선: {n_p2}개')}
@@ -2675,7 +2774,7 @@ def create_folium_map(
             <td rowspan="2">지질 안정성</td>
             <td>⑤ 자기이상·지질경계<br>&nbsp;&nbsp;&nbsp;&nbsp;모델 기여도</td>
             <td style="text-align:center;">10</td>
-            <td style="text-align:center;">⚠</td></tr>
+            <td style="text-align:center;">✅</td></tr>
         <tr><td>⑥ 암상 적합성</td>
             <td style="text-align:center;">5</td>
             <td style="text-align:center;">✅</td></tr>
@@ -3150,9 +3249,10 @@ def main():
         print("  ℹ  KIGAM 데이터 없음 — EMAG2 시도")
         mag_data = load_emag2_korea()        # 폴백: EMAG2 V3
     anomaly_gdf = None
+    anomaly_tiers_gdf = None
     if mag_data is not None:
-        anomaly_gdf = compute_anomaly_variation_zones(mag_data)
-        print(f"  ✅ 자기이상도 변화폭 제외 구역 생성 완료 (기준: {ANOMALY_VARIATION_THRESHOLD} nT)")
+        anomaly_gdf, anomaly_tiers_gdf = compute_anomaly_variation_zones(mag_data)
+        print(f"  ✅ 자기이상 조건부 제외 구역 생성 완료 (기준: {ANOMALY_VARIATION_THRESHOLD} nT)")
     else:
         print(f"  ℹ  {DATA_DIR}/mag_1982-2018_1.5min_ed.dat 필요")
     print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
@@ -3191,13 +3291,15 @@ def main():
 
     print("\n▶ 지도 데이터 파일 저장 (output/data/)")
     data_dir = OUTPUT_DIR / "data"
-    save_map_data(zones, grid, final_candidates, existing_sites, korea, data_dir)
+    save_map_data(zones, grid, final_candidates, existing_sites, korea, data_dir,
+                  anomaly_tiers_gdf=anomaly_tiers_gdf)
 
     m = create_folium_map(
         zones, grid, final_candidates,
         korea_gdf=korea,
         existing_sites=existing_sites,
         data_subdir="data",
+        anomaly_tiers_available=(anomaly_tiers_gdf is not None and len(anomaly_tiers_gdf) > 0),
     )
 
     # ── 8. HTML 저장 ─────────────────────────────────────────

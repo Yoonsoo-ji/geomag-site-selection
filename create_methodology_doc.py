@@ -4,6 +4,7 @@
 대한민국 지구자기장 측정 입지 선정 시스템 — 기술 문서 생성
 """
 
+from datetime import datetime
 from docx import Document
 from docx.shared import Pt, Cm, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -259,7 +260,7 @@ def main():
              "log(dist) 함수 기반 정규화"],
             ["", "④ 인구 밀집 이격도", "15", "✅",
              "log(dist) 함수 기반 정규화"],
-            ["지질 안정성", "⑤ 자기이상·지질경계 모델 기여도", "10", "⚠",
+            ["지질 안정성", "⑤ 자기이상·지질경계 모델 기여도", "10", "✅",
              "KIGAM 반경 0.05° 내 P90-P10 구간별 점수화"],
             ["", "⑥ 암상 적합성", "5", "❌",
              "지질도 기반 가중치 (미확보)"],
@@ -578,7 +579,8 @@ def main():
     )
 
     # ── 저장 ────────────────────────────────────────────────
-    out_path = Path("C:/LG_gram_backup_users/LX/2026_geomag/output/site_selection_methodology.docx")
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_path = Path(f"C:/LG_gram_backup_users/LX/2026_geomag/output/{ts}_site_selection_methodology_geology.docx")
     doc.save(str(out_path))
     print(f"saved: {out_path}")
 
