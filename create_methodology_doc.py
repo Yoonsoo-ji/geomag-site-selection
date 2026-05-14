@@ -589,8 +589,8 @@ def main():
     doc.save(str(docs_path))
     print(f"saved: {docs_path}")
 
-    # 로컬 output/ — 로컬 백업
-    local_dir = Path("C:/LG_gram_backup_users/LX/2026_geomag/output")
+    # 로컬 docs/output/ — 로컬 백업
+    local_dir = Path("C:/LG_gram_backup_users/LX/2026_geomag/docs/output")
     local_dir.mkdir(parents=True, exist_ok=True)
     import shutil
     shutil.copy2(docs_path, local_dir / filename)

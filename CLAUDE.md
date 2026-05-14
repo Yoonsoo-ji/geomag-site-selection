@@ -2,11 +2,16 @@
 
 ## 출력 파일 저장 경로
 
-**모든 작업 산출물은 `docs/output/` 폴더에 저장한다.**
+**모든 작업 산출물은 두 곳에 동시 저장한다.**
 
-- Word 문서(.docx), CSV, 보고서 등 생성되는 파일은 반드시 `docs/output/` 경로 사용
-- `output/` (루트 하위) 에 저장하지 않는다 — GitHub Pages 배포 폴더인 `docs/` 기준이므로 커밋 대상과 일치시켜야 함
-- 스크립트 내 절대경로 하드코딩 금지. 대신 `Path(__file__).parent / "docs" / "output"` 패턴 사용
+| 경로 | 용도 |
+|---|---|
+| `docs/output/` (스크립트 기준 상대경로) | git 커밋 대상, GitHub Pages 배포 |
+| `C:/LG_gram_backup_users/LX/2026_geomag/docs/output/` | 로컬 백업 |
+
+- 스크립트 내 저장 순서: ① `docs/output/` 에 `doc.save()` → ② `shutil.copy2()` 로 로컬 경로 복사
+- `docs/output/` 경로는 `Path(__file__).parent / "docs" / "output"` 패턴 사용 (절대경로 하드코딩 금지)
+- 루트의 `output/` 단독 저장 금지
 
 ## 파일명 규칙
 
