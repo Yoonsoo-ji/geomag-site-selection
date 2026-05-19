@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_064f45dccf7c0304e10074bfdec9aa48 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+<div style='position:fixed;bottom:28px;left:20px;z-index:9999;
+     background:white;padding:12px 16px;border-radius:8px;
+     border:1px solid #ccc;font-size:12px;font-family:맑은고딕,sans-serif;
+     box-shadow:0 2px 8px rgba(0,0,0,0.2)'>
+<b>범례</b><br>
+<span style='color:#1F5C96'>●</span> 탐색 반경 5km<br>
+<span style='color:#BBBBBB'>●</span> 제외 격자점 (간섭·지질)<br>
+<span style='color:#FF8800'>●</span> 도로접근 불리 (>2km)<br>
+<span style='color:#3a3'>●</span> 후보점 (점수 高)<br>
+<span style='color:#d33'>●</span> 후보점 (점수 低)<br>
+<b style='color:#1a5276'>#1~#5</b> 최우선 답사 후보<br>
+<span style='color:#4472C4'>★</span> P1 원점 (도상 선정)
+</div>
+    
+<div style='position:fixed;top:12px;left:50%;transform:translateX(-50%);
+     z-index:9999;background:rgba(31,56,100,0.9);color:white;
+     padding:8px 20px;border-radius:6px;font-size:14px;font-weight:bold;
+     font-family:맑은고딕,sans-serif;white-space:nowrap'>
+전주(완주) P1 후보지 — 1km 서브격자 현장 답사 후보 |
+후보 7개 | 상위 5개 번호 표시
+</div>
+    
+            <div class="folium-map" id="map_064f45dccf7c0304e10074bfdec9aa48" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_064f45dccf7c0304e10074bfdec9aa48 = L.map(
+                "map_064f45dccf7c0304e10074bfdec9aa48",
+                {
+                    center: [35.59196, 127.15795],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_5d1ceff0db331f8161d658cc2e54aa4f = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_5d1ceff0db331f8161d658cc2e54aa4f.addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            var circle_ed20b94457332a1f20a8cc36e0832f6d = L.circle(
+                [35.59196, 127.15795],
+                {"bubblingMouseEvents": true, "color": "#4472C4", "dashArray": "8", "dashOffset": null, "fill": true, "fillColor": "#4472C4", "fillOpacity": 0.05, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 5000, "stroke": true, "weight": 2}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_ed20b94457332a1f20a8cc36e0832f6d.bindTooltip(
+                `<div>
+                     탐색 반경 5km
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_71425b078d5ca9927acee2835ef2d5c9 = L.marker(
+                [35.59196, 127.15795],
+                {
+}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            var icon_bcb7ec05832ee77733b63a2fa4ef2f6c = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "star",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_aaefc512e6fc40bf693948d635fd6614 = L.popup({
+  "maxWidth": 220,
+});
+
+        
+            
+                var html_4660e338e7a03c9446ac60d52140011c = $(`<div id="html_4660e338e7a03c9446ac60d52140011c" style="width: 100.0%; height: 100.0%;"><b>P1 원점 (site_id=11)</b><br>도상 종합점수: 61.1점<br>위도: 35.59196°N<br>경도: 127.15795°E</div>`)[0];
+                popup_aaefc512e6fc40bf693948d635fd6614.setContent(html_4660e338e7a03c9446ac60d52140011c);
+            
+        
+
+        marker_71425b078d5ca9927acee2835ef2d5c9.bindPopup(popup_aaefc512e6fc40bf693948d635fd6614)
+        ;
+
+        
+    
+    
+            marker_71425b078d5ca9927acee2835ef2d5c9.bindTooltip(
+                `<div>
+                     P1 원점 (site_id=11, 도상 점수 61.1점)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_71425b078d5ca9927acee2835ef2d5c9.setIcon(icon_bcb7ec05832ee77733b63a2fa4ef2f6c);
+            
+    
+            var circle_marker_109f358f9aacb42a6421bb8ca9b44cd5 = L.circleMarker(
+                [35.5917907220737, 127.10275724648311],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_109f358f9aacb42a6421bb8ca9b44cd5.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_9f5cab4899a5c46ae5b4aa415b499771 = L.circleMarker(
+                [35.56477748208919, 127.11392558895395],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_9f5cab4899a5c46ae5b4aa415b499771.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_d7756e80340f2d45988d4804f7982032 = L.circleMarker(
+                [35.57379386815042, 127.11388233179464],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_d7756e80340f2d45988d4804f7982032.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_425386d1a12ca3f826b695b74d6ff5d3 = L.circleMarker(
+                [35.58281024065195, 127.1138390554194],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_425386d1a12ca3f826b695b74d6ff5d3.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_124e4774246c44fc2fc1d5adc06a1ea3 = L.circleMarker(
+                [35.59182659959234, 127.11379575981965],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_124e4774246c44fc2fc1d5adc06a1ea3.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_8858c9324856d3a2fa8b051bbba72d57 = L.circleMarker(
+                [35.60084294497014, 127.1137524449868],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_8858c9324856d3a2fa8b051bbba72d57.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_3e17ba5ea0b4ad27f9e0bc49766a08ce = L.circleMarker(
+                [35.60985927678391, 127.1137091109123],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_3e17ba5ea0b4ad27f9e0bc49766a08ce.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_9b1b5fa59e9fcd39adbe6207982e2159 = L.circleMarker(
+                [35.61887559503219, 127.11366575758751],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_9b1b5fa59e9fcd39adbe6207982e2159.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_adcfb0cfa9aaca9f88700a7c92e9bbc1 = L.circleMarker(
+                [35.55579590295377, 127.12500241313957],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_adcfb0cfa9aaca9f88700a7c92e9bbc1.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_4b55c2ac3847ccbcc5a82abbdc9986b5 = L.circleMarker(
+                [35.56481231408776, 127.12496041094796],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_4b55c2ac3847ccbcc5a82abbdc9986b5.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_cd50e97d173fcab5bc383ba5bcce96a7 = L.circleMarker(
+                [35.57382871166608, 127.12491839009792],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_cd50e97d173fcab5bc383ba5bcce96a7.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_5437b68437a27b5ad49f60bf123578cc = L.circleMarker(
+                [35.58284509568722, 127.12487635058115],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_5437b68437a27b5ad49f60bf123578cc.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_584985794b83777554d46f3feb64e5b4 = L.circleMarker(
+                [35.59186146614979, 127.12483429238927],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_584985794b83777554d46f3feb64e5b4.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_6c38c03ad88644488c1acf338c9cda58 = L.circleMarker(
+                [35.6008778230523, 127.12479221551398],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_6c38c03ad88644488c1acf338c9cda58.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_72189d892e6e3d3ca45e678d0645ecde = L.circleMarker(
+                [35.6098941663933, 127.12475011994692],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_72189d892e6e3d3ca45e678d0645ecde.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_20e70787eea5c40a7b9e560719451fdd = L.circleMarker(
+                [35.61891049617138, 127.12470800567975],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_20e70787eea5c40a7b9e560719451fdd.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_fce2504d037e4f846eea45588ba1354c = L.circleMarker(
+                [35.62792681238507, 127.12466587270413],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_fce2504d037e4f846eea45588ba1354c.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_616088d78bf946a4a56645fdbaaa82b9 = L.circleMarker(
+                [35.55582971380688, 127.13603601802332],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_616088d78bf946a4a56645fdbaaa82b9.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_58d62470684aa7794592ffcd83915a57 = L.circleMarker(
+                [35.56484613612159, 127.13599525160039],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_58d62470684aa7794592ffcd83915a57.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_354f1e535fe60f436a79a7b244da3a8a = L.circleMarker(
+                [35.573862544883056, 127.13595446706798],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_354f1e535fe60f436a79a7b244da3a8a.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_a776875c13730759656dcc984e881543 = L.circleMarker(
+                [35.58287894008982, 127.13591366441797],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_a776875c13730759656dcc984e881543.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_13381e0551fd9c74d7317e8082b335e3 = L.circleMarker(
+                [35.59189532174047, 127.13587284364233],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_13381e0551fd9c74d7317e8082b335e3.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_b670adae140cdd4c2db9b6072349ef29 = L.circleMarker(
+                [35.60091168983353, 127.13583200473293],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_b670adae140cdd4c2db9b6072349ef29.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_1a7068e5c711bf2b4a62d939ab0de4e1 = L.circleMarker(
+                [35.60992804436756, 127.13579114768169],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_1a7068e5c711bf2b4a62d939ab0de4e1.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_3a1db92fda1a6e1e1149c2ed822a5cf3 = L.circleMarker(
+                [35.61894438534113, 127.13575027248048],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_3a1db92fda1a6e1e1149c2ed822a5cf3.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_2895d73aed2f6add8095b2f5fd796a50 = L.circleMarker(
+                [35.62796071275278, 127.13570937912121],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_2895d73aed2f6add8095b2f5fd796a50.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_7ab477078592b22e24d851f36ba3a76c = L.circleMarker(
+                [35.55586251502371, 127.1470696410085],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_7ab477078592b22e24d851f36ba3a76c.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_0c752d96a7682fd0eba3dc106fb80e07 = L.circleMarker(
+                [35.564878948185246, 127.14703011036231],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_0c752d96a7682fd0eba3dc106fb80e07.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_59cc626fb35dd01a5bd10327d5d858ed = L.circleMarker(
+                [35.573895367795934, 127.14699056215557],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_59cc626fb35dd01a5bd10327d5d858ed.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_4f1d7d9cda1b418199e4f848635d5b9e = L.circleMarker(
+                [35.582911773854306, 127.14695099638047],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_4f1d7d9cda1b418199e4f848635d5b9e.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_361915aca357c009eeba1807fda6beb7 = L.circleMarker(
+                [35.60094454530841, 127.14687181209369],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_361915aca357c009eeba1807fda6beb7.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_53418bfcf89a2102a50b0f9039f7c6cf = L.circleMarker(
+                [35.60996091070124, 127.14683219356637],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_53418bfcf89a2102a50b0f9039f7c6cf.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_3a2e19691e68fcc468a9aebfaed38b4a = L.circleMarker(
+                [35.618977262535985, 127.14679255743924],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_3a2e19691e68fcc468a9aebfaed38b4a.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_e7b99e01965a177a161c1c43c47d57cc = L.circleMarker(
+                [35.62799360081122, 127.14675290370447],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_e7b99e01965a177a161c1c43c47d57cc.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_ee74999a2b2ca43810bd5c974b45fa72 = L.circleMarker(
+                [35.5468778493774, 127.15814155940397],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_ee74999a2b2ca43810bd5c974b45fa72.bindTooltip(
+                `<div>
+                     제외: fault
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_759956ea07de712d10e177b40925c054 = L.circleMarker(
+                [35.56491075027349, 127.15806498668478],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_759956ea07de712d10e177b40925c054.bindTooltip(
+                `<div>
+                     제외: geology
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_11040c500e5ba6838fc53e03af4b0f35 = L.circleMarker(
+                [35.57392718039945, 127.15802667481158],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_11040c500e5ba6838fc53e03af4b0f35.bindTooltip(
+                `<div>
+                     제외: geology
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_7298d6b6194048ad3fae8326a566bf22 = L.circleMarker(
+                [35.60999276538907, 127.15787325705084],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_7298d6b6194048ad3fae8326a566bf22.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_6734c12e8f0907e6b2e0cb3f21c7135f = L.circleMarker(
+                [35.61900912775071, 127.15783486000566],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_6734c12e8f0907e6b2e0cb3f21c7135f.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_c83d9dcdb3b3660b826a27affa4841e5 = L.circleMarker(
+                [35.62802547655514, 127.15779644590324],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_c83d9dcdb3b3660b826a27affa4841e5.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_60f957e765f67e462be755383a4b838e = L.circleMarker(
+                [35.63704181180096, 127.15775801473602],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_60f957e765f67e462be755383a4b838e.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_9d9975b4a9455092b64b652fa9441d47 = L.circleMarker(
+                [35.55592508852762, 127.16913693908828],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_9d9975b4a9455092b64b652fa9441d47.bindTooltip(
+                `<div>
+                     제외: fault
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_87deda061a9a1cf0c3fce989c3aaae3d = L.circleMarker(
+                [35.564941542381234, 127.16909988001885],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_87deda061a9a1cf0c3fce989c3aaae3d.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_01b301975cf67c7b53d588a28e412d17 = L.circleMarker(
+                [35.57395798268854, 127.16906280448676],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_01b301975cf67c7b53d588a28e412d17.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_3d94381ab31a52a9614fb27555e00050 = L.circleMarker(
+                [35.58297440944811, 127.16902571248467],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_3d94381ab31a52a9614fb27555e00050.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_b60874f7db4792c2f2ca6a01d219e460 = L.circleMarker(
+                [35.591990822658516, 127.16898860400525],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_b60874f7db4792c2f2ca6a01d219e460.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_900b3672b845ef2a9b31ba245bc5ce7c = L.circleMarker(
+                [35.60100722231828, 127.16895147904113],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_900b3672b845ef2a9b31ba245bc5ce7c.bindTooltip(
+                `<div>
+                     제외: geology
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_e7b43344c903a64f08931492bb73924c = L.circleMarker(
+                [35.610023608425976, 127.16891433758492],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_e7b43344c903a64f08931492bb73924c.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_2b4d51651536a382a3338444574a4ae8 = L.circleMarker(
+                [35.61903998098019, 127.16887717962929],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_2b4d51651536a382a3338444574a4ae8.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_77720b36089518f49f54beeb11b11502 = L.circleMarker(
+                [35.62805633997944, 127.1688400051669],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_77720b36089518f49f54beeb11b11502.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_7020873001e94be7126a9cc07a2a511a = L.circleMarker(
+                [35.55595486080472, 127.1801706130855],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_7020873001e94be7126a9cc07a2a511a.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_500af9535a6a9c7b256d32812c142ae2 = L.circleMarker(
+                [35.56497132450355, 127.18013478981557],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_500af9535a6a9c7b256d32812c142ae2.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_f99c207fcb572ad7c0479319c7685a1e = L.circleMarker(
+                [35.57398777465827, 127.18009895063193],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_f99c207fcb572ad7c0479319c7685a1e.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_049f834fd7744ec272ff2c032ce5c71b = L.circleMarker(
+                [35.58300421126741, 127.18006309552753],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_049f834fd7744ec272ff2c032ce5c71b.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_245205b81432d4337cec36caf1c86d8e = L.circleMarker(
+                [35.59202063432955, 127.1800272244952],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_245205b81432d4337cec36caf1c86d8e.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_2da474aa29fddfdb892616683a3fc1a5 = L.circleMarker(
+                [35.60103704384323, 127.17999133752788],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_2da474aa29fddfdb892616683a3fc1a5.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_578f0ebfbd5c72a9772a76a716524415 = L.circleMarker(
+                [35.610053439807025, 127.17995543461845],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_578f0ebfbd5c72a9772a76a716524415.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_d49a046cf0a438d0a7a7f491709ebf41 = L.circleMarker(
+                [35.61906982221948, 127.17991951575975],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_d49a046cf0a438d0a7a7f491709ebf41.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_ce97e86b111136c3b53cb167c94abdd0 = L.circleMarker(
+                [35.628086191079184, 127.17988358094469],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_ce97e86b111136c3b53cb167c94abdd0.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_8958de3b5240a32f153b8f7f019c515a = L.circleMarker(
+                [35.55598362342548, 127.19120430298929],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_8958de3b5240a32f153b8f7f019c515a.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_6f9f2253e641420fd777cbf009d89332 = L.circleMarker(
+                [35.565000096635686, 127.19116971552597],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_6f9f2253e641420fd777cbf009d89332.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_7cc38317dbb005ba9d991a2b96a58e28 = L.circleMarker(
+                [35.57401655630385, 127.1911351126979],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_7cc38317dbb005ba9d991a2b96a58e28.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_c12de7f1d3006486d1ee12fbffdea0b9 = L.circleMarker(
+                [35.58303300242854, 127.19110049449824],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_c12de7f1d3006486d1ee12fbffdea0b9.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_ed9c62468bda05b322c3918d005b271b = L.circleMarker(
+                [35.592049435008335, 127.19106586092016],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_ed9c62468bda05b322c3918d005b271b.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_c1bfaaaf957fcb8359fca2b2418f3d89 = L.circleMarker(
+                [35.601065854041764, 127.19103121195678],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_c1bfaaaf957fcb8359fca2b2418f3d89.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_1b9597ace62f29989bae9b94d6b3ad78 = L.circleMarker(
+                [35.6100822595274, 127.19099654760119],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_1b9597ace62f29989bae9b94d6b3ad78.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_3bb98eefa350694da1281fa7a98fe519 = L.circleMarker(
+                [35.61909865146381, 127.19096186784657],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_3bb98eefa350694da1281fa7a98fe519.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_3b4d80e1a881a89ce6ed7f9fb5e73b19 = L.circleMarker(
+                [35.62811502984956, 127.190927172686],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_3b4d80e1a881a89ce6ed7f9fb5e73b19.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_62a8602b2cb6ddbe50f57c6be0429e92 = L.circleMarker(
+                [35.56502785877302, 127.20220465660107],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_62a8602b2cb6ddbe50f57c6be0429e92.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_3e3d80f7a860f21eadc236561af9c7d0 = L.circleMarker(
+                [35.574044327620705, 127.20217129013545],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_3e3d80f7a860f21eadc236561af9c7d0.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_6225d78b8d51c4142075f1565681b54b = L.circleMarker(
+                [35.58306078292692, 127.20213790884742],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_6225d78b8d51c4142075f1565681b54b.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_ea3c5c9a5b2744b0d25e45bec0ce88ec = L.circleMarker(
+                [35.61011006758252, 127.202037675983],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_ea3c5c9a5b2744b0d25e45bec0ce88ec.bindTooltip(
+                `<div>
+                     제외: urban_resid
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_570be25331f6433d1c07260958160570 = L.circleMarker(
+                [35.619126468708565, 127.2020042353393],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_570be25331f6433d1c07260958160570.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_d27d9a549d50afcf8b1549a43daf63ff = L.circleMarker(
+                [35.5921040033709, 127.21314317937632],
+                {"bubblingMouseEvents": true, "color": "#BBBBBB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#BBBBBB", "fillOpacity": 0.4, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 3, "stroke": true, "weight": 0.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            circle_marker_d27d9a549d50afcf8b1549a43daf63ff.bindTooltip(
+                `<div>
+                     제외: water
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_38ded1f515463d035d4666098c8874d3 = L.marker(
+                [35.6009763894717, 127.15791163704641],
+                {
+}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            var div_icon_cb6b73d02d617abe95f286c5f30c9e31 = L.divIcon({
+  "html": "\u003cdiv style=\u0027\n                    background:#00ef32;color:#fff;font-weight:bold;\n                    border-radius:50%;width:32px;height:32px;\n                    display:flex;align-items:center;justify-content:center;\n                    font-size:14px;border:2px solid #333;\n                    box-shadow:0 2px 6px rgba(0,0,0,0.4)\u0027\u003e#1\u003c/div\u003e",
+  "iconSize": [32, 32],
+  "iconAnchor": [16, 16],
+  "className": "empty",
+});
+        
+    
+        var popup_2ddeda820991fcb36060bc7a269ef22f = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_694c59a06a226925ac939cda9d20111c = $(`<div id="html_694c59a06a226925ac939cda9d20111c" style="width: 100.0%; height: 100.0%;"> <div style='font-family:맑은고딕,sans-serif;font-size:12px;min-width:240px'> <b style='font-size:14px'>#1 후보점</b>&nbsp; <span style='background:#00ef32;color:#fff;padding:2px 8px;border-radius:10px;font-weight:bold'>91.2점</span> <hr style='margin:4px 0'> <table style='border-collapse:collapse;width:100%'> <tr><td style='color:#555'>위도</td><td><b>35.60098°N</b></td>     <td style='color:#555'>경도</td><td><b>127.15791°E</b></td></tr> <tr><td colspan=4><hr style='margin:3px 0'></td></tr> <tr style='background:#f5f5f5'><td colspan=4 style='font-weight:bold;padding:2px'>점수 내역</td></tr> <tr><td>② 지형경사</td><td>13.5/15</td>     <td>경사도</td><td>3.0°</td></tr> <tr><td>③ 전력·철도</td><td>14.5/15</td>     <td>전력/철도</td><td>5.4/6.6km</td></tr> <tr><td>④ 인구이격</td><td>14.4/15</td>     <td>도시</td><td>1.1km</td></tr> <tr><td>⑤ 모델기여</td><td>8.0/10</td>     <td>P90-P10</td><td>116nT</td></tr> <tr><td>⑥ 암상</td><td>4.4/5</td>     <td>암상/단층</td><td>0.6km/0.9km</td></tr> <tr style='background:#EEF4FF'><td colspan=2><b>합계</b></td>     <td colspan=2><b>54.7/60점 → 91.2점</b></td></tr> </table> <hr style='margin:4px 0'> <span style='color:#1a5276'>🚗 도로접근: 288m</span> </div></div>`)[0];
+                popup_2ddeda820991fcb36060bc7a269ef22f.setContent(html_694c59a06a226925ac939cda9d20111c);
+            
+        
+
+        marker_38ded1f515463d035d4666098c8874d3.bindPopup(popup_2ddeda820991fcb36060bc7a269ef22f)
+        ;
+
+        
+    
+    
+            marker_38ded1f515463d035d4666098c8874d3.bindTooltip(
+                `<div>
+                     #1 종합 91.2점
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_38ded1f515463d035d4666098c8874d3.setIcon(div_icon_cb6b73d02d617abe95f286c5f30c9e31);
+            
+    
+            var marker_ed1bb09034944d9fbb21f67752b7ab72 = L.marker(
+                [35.601093652909285, 127.20207110177785],
+                {
+}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            var div_icon_2fdce97b23833d5a9fa9c0cb77e18901 = L.divIcon({
+  "html": "\u003cdiv style=\u0027\n                    background:#4bab32;color:#fff;font-weight:bold;\n                    border-radius:50%;width:32px;height:32px;\n                    display:flex;align-items:center;justify-content:center;\n                    font-size:14px;border:2px solid #333;\n                    box-shadow:0 2px 6px rgba(0,0,0,0.4)\u0027\u003e#2\u003c/div\u003e",
+  "iconSize": [32, 32],
+  "iconAnchor": [16, 16],
+  "className": "empty",
+});
+        
+    
+        var popup_3d451c479c072ff96787cdbc290b6923 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_75c625b39d8f4d0776a21f002f0ab923 = $(`<div id="html_75c625b39d8f4d0776a21f002f0ab923" style="width: 100.0%; height: 100.0%;"> <div style='font-family:맑은고딕,sans-serif;font-size:12px;min-width:240px'> <b style='font-size:14px'>#2 후보점</b>&nbsp; <span style='background:#4bab32;color:#fff;padding:2px 8px;border-radius:10px;font-weight:bold'>88.0점</span> <hr style='margin:4px 0'> <table style='border-collapse:collapse;width:100%'> <tr><td style='color:#555'>위도</td><td><b>35.60109°N</b></td>     <td style='color:#555'>경도</td><td><b>127.20207°E</b></td></tr> <tr><td colspan=4><hr style='margin:3px 0'></td></tr> <tr style='background:#f5f5f5'><td colspan=4 style='font-weight:bold;padding:2px'>점수 내역</td></tr> <tr><td>② 지형경사</td><td>12.8/15</td>     <td>경사도</td><td>4.4°</td></tr> <tr><td>③ 전력·철도</td><td>13.5/15</td>     <td>전력/철도</td><td>3.5/3.4km</td></tr> <tr><td>④ 인구이격</td><td>13.6/15</td>     <td>도시</td><td>0.8km</td></tr> <tr><td>⑤ 모델기여</td><td>8.0/10</td>     <td>P90-P10</td><td>67nT</td></tr> <tr><td>⑥ 암상</td><td>4.8/5</td>     <td>암상/단층</td><td>1.3km/1.8km</td></tr> <tr style='background:#EEF4FF'><td colspan=2><b>합계</b></td>     <td colspan=2><b>52.8/60점 → 88.0점</b></td></tr> </table> <hr style='margin:4px 0'> <span style='color:#1a5276'>🚗 도로접근: 74m</span> </div></div>`)[0];
+                popup_3d451c479c072ff96787cdbc290b6923.setContent(html_75c625b39d8f4d0776a21f002f0ab923);
+            
+        
+
+        marker_ed1bb09034944d9fbb21f67752b7ab72.bindPopup(popup_3d451c479c072ff96787cdbc290b6923)
+        ;
+
+        
+    
+    
+            marker_ed1bb09034944d9fbb21f67752b7ab72.bindTooltip(
+                `<div>
+                     #2 종합 88.0점
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_ed1bb09034944d9fbb21f67752b7ab72.setIcon(div_icon_2fdce97b23833d5a9fa9c0cb77e18901);
+            
+    
+            var marker_575a3224e344d4e642a865b4e11e46e6 = L.marker(
+                [35.59192816635896, 127.14691141302913],
+                {
+}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            var div_icon_323d4efa525b7e2939e442140a5d0b51 = L.divIcon({
+  "html": "\u003cdiv style=\u0027\n                    background:#689132;color:#fff;font-weight:bold;\n                    border-radius:50%;width:32px;height:32px;\n                    display:flex;align-items:center;justify-content:center;\n                    font-size:14px;border:2px solid #333;\n                    box-shadow:0 2px 6px rgba(0,0,0,0.4)\u0027\u003e#3\u003c/div\u003e",
+  "iconSize": [32, 32],
+  "iconAnchor": [16, 16],
+  "className": "empty",
+});
+        
+    
+        var popup_5b3acada44666c5a43b0b7a54286d4a9 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_3b744dadd08a9858648bcdc8d262822c = $(`<div id="html_3b744dadd08a9858648bcdc8d262822c" style="width: 100.0%; height: 100.0%;"> <div style='font-family:맑은고딕,sans-serif;font-size:12px;min-width:240px'> <b style='font-size:14px'>#3 후보점</b>&nbsp; <span style='background:#689132;color:#fff;padding:2px 8px;border-radius:10px;font-weight:bold'>86.8점</span> <hr style='margin:4px 0'> <table style='border-collapse:collapse;width:100%'> <tr><td style='color:#555'>위도</td><td><b>35.59193°N</b></td>     <td style='color:#555'>경도</td><td><b>127.14691°E</b></td></tr> <tr><td colspan=4><hr style='margin:3px 0'></td></tr> <tr style='background:#f5f5f5'><td colspan=4 style='font-weight:bold;padding:2px'>점수 내역</td></tr> <tr><td>② 지형경사</td><td>8.6/15</td>     <td>경사도</td><td>12.9°</td></tr> <tr><td>③ 전력·철도</td><td>14.4/15</td>     <td>전력/철도</td><td>4.4/7.9km</td></tr> <tr><td>④ 인구이격</td><td>14.5/15</td>     <td>도시</td><td>1.2km</td></tr> <tr><td>⑤ 모델기여</td><td>10.0/10</td>     <td>P90-P10</td><td>170nT</td></tr> <tr><td>⑥ 암상</td><td>4.5/5</td>     <td>암상/단층</td><td>1.5km/0.6km</td></tr> <tr style='background:#EEF4FF'><td colspan=2><b>합계</b></td>     <td colspan=2><b>52.1/60점 → 86.8점</b></td></tr> </table> <hr style='margin:4px 0'> <span style='color:#1a5276'>🚗 도로접근: 63m</span> </div></div>`)[0];
+                popup_5b3acada44666c5a43b0b7a54286d4a9.setContent(html_3b744dadd08a9858648bcdc8d262822c);
+            
+        
+
+        marker_575a3224e344d4e642a865b4e11e46e6.bindPopup(popup_5b3acada44666c5a43b0b7a54286d4a9)
+        ;
+
+        
+    
+    
+            marker_575a3224e344d4e642a865b4e11e46e6.bindTooltip(
+                `<div>
+                     #3 종합 86.8점
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_575a3224e344d4e642a865b4e11e46e6.setIcon(div_icon_323d4efa525b7e2939e442140a5d0b51);
+            
+    
+            var marker_4eda42cc44d3875942b547ccc9cdebaf = L.marker(
+                [35.59196000000001, 127.15794999999999],
+                {
+}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            var div_icon_539e54207f418cdecf19db146a90aa72 = L.divIcon({
+  "html": "\u003cdiv style=\u0027\n                    background:#689132;color:#fff;font-weight:bold;\n                    border-radius:50%;width:32px;height:32px;\n                    display:flex;align-items:center;justify-content:center;\n                    font-size:14px;border:2px solid #333;\n                    box-shadow:0 2px 6px rgba(0,0,0,0.4)\u0027\u003e#4\u003c/div\u003e",
+  "iconSize": [32, 32],
+  "iconAnchor": [16, 16],
+  "className": "empty",
+});
+        
+    
+        var popup_b0c685e3da9c1021580c9073433a1f9c = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_50c9f8d71872fdbdb847e8cad4469899 = $(`<div id="html_50c9f8d71872fdbdb847e8cad4469899" style="width: 100.0%; height: 100.0%;"> <div style='font-family:맑은고딕,sans-serif;font-size:12px;min-width:240px'> <b style='font-size:14px'>#4 후보점</b>&nbsp; <span style='background:#689132;color:#fff;padding:2px 8px;border-radius:10px;font-weight:bold'>86.8점</span> <hr style='margin:4px 0'> <table style='border-collapse:collapse;width:100%'> <tr><td style='color:#555'>위도</td><td><b>35.59196°N</b></td>     <td style='color:#555'>경도</td><td><b>127.15795°E</b></td></tr> <tr><td colspan=4><hr style='margin:3px 0'></td></tr> <tr style='background:#f5f5f5'><td colspan=4 style='font-weight:bold;padding:2px'>점수 내역</td></tr> <tr><td>② 지형경사</td><td>10.1/15</td>     <td>경사도</td><td>9.9°</td></tr> <tr><td>③ 전력·철도</td><td>14.5/15</td>     <td>전력/철도</td><td>5.4/7.0km</td></tr> <tr><td>④ 인구이격</td><td>15.0/15</td>     <td>도시</td><td>1.5km</td></tr> <tr><td>⑤ 모델기여</td><td>8.0/10</td>     <td>P90-P10</td><td>97nT</td></tr> <tr><td>⑥ 암상</td><td>4.5/5</td>     <td>암상/단층</td><td>0.6km/1.3km</td></tr> <tr style='background:#EEF4FF'><td colspan=2><b>합계</b></td>     <td colspan=2><b>52.1/60점 → 86.8점</b></td></tr> </table> <hr style='margin:4px 0'> <span style='color:#1a5276'>🚗 도로접근: 939m</span> </div></div>`)[0];
+                popup_b0c685e3da9c1021580c9073433a1f9c.setContent(html_50c9f8d71872fdbdb847e8cad4469899);
+            
+        
+
+        marker_4eda42cc44d3875942b547ccc9cdebaf.bindPopup(popup_b0c685e3da9c1021580c9073433a1f9c)
+        ;
+
+        
+    
+    
+            marker_4eda42cc44d3875942b547ccc9cdebaf.bindTooltip(
+                `<div>
+                     #4 종합 86.8점
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_4eda42cc44d3875942b547ccc9cdebaf.setIcon(div_icon_539e54207f418cdecf19db146a90aa72);
+            
+    
+            var marker_ba6ef2b2ed5c518822c1f5986d36ff1b = L.marker(
+                [35.58294359697545, 127.15798834591918],
+                {
+}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+            var div_icon_df4229e353a367c91911d8bca3d3923c = L.divIcon({
+  "html": "\u003cdiv style=\u0027\n                    background:#897332;color:#fff;font-weight:bold;\n                    border-radius:50%;width:32px;height:32px;\n                    display:flex;align-items:center;justify-content:center;\n                    font-size:14px;border:2px solid #333;\n                    box-shadow:0 2px 6px rgba(0,0,0,0.4)\u0027\u003e#5\u003c/div\u003e",
+  "iconSize": [32, 32],
+  "iconAnchor": [16, 16],
+  "className": "empty",
+});
+        
+    
+        var popup_6ac2ff45fb8c247174cf2e5b85cf4bfa = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_7c07aa83a6ada620c06c028a9b17f4d2 = $(`<div id="html_7c07aa83a6ada620c06c028a9b17f4d2" style="width: 100.0%; height: 100.0%;"> <div style='font-family:맑은고딕,sans-serif;font-size:12px;min-width:240px'> <b style='font-size:14px'>#5 후보점</b>&nbsp; <span style='background:#897332;color:#fff;padding:2px 8px;border-radius:10px;font-weight:bold'>85.4점</span> <hr style='margin:4px 0'> <table style='border-collapse:collapse;width:100%'> <tr><td style='color:#555'>위도</td><td><b>35.58294°N</b></td>     <td style='color:#555'>경도</td><td><b>127.15799°E</b></td></tr> <tr><td colspan=4><hr style='margin:3px 0'></td></tr> <tr style='background:#f5f5f5'><td colspan=4 style='font-weight:bold;padding:2px'>점수 내역</td></tr> <tr><td>② 지형경사</td><td>10.0/15</td>     <td>경사도</td><td>10.0°</td></tr> <tr><td>③ 전력·철도</td><td>14.6/15</td>     <td>전력/철도</td><td>5.6/7.6km</td></tr> <tr><td>④ 인구이격</td><td>14.0/15</td>     <td>도시</td><td>1.0km</td></tr> <tr><td>⑤ 모델기여</td><td>8.0/10</td>     <td>P90-P10</td><td>97nT</td></tr> <tr><td>⑥ 암상</td><td>4.6/5</td>     <td>암상/단층</td><td>0.6km/1.6km</td></tr> <tr style='background:#EEF4FF'><td colspan=2><b>합계</b></td>     <td colspan=2><b>51.2/60점 → 85.4점</b></td></tr> </table> <hr style='margin:4px 0'> <span style='color:#1a5276'>🚗 도로접근: 926m</span> </div></div>`)[0];
+                popup_6ac2ff45fb8c247174cf2e5b85cf4bfa.setContent(html_7c07aa83a6ada620c06c028a9b17f4d2);
+            
+        
+
+        marker_ba6ef2b2ed5c518822c1f5986d36ff1b.bindPopup(popup_6ac2ff45fb8c247174cf2e5b85cf4bfa)
+        ;
+
+        
+    
+    
+            marker_ba6ef2b2ed5c518822c1f5986d36ff1b.bindTooltip(
+                `<div>
+                     #5 종합 85.4점
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_ba6ef2b2ed5c518822c1f5986d36ff1b.setIcon(div_icon_df4229e353a367c91911d8bca3d3923c);
+            
+    
+            var circle_marker_62db5a9130fbe6b3128685b8e7cce2cd = L.circleMarker(
+                [35.55589430659899, 127.1581032815464],
+                {"bubblingMouseEvents": true, "color": "#cd3432", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#cd3432", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 7, "stroke": true, "weight": 1.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+        var popup_7c481df885823c642cf639d26014fd43 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_8dbd10264e17da035da8062ef1d47e2b = $(`<div id="html_8dbd10264e17da035da8062ef1d47e2b" style="width: 100.0%; height: 100.0%;"> <div style='font-family:맑은고딕,sans-serif;font-size:12px;min-width:240px'> <b style='font-size:14px'>#6 후보점</b>&nbsp; <span style='background:#cd3432;color:#fff;padding:2px 8px;border-radius:10px;font-weight:bold'>82.5점</span> <hr style='margin:4px 0'> <table style='border-collapse:collapse;width:100%'> <tr><td style='color:#555'>위도</td><td><b>35.55589°N</b></td>     <td style='color:#555'>경도</td><td><b>127.15810°E</b></td></tr> <tr><td colspan=4><hr style='margin:3px 0'></td></tr> <tr style='background:#f5f5f5'><td colspan=4 style='font-weight:bold;padding:2px'>점수 내역</td></tr> <tr><td>② 지형경사</td><td>9.2/15</td>     <td>경사도</td><td>11.7°</td></tr> <tr><td>③ 전력·철도</td><td>15.0/15</td>     <td>전력/철도</td><td>7.0/9.8km</td></tr> <tr><td>④ 인구이격</td><td>12.0/15</td>     <td>도시</td><td>0.4km</td></tr> <tr><td>⑤ 모델기여</td><td>10.0/10</td>     <td>P90-P10</td><td>230nT</td></tr> <tr><td>⑥ 암상</td><td>3.3/5</td>     <td>암상/단층</td><td>0.0km/0.5km</td></tr> <tr style='background:#EEF4FF'><td colspan=2><b>합계</b></td>     <td colspan=2><b>49.5/60점 → 82.5점</b></td></tr> </table> <hr style='margin:4px 0'> <span style='color:#1a5276'>🚗 도로접근: 128m</span> </div></div>`)[0];
+                popup_7c481df885823c642cf639d26014fd43.setContent(html_8dbd10264e17da035da8062ef1d47e2b);
+            
+        
+
+        circle_marker_62db5a9130fbe6b3128685b8e7cce2cd.bindPopup(popup_7c481df885823c642cf639d26014fd43)
+        ;
+
+        
+    
+    
+            circle_marker_62db5a9130fbe6b3128685b8e7cce2cd.bindTooltip(
+                `<div>
+                     #6 82.5점
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_a2fc44bf930f7b819b397d8441a4229a = L.circleMarker(
+                [35.592077224690264, 127.20210451273043],
+                {"bubblingMouseEvents": true, "color": "#dc2832", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#dc2832", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 7, "stroke": true, "weight": 1.5}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+        
+    
+        var popup_56666dfa1cd7ba9cc49726f05f6c5b2f = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_e0da76a46a916bbd9686aa2bd2f88c4f = $(`<div id="html_e0da76a46a916bbd9686aa2bd2f88c4f" style="width: 100.0%; height: 100.0%;"> <div style='font-family:맑은고딕,sans-serif;font-size:12px;min-width:240px'> <b style='font-size:14px'>#7 후보점</b>&nbsp; <span style='background:#dc2832;color:#fff;padding:2px 8px;border-radius:10px;font-weight:bold'>81.9점</span> <hr style='margin:4px 0'> <table style='border-collapse:collapse;width:100%'> <tr><td style='color:#555'>위도</td><td><b>35.59208°N</b></td>     <td style='color:#555'>경도</td><td><b>127.20210°E</b></td></tr> <tr><td colspan=4><hr style='margin:3px 0'></td></tr> <tr style='background:#f5f5f5'><td colspan=4 style='font-weight:bold;padding:2px'>점수 내역</td></tr> <tr><td>② 지형경사</td><td>11.5/15</td>     <td>경사도</td><td>7.0°</td></tr> <tr><td>③ 전력·철도</td><td>13.9/15</td>     <td>전력/철도</td><td>4.3/4.2km</td></tr> <tr><td>④ 인구이격</td><td>11.0/15</td>     <td>도시</td><td>0.2km</td></tr> <tr><td>⑤ 모델기여</td><td>8.0/10</td>     <td>P90-P10</td><td>71nT</td></tr> <tr><td>⑥ 암상</td><td>4.8/5</td>     <td>암상/단층</td><td>2.2km/0.9km</td></tr> <tr style='background:#EEF4FF'><td colspan=2><b>합계</b></td>     <td colspan=2><b>49.2/60점 → 81.9점</b></td></tr> </table> <hr style='margin:4px 0'> <span style='color:#1a5276'>🚗 도로접근: 174m</span> </div></div>`)[0];
+                popup_56666dfa1cd7ba9cc49726f05f6c5b2f.setContent(html_e0da76a46a916bbd9686aa2bd2f88c4f);
+            
+        
+
+        circle_marker_a2fc44bf930f7b819b397d8441a4229a.bindPopup(popup_56666dfa1cd7ba9cc49726f05f6c5b2f)
+        ;
+
+        
+    
+    
+            circle_marker_a2fc44bf930f7b819b397d8441a4229a.bindTooltip(
+                `<div>
+                     #7 81.9점
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var layer_control_be4b8ca1340fa4fd8c67a0c8f54a2d49_layers = {
+                base_layers : {
+                    "cartodbpositron" : tile_layer_5d1ceff0db331f8161d658cc2e54aa4f,
+                },
+                overlays :  {
+                },
+            };
+            let layer_control_be4b8ca1340fa4fd8c67a0c8f54a2d49 = L.control.layers(
+                layer_control_be4b8ca1340fa4fd8c67a0c8f54a2d49_layers.base_layers,
+                layer_control_be4b8ca1340fa4fd8c67a0c8f54a2d49_layers.overlays,
+                {
+  "position": "topright",
+  "collapsed": true,
+  "autoZIndex": true,
+}
+            ).addTo(map_064f45dccf7c0304e10074bfdec9aa48);
+
+        
+</script>
+</html>

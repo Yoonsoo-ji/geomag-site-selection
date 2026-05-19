@@ -2406,7 +2406,12 @@ def save_map_data(
     # ── 후보 지점 (우선순위별, 속성 포함) ────────────────────
     final_wgs    = final_cands.to_crs(WGS84_CRS).copy().reset_index(drop=True)
     has_priority = "priority" in final_wgs.columns
-    final_wgs["idx"] = final_wgs.index + 1
+    # site_id 컬럼이 이미 compute_priority() 직후 할당된 경우 그대로 사용,
+    # 없으면(구버전 호환) index+1 로 폴백한다.
+    if "site_id" in final_wgs.columns:
+        final_wgs["idx"] = final_wgs["site_id"]
+    else:
+        final_wgs["idx"] = final_wgs.index + 1
     final_wgs["lat"] = final_wgs.geometry.y
     final_wgs["lon"] = final_wgs.geometry.x
     rename_map = {
@@ -3369,6 +3374,12 @@ def main():
     final_candidates = compute_priority(final_candidates, zones, mag_data)
     print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
 
+    # ── site_id 단일 출처 고정 ────────────────────────────────
+    # 지도(GeoJSON idx)와 CSV(site_id)가 항상 동일 번호를 공유하도록
+    # compute_priority() 직후 한 번만 할당한다.
+    final_candidates = final_candidates.reset_index(drop=True)
+    final_candidates["site_id"] = range(1, len(final_candidates) + 1)
+
     # ── 7. 지도 생성 ─────────────────────────────────────────
     t_step = time.time()
     print("\n▶ 기존 측정점 로드")
@@ -3395,9 +3406,12 @@ def main():
     # ── 9. CSV 저장 ──────────────────────────────────────────
     if len(final_candidates) > 0:
         result = final_candidates.to_crs(WGS84_CRS).copy()
-        result["lat"]     = result.geometry.y.round(5)
-        result["lon"]     = result.geometry.x.round(5)
-        result["site_id"] = range(1, len(result) + 1)
+        result["lat"] = result.geometry.y.round(5)
+        result["lon"] = result.geometry.x.round(5)
+        # site_id 는 compute_priority() 직후 단일 출처로 이미 고정됨.
+        # 여기서 재할당하지 않는다 (지도 idx 와 불일치 방지).
+        if "site_id" not in result.columns:
+            result["site_id"] = range(1, len(result) + 1)
 
         cols = ["site_id", "lat", "lon"]
         for c in ["priority", "score",
