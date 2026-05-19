@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>지구자기장 측정 후보지 서브격자 분석</name>
+  <description>후보지 #16·#18 1km 서브격자 현장 답사 세부 선정</description>
+
+  <!-- 스타일 정의 -->
+  <Style id="top3">
+    <IconStyle>
+      <color>ff0000ff</color>
+      <scale>1.3</scale>
+      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/red-stars.png</href></Icon>
+    </IconStyle>
+    <LabelStyle><scale>1.1</scale></LabelStyle>
+  </Style>
+  <Style id="top10">
+    <IconStyle>
+      <color>ff00aaff</color>
+      <scale>1.1</scale>
+      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/orange-circle.png</href></Icon>
+    </IconStyle>
+    <LabelStyle><scale>0.9</scale></LabelStyle>
+  </Style>
+  <Style id="center">
+    <IconStyle>
+      <color>ffff0000</color>
+      <scale>1.4</scale>
+      <Icon><href>http://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon>
+    </IconStyle>
+  </Style>
+
+  <Folder>
+    <name>후보지 #18 (진안 무주)</name>
+    <description>국가격자 점수: 58.8점 / 우선순위 1등급</description>
+
+    <Placemark>
+      <name>▶ 후보지 #18 (진안 무주) 중심</name>
+      <description><![CDATA[국가 10km격자 후보지<br>도상 점수: 58.8점<br>우선순위: 1등급<br>위도: 35.86272°N  경도: 127.26755°E<br><br><a href="https://map.naver.com/v5/?c=127.26755,35.86272,14,0,0,0,dh">네이버 지도</a>  <a href="https://map.kakao.com/link/map/후보지 #18 (진안 무주),35.86272,127.26755">카카오 지도</a>]]></description>
+      <styleUrl>#center</styleUrl>
+      <Point><coordinates>127.26755,35.86272,0</coordinates></Point>
+    </Placemark>
+
+    <Placemark>
+      <name>#1 93.9점</name>
+      <description><![CDATA[사이트: 후보지 #18 (진안 무주)
+순위: #1 / 서브격자 종합점수: 93.9점
+위도: 35.817639°N  경도: 127.267681°E
+
+── 점수 내역 ──
+② 지형 경사도: 12.6 / 15점 (경사 4.8°)
+③ 전력·철도:   14.1 / 15점 (전력 5.8km / 철도 1.9km)
+④ 인구 이격:   15.0 / 15점 (도시 1.4km)
+⑤ 모델기여도:  10.0 / 10점 (P90-P10 189nT)
+⑥ 암상 적합성: 4.7 / 5점 (암상 4.5km / 단층 1.5km)
+
+도로 접근: 922m
+
+네이버 지도: https://map.naver.com/v5/?c=127.267681,35.817639,16,0,0,0,dh
+카카오 지도: https://map.kakao.com/link/map/#1_18,35.817639,127.267681]]></description>
+      <styleUrl>#top3</styleUrl>
+      <Point>
+        <coordinates>127.267681,35.817639,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <name>#2 91.7점</name>
+      <description><![CDATA[사이트: 후보지 #18 (진안 무주)
+순위: #2 / 서브격자 종합점수: 91.7점
+위도: 35.844688°N  경도: 127.267603°E
+
+── 점수 내역 ──
+② 지형 경사도: 12.4 / 15점 (경사 5.3°)
+③ 전력·철도:   14.5 / 15점 (전력 6.1km / 철도 3.2km)
+④ 인구 이격:   14.1 / 15점 (도시 0.9km)
+⑤ 모델기여도:  10.0 / 10점 (P90-P10 186nT)
+⑥ 암상 적합성: 4.1 / 5점 (암상 1.8km / 단층 0.5km)
+
+도로 접근: 60m
+
+네이버 지도: https://map.naver.com/v5/?c=127.267603,35.844688,16,0,0,0,dh
+카카오 지도: https://map.kakao.com/link/map/#2_18,35.844688,127.267603]]></description>
+      <styleUrl>#top3</styleUrl>
+      <Point>
+        <coordinates>127.267603,35.844688,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <name>#3 90.9점</name>
+      <description><![CDATA[사이트: 후보지 #18 (진안 무주)
+순위: #3 / 서브격자 종합점수: 90.9점
+위도: 35.880730°N  경도: 127.256419°E
+
+── 점수 내역 ──
+② 지형 경사도: 13.2 / 15점 (경사 3.6°)
+③ 전력·철도:   14.4 / 15점 (전력 3.9km / 철도 4.0km)
+④ 인구 이격:   14.8 / 15점 (도시 1.3km)
+⑤ 모델기여도:  8.0 / 10점 (P90-P10 114nT)
+⑥ 암상 적합성: 4.2 / 5점 (암상 0.3km / 단층 4.0km)
+
+도로 접근: 89m
+
+네이버 지도: https://map.naver.com/v5/?c=127.256419,35.88073,16,0,0,0,dh
+카카오 지도: https://map.kakao.com/link/map/#3_18,35.88073,127.256419]]></description>
+      <styleUrl>#top3</styleUrl>
+      <Point>
+        <coordinates>127.256419,35.88073,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <name>#4 90.8점</name>
+      <description><![CDATA[사이트: 후보지 #18 (진안 무주)
+순위: #4 / 서브격자 종합점수: 90.8점
+위도: 35.826696°N  경도: 127.289797°E
+
+── 점수 내역 ──
+② 지형 경사도: 10.3 / 15점 (경사 9.4°)
+③ 전력·철도:   15.0 / 15점 (전력 7.9km / 철도 4.2km)
+④ 인구 이격:   14.7 / 15점 (도시 1.2km)
+⑤ 모델기여도:  10.0 / 10점 (P90-P10 190nT)
+⑥ 암상 적합성: 4.5 / 5점 (암상 4.6km / 단층 0.7km)
+
+도로 접근: 194m
+
+네이버 지도: https://map.naver.com/v5/?c=127.289797,35.826696,16,0,0,0,dh
+카카오 지도: https://map.kakao.com/link/map/#4_18,35.826696,127.289797]]></description>
+      <styleUrl>#top10</styleUrl>
+      <Point>
+        <coordinates>127.289797,35.826696,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <name>#5 89.6점</name>
+      <description><![CDATA[사이트: 후보지 #18 (진안 무주)
+순위: #5 / 서브격자 종합점수: 89.6점
+위도: 35.844666°N  경도: 127.256529°E
+
+── 점수 내역 ──
+② 지형 경사도: 10.9 / 15점 (경사 8.2°)
+③ 전력·철도:   14.1 / 15점 (전력 5.2km / 철도 2.3km)
+④ 인구 이격:   14.7 / 15점 (도시 1.3km)
+⑤ 모델기여도:  10.0 / 10점 (P90-P10 186nT)
+⑥ 암상 적합성: 4.0 / 5점 (암상 1.3km / 단층 0.6km)
+
+도로 접근: 226m
+
+네이버 지도: https://map.naver.com/v5/?c=127.256529,35.844666,16,0,0,0,dh
+카카오 지도: https://map.kakao.com/link/map/#5_18,35.844666,127.256529]]></description>
+      <styleUrl>#top10</styleUrl>
+      <Point>
+        <coordinates>127.256529,35.844666,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <name>#6 89.5점</name>
+      <description><![CDATA[사이트: 후보지 #18 (진안 무주)
+순위: #6 / 서브격자 종합점수: 89.5점
+위도: 35.853682°N  경도: 127.256501°E
+
+── 점수 내역 ──
+② 지형 경사도: 12.4 / 15점 (경사 5.1°)
+③ 전력·철도:   14.2 / 15점 (전력 4.9km / 철도 2.7km)
+④ 인구 이격:   13.1 / 15점 (도시 0.6km)
+⑤ 모델기여도:  10.0 / 10점 (P90-P10 179nT)
+⑥ 암상 적합성: 4.0 / 5점 (암상 0.4km / 단층 1.6km)
+
+도로 접근: 47m
+
+네이버 지도: https://map.naver.com/v5/?c=127.256501,35.853682,16,0,0,0,dh
+카카오 지도: https://map.kakao.com/link/map/#6_18,35.853682,127.256501]]></description>
+      <styleUrl>#top10</styleUrl>
+      <Point>
+        <coordinates>127.256501,35.853682,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <name>#7 87.9점</name>
+      <description><![CDATA[사이트: 후보지 #18 (진안 무주)
+순위: #7 / 서브격자 종합점수: 87.9점
+위도: 35.871691°N  경도: 127.245369°E
+
+── 점수 내역 ──
+② 지형 경사도: 13.3 / 15점 (경사 3.4°)
+③ 전력·철도:   13.8 / 15점 (전력 3.1km / 철도 2.6km)
+④ 인구 이격:   14.2 / 15점 (도시 1.0km)
+⑤ 모델기여도:  8.0 / 10점 (P90-P10 97nT)
+⑥ 암상 적합성: 3.4 / 5점 (암상 0.0km / 단층 3.6km)
+
+도로 접근: 153m
+
+네이버 지도: https://map.naver.com/v5/?c=127.245369,35.871691,16,0,0,0,dh
+카카오 지도: https://map.kakao.com/link/map/#7_18,35.871691,127.245369]]></description>
+      <styleUrl>#top10</styleUrl>
+      <Point>
+        <coordinates>127.245369,35.871691,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <name>#8 86.9점</name>
+      <description><![CDATA[사이트: 후보지 #18 (진안 무주)
+순위: #8 / 서브격자 종합점수: 86.9점
+위도: 35.826676°N  경도: 127.278726°E
+
+── 점수 내역 ──
+② 지형 경사도: 8.8 / 15점 (경사 12.3°)
+③ 전력·철도:   14.7 / 15점 (전력 6.9km / 철도 3.3km)
+④ 인구 이격:   14.3 / 15점 (도시 1.0km)
+⑤ 모델기여도:  10.0 / 10점 (P90-P10 190nT)
+⑥ 암상 적합성: 4.4 / 5점 (암상 4.0km / 단층 0.6km)
+
+도로 접근: 365m
+
+네이버 지도: https://map.naver.com/v5/?c=127.278726,35.826676,16,0,0,0,dh
+카카오 지도: https://map.kakao.com/link/map/#8_18,35.826676,127.278726]]></description>
+      <styleUrl>#top10</styleUrl>
+      <Point>
+        <coordinates>127.278726,35.826676,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <name>#9 86.4점</name>
+      <description><![CDATA[사이트: 후보지 #18 (진안 무주)
+순위: #9 / 서브격자 종합점수: 86.4점
+위도: 35.862675°N  경도: 127.245398°E
+
+── 점수 내역 ──
+② 지형 경사도: 14.2 / 15점 (경사 1.6°)
+③ 전력·철도:   13.7 / 15점 (전력 3.5km / 철도 2.2km)
+④ 인구 이격:   12.2 / 15점 (도시 0.4km)
+⑤ 모델기여도:  8.0 / 10점 (P90-P10 97nT)
+⑥ 암상 적합성: 3.8 / 5점 (암상 0.1km / 단층 2.7km)
+
+도로 접근: 26m
+
+네이버 지도: https://map.naver.com/v5/?c=127.245398,35.862675,16,0,0,0,dh
+카카오 지도: https://map.kakao.com/link/map/#9_18,35.862675,127.245398]]></description>
+      <styleUrl>#top10</styleUrl>
+      <Point>
+        <coordinates>127.245398,35.862675,0</coordinates>
+      </Point>
+    </Placemark>
+
+    <Placemark>
+      <name>#10 84.4점</name>
+      <description><![CDATA[사이트: 후보지 #18 (진안 무주)
+순위: #10 / 서브격자 종합점수: 84.4점
+위도: 35.862720°N  경도: 127.267550°E
+
+── 점수 내역 ──
+② 지형 경사도: 9.7 / 15점 (경사 10.6°)
+③ 전력·철도:   14.6 / 15점 (전력 5.3km / 철도 4.0km)
+④ 인구 이격:   12.3 / 15점 (도시 0.4km)
+⑤ 모델기여도:  10.0 / 10점 (P90-P10 179nT)
+⑥ 암상 적합성: 4.0 / 5점 (암상 0.3km / 단층 2.1km)
+
+도로 접근: 137m
+
+네이버 지도: https://map.naver.com/v5/?c=127.26755,35.86272,16,0,0,0,dh
+카카오 지도: https://map.kakao.com/link/map/#10_18,35.86272,127.26755]]></description>
+      <styleUrl>#top10</styleUrl>
+      <Point>
+        <coordinates>127.26755,35.86272,0</coordinates>
+      </Point>
+    </Placemark>
+
+  </Folder>
+
+</Document>
+</kml>
