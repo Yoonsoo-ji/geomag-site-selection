@@ -2081,9 +2081,9 @@ def compute_priority(
             p90p10 = np.full(n, np.nan)
             for i, (clat, clon) in enumerate(zip(c_lats, c_lons)):
                 mask = (np.abs(e_lats - clat) <= radius) & (np.abs(e_lons - clon) <= radius)
-                pts = e_anom[mask]
-                if len(pts) >= 3:
-                    p90p10[i] = np.percentile(pts, 90) - np.percentile(pts, 10)
+                anom_pts = e_anom[mask]
+                if len(anom_pts) >= 3:
+                    p90p10[i] = np.percentile(anom_pts, 90) - np.percentile(anom_pts, 10)
             valid = ~np.isnan(p90p10)
             if valid.sum() > 0:
                 # 지질경계·변화 구간 포괄 설계 — 중간 그레디언트(150~400 nT) 최고점

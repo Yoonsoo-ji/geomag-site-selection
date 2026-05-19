@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>전주(완주) P1 후보지 현장 답사</name>
+    <description>1km 서브격자 현장 답사 후보지 (총 7개소)</description>
+    
+    <Style id="originStyle">
+      <IconStyle>
+        <Icon><href>http://maps.google.com/mapfiles/kml/paddle/blu-star.png</href></Icon>
+      </IconStyle>
+    </Style>
+    <Style id="topStyle">
+      <IconStyle>
+        <Icon><href>http://maps.google.com/mapfiles/kml/paddle/grn-circle.png</href></Icon>
+      </IconStyle>
+    </Style>
+    <Style id="subStyle">
+      <IconStyle>
+        <Icon><href>http://maps.google.com/mapfiles/kml/paddle/red-circle.png</href></Icon>
+      </IconStyle>
+    </Style>
+
+    <Folder>
+      <name>기준점</name>
+      <Placemark>
+        <name>P1 원점</name>
+        <description><![CDATA[
+          <b>도상 종합점수:</b> 61.1점<br>
+          <b>위도:</b> 35.59196°N<br>
+          <b>경도:</b> 127.15795°E
+        ]]></description>
+        <styleUrl>#originStyle</styleUrl>
+        <Point>
+          <coordinates>127.15795,35.59196,0</coordinates>
+        </Point>
+      </Placemark>
+    </Folder>
+
+    <Folder>
+      <name>최우선 답사 후보 (#1~#5)</name>
+      <Placemark>
+        <name>#1 후보점 (91.2점)</name>
+        <description><![CDATA[
+          <b>종합점수:</b> 91.2점<br>
+          <b>위도:</b> 35.60098°N<br>
+          <b>경도:</b> 127.15791°E<br>
+          <b>도로접근:</b> 288m
+        ]]></description>
+        <styleUrl>#topStyle</styleUrl>
+        <Point>
+          <coordinates>127.15791163704641,35.6009763894717,0</coordinates>
+        </Point>
+      </Placemark>
+      
+      <Placemark>
+        <name>#2 후보점 (88.0점)</name>
+        <description><![CDATA[
+          <b>종합점수:</b> 88.0점<br>
+          <b>위도:</b> 35.60109°N<br>
+          <b>경도:</b> 127.20207°E<br>
+          <b>도로접근:</b> 74m
+        ]]></description>
+        <styleUrl>#topStyle</styleUrl>
+        <Point>
+          <coordinates>127.20207110177785,35.601093652909285,0</coordinates>
+        </Point>
+      </Placemark>
+
+      <Placemark>
+        <name>#3 후보점 (86.8점)</name>
+        <description><![CDATA[
+          <b>종합점수:</b> 86.8점<br>
+          <b>위도:</b> 35.59193°N<br>
+          <b>경도:</b> 127.14691°E<br>
+          <b>도로접근:</b> 63m
+        ]]></description>
+        <styleUrl>#topStyle</styleUrl>
+        <Point>
+          <coordinates>127.14691141302913,35.59192816635896,0</coordinates>
+        </Point>
+      </Placemark>
+
+      <Placemark>
+        <name>#4 후보점 (86.8점)</name>
+        <description><![CDATA[
+          <b>종합점수:</b> 86.8점<br>
+          <b>위도:</b> 35.59196°N<br>
+          <b>경도:</b> 127.15795°E<br>
+          <b>도로접근:</b> 939m
+        ]]></description>
+        <styleUrl>#topStyle</styleUrl>
+        <Point>
+          <coordinates>127.15794999999999,35.59196000000001,0</coordinates>
+        </Point>
+      </Placemark>
+
+      <Placemark>
+        <name>#5 후보점 (85.4점)</name>
+        <description><![CDATA[
+          <b>종합점수:</b> 85.4점<br>
+          <b>위도:</b> 35.58294°N<br>
+          <b>경도:</b> 127.15799°E<br>
+          <b>도로접근:</b> 926m
+        ]]></description>
+        <styleUrl>#topStyle</styleUrl>
+        <Point>
+          <coordinates>127.15798834591918,35.58294359697545,0</coordinates>
+        </Point>
+      </Placemark>
+    </Folder>
+
+    <Folder>
+      <name>추가 답사 후보 (#6, #7)</name>
+      <Placemark>
+        <name>#6 후보점 (82.5점)</name>
+        <description><![CDATA[
+          <b>종합점수:</b> 82.5점<br>
+          <b>위도:</b> 35.55589°N<br>
+          <b>경도:</b> 127.15810°E<br>
+          <b>도로접근:</b> 128m
+        ]]></description>
+        <styleUrl>#subStyle</styleUrl>
+        <Point>
+          <coordinates>127.1581032815464,35.55589430659899,0</coordinates>
+        </Point>
+      </Placemark>
+
+      <Placemark>
+        <name>#7 후보점 (81.9점)</name>
+        <description><![CDATA[
+          <b>종합점수:</b> 81.9점<br>
+          <b>위도:</b> 35.59208°N<br>
+          <b>경도:</b> 127.20210°E<br>
+          <b>도로접근:</b> 174m
+        ]]></description>
+        <styleUrl>#subStyle</styleUrl>
+        <Point>
+          <coordinates>127.20210451273043,35.592077224690264,0</coordinates>
+        </Point>
+      </Placemark>
+    </Folder>
+  </Document>
+</kml>
