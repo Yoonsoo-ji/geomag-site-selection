@@ -17,7 +17,7 @@ from datetime import datetime
 
 MAIN_DIR = Path("C:/LG_gram_backup_users/LX/2026_geomag")
 OUT_DIR  = MAIN_DIR / "docs" / "output"
-KML_IN   = OUT_DIR / "20260520_172945_P1_63sites_filtered.kml"
+KML_IN   = OUT_DIR / "20260520_174034_P1_63sites_filtered.kml"
 TS       = datetime.now().strftime("%Y%m%d_%H%M%S")
 KML_OUT  = OUT_DIR / f"{TS}_P1_63sites_with_radius.kml"
 
