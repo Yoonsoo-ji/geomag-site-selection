@@ -1,0 +1,2231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document>
+	<name>도상 선점</name>
+	<description>도상 선점</description>
+	<gx:CascadingStyle kml:id="__managed_style_0A83AEAE273FFDFFC27B_highlight">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>3</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_0A83AEAE273FFDFFC27B_normal">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>2</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0A83AEAE273FFDFFC27B">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_0A83AEAE273FFDFFC27B_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_0A83AEAE273FFDFFC27B_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_0828B44F3F40039DCC8C_normal">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.1</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<color>ff00cccc</color>
+				<scale>0.85</scale>
+			</LabelStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0828B44F3F40039DCC8C">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_0828B44F3F40039DCC8C_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_0828B44F3F40039DCC8C_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<StyleMap id="__managed_style_02691C5A4E3FFE22D901">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_02691C5A4E3FFE22D901_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_02691C5A4E3FFE22D901_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_00AC520E9F3FFE512F29_normal">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>0.9</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<color>ffaaaaaa</color>
+				<scale>0.75</scale>
+			</LabelStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_08CA17847C4003766864_highlight">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>0.85</scale>
+			</LabelStyle>
+			<LineStyle>
+				<width>1.5</width>
+			</LineStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0F6E9253933FFE704E2F">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_0F6E9253933FFE704E2F_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_0F6E9253933FFE704E2F_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<StyleMap id="__managed_style_00AC520E9F3FFE512F29">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_00AC520E9F3FFE512F29_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_00AC520E9F3FFE512F29_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_02691C5A4E3FFE22D901_highlight">
+		<Style>
+			<IconStyle>
+				<scale>1.44</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>0.9</scale>
+			</LabelStyle>
+			<LineStyle>
+				<width>1.5</width>
+			</LineStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_02691C5A4E3FFE22D901_normal">
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>0.9</scale>
+			</LabelStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0BBDB6D86F400389427B">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_0BBDB6D86F400389427B_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_0BBDB6D86F400389427B_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_0619D109BF3FFE2FB540_highlight">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.44</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>0.9</scale>
+			</LabelStyle>
+			<LineStyle>
+				<width>1.5</width>
+			</LineStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_09A8BF50B540043FDB6C_normal">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>0.9</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<color>ffaaaaaa</color>
+				<scale>0.75</scale>
+			</LabelStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_08CA17847C4003766864_normal">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>0.85</scale>
+			</LabelStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_0828B44F3F40039DCC8C_highlight">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.32</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<color>ff00cccc</color>
+				<scale>0.85</scale>
+			</LabelStyle>
+			<LineStyle>
+				<width>1.5</width>
+			</LineStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_08CA17847C4003766864">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_08CA17847C4003766864_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_08CA17847C4003766864_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_0619D109BF3FFE2FB540_normal">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>0.9</scale>
+			</LabelStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_0F6E9253933FFE704E2F_highlight">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.08</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>0.7</scale>
+			</LabelStyle>
+			<LineStyle>
+				<width>1.5</width>
+			</LineStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_0F6E9253933FFE704E2F_normal">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>0.9</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>0.7</scale>
+			</LabelStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0619D109BF3FFE2FB540">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_0619D109BF3FFE2FB540_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_0619D109BF3FFE2FB540_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_0BBDB6D86F400389427B_normal">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.4</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>1.1</scale>
+			</LabelStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_0BBDB6D86F400389427B_highlight">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.68</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>1.1</scale>
+			</LabelStyle>
+			<LineStyle>
+				<width>1.5</width>
+			</LineStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_09A8BF50B540043FDB6C">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_09A8BF50B540043FDB6C_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_09A8BF50B540043FDB6C_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<gx:CascadingStyle kml:id="__managed_style_0B94C8BC9A4003284EF3_highlight">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.44</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>0.9</scale>
+			</LabelStyle>
+			<LineStyle>
+				<width>1.5</width>
+			</LineStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_09A8BF50B540043FDB6C_highlight">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.08</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<color>ffaaaaaa</color>
+				<scale>0.75</scale>
+			</LabelStyle>
+			<LineStyle>
+				<width>1.5</width>
+			</LineStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_0B94C8BC9A4003284EF3_normal">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<scale>0.9</scale>
+			</LabelStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_00AC520E9F3FFE512F29_highlight">
+		<styleUrl>https://earth.google.com/balloon_components/base/1.1.0.0/card_template.kml#main</styleUrl>
+		<Style>
+			<IconStyle>
+				<scale>1.08</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2236&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+				<color>ffaaaaaa</color>
+				<scale>0.75</scale>
+			</LabelStyle>
+			<LineStyle>
+				<width>1.5</width>
+			</LineStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0B94C8BC9A4003284EF3">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_0B94C8BC9A4003284EF3_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_0B94C8BC9A4003284EF3_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Placemark id="026E816C5940046E9F5F">
+		<name>거제 신규점1</name>
+		<description><![CDATA[<div>임도 아님. 공터 존재하는 것으로 보임<br></div><div>카카오뷰에서 확인가능<br></div>]]></description>
+		<LookAt>
+			<longitude>128.6395750137899</longitude>
+			<latitude>34.93569056728958</latitude>
+			<altitude>253.1216763195025</altitude>
+			<heading>0.8448471843281417</heading>
+			<tilt>0.108154768960706</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>593.3041749584663</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>128.6398127564191,34.93608042672246,232.7077193062078</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="073CAB851A40043839EF">
+		<name>길담 신규점1</name>
+		<description><![CDATA[<div>임도 없음<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>127.231745505614</longitude>
+			<latitude>35.60022419974403</latitude>
+			<altitude>329.3087146157795</altitude>
+			<heading>1.242399991874853e-08</heading>
+			<tilt>0.0874346044105439</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>854.8684828053229</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0BBDB6D86F400389427B</styleUrl>
+		<Point>
+			<coordinates>127.2306723711429,35.60033105020187,314.1132004543521</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0D1E7E679440033279EC">
+		<name>예산 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인가능</div>]]></description>
+		<LookAt>
+			<longitude>126.9323227995823</longitude>
+			<latitude>36.60121056471969</latitude>
+			<altitude>222.012663439988</altitude>
+			<heading>0.0001456528832315016</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>489.9552594132548</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.9324005716872,36.60135579453313,224.7389481264389</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="056D12ED073FFEF8FC71">
+		<name>울진 신규점</name>
+		<description><![CDATA[<div>지선임도 방향이 차량진입 힘들면<br></div><div>현재 지점 흙길로 전신주 100m 이상<br></div><div>이동해서 확인 바람<br></div><div><br></div>]]></description>
+		<LookAt>
+			<longitude>129.3095395390957</longitude>
+			<latitude>36.98998646572738</latitude>
+			<altitude>195.3618469873709</altitude>
+			<heading>2.363485545284671</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>491.5548846106685</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>129.3092066075099,36.98934786703305,196.8329930547445</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="015D659AC54003FDF4E8">
+		<name>언양 신규점1</name>
+		<description><![CDATA[<div>간선임도,<br></div><div>카카오뷰로 근방까지 확인 가능.<br></div><div>근처 까지 차량은 진입 불가능</div>]]></description>
+		<LookAt>
+			<longitude>129.0229805536644</longitude>
+			<latitude>35.64711837957046</latitude>
+			<altitude>523.9162765602882</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>176.7763731217383</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>129.0228807712625,35.64713876945168,530.4660843301616</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="080A146CBA3FFE7D1F24">
+		<name>태백 신규점</name>
+		<description><![CDATA[<div>간선임도<br></div><div>카카오 뷰로 확인<br></div><div>차단기 있으나, 열려 있음</div>]]></description>
+		<LookAt>
+			<longitude>128.9837635182098</longitude>
+			<latitude>37.02072090092558</latitude>
+			<altitude>871.0758484213809</altitude>
+			<heading>6.312926312796379e-08</heading>
+			<tilt>0.7267404835880371</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>188.8841076624885</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>128.9839300466128,37.02070477450185,872.1337339014466</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0262C68A593FFEF12148">
+		<name>죽변 신규점2</name>
+		<description><![CDATA[<div>작업임도 (폭 5미터)<br></div><div>로드뷰로 입구만 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.2898498557179</longitude>
+			<latitude>37.04706412542107</latitude>
+			<altitude>206.6594522664531</altitude>
+			<heading>2.363485545731071</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>633.7835277539125</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>129.2895070590465,37.04718605068754,215.9660481892109</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0A573DF6373FFEFF93B0">
+		<name>울진 신규점2</name>
+		<description><![CDATA[<div>간선임도,<br></div><div>입구는 로드뷰 확인 가능<br></div><div>간선임도로 들어오면 주택이 있는 것으로&nbsp;<br></div><div>보이며, 그 지점으로 부터 100미터 이상<br></div><div>떨어진 지점을 신규지점으로 저장</div>]]></description>
+		<LookAt>
+			<longitude>129.2431655779458</longitude>
+			<latitude>36.91294397806087</latitude>
+			<altitude>575.8515351019793</altitude>
+			<heading>2.363485544798166</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>415.0360799531336</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>129.2432113607111,36.91277170066834,574.5529149203039</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="000414B0283FFF748CFF">
+		<name>영양 신규점9</name>
+		<description><![CDATA[<div>간선임도,<br></div><div>카카오뷰로 입구확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.1730956872219</longitude>
+			<latitude>36.62863525791074</latitude>
+			<altitude>330.3625466641791</altitude>
+			<heading>7.244780505807072</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>816.0905048684799</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>129.1728004605717,36.62803237878779,324.2741624595215</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0C73E994433FFF71E1B9">
+		<name>영양 신규점8</name>
+		<description><![CDATA[<div>간선임도,<br></div><div>카카오뷰로 확인가능<br></div><div>차단기 있으나, 열린 것으로 확인 됨</div>]]></description>
+		<LookAt>
+			<longitude>129.1815420482311</longitude>
+			<latitude>36.66190395342011</latitude>
+			<altitude>379.5242285235544</altitude>
+			<heading>7.225427816112199</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>777.7787675203581</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>129.1830133989847,36.6624005258267,410.8185669581584</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0BD9C61D8F3FFF025A20">
+		<name>울진 신규점3</name>
+		<description><![CDATA[<div>간선임도<br></div><div>네이버뷰로 입구 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.306687674991</longitude>
+			<latitude>36.89009264699158</latitude>
+			<altitude>214.1268398422768</altitude>
+			<heading>2.363485544686643</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>224.8733800219634</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_08CA17847C4003766864</styleUrl>
+		<Point>
+			<coordinates>129.3071801554135,36.88990674857294,220.8249931518496</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0C9CD2908440040841A7">
+		<name>언양 신규점2</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인 가능한 길<br></div><div>비포장 도로</div>]]></description>
+		<LookAt>
+			<longitude>129.0996542002199</longitude>
+			<latitude>35.66280026213583</latitude>
+			<altitude>559.5256308935406</altitude>
+			<heading>-3.41604895071365e-07</heading>
+			<tilt>0.08745964402410032</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>2616.930640468199</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>129.0992673970314,35.66446366066518,612.7453724186747</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="02588A793B3FFE22D8E1">
+		<name>청일 신규점2</name>
+		<description><![CDATA[<div>간선임도<br></div><div>차단기 유<br></div>]]></description>
+		<LookAt>
+			<longitude>128.1699042637506</longitude>
+			<latitude>37.61963913108757</latitude>
+			<altitude>354.0898683419136</altitude>
+			<heading>48.41530594766775</heading>
+			<tilt>5.198957212113061</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1538.303851946112</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>128.169799798234,37.61857770393431,371.6596927360177</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="074519247D40045D2521">
+		<name>남해 신규점1</name>
+		<description><![CDATA[<div>남해 기존점이 저수지 인근이라 대체점으로&nbsp;<br></div><div>찾아봄.&nbsp; 바로 옆이 묘지 이나, 근처 공터가 있는 것으로 보임.<br></div><div>카카오뷰로 확인 가능함.</div>]]></description>
+		<LookAt>
+			<longitude>127.9814257424498</longitude>
+			<latitude>34.8520989303392</latitude>
+			<altitude>256.9951162491853</altitude>
+			<heading>0.8448472161100736</heading>
+			<tilt>0.1081479683164131</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>176.5511216223604</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_09A8BF50B540043FDB6C</styleUrl>
+		<Point>
+			<coordinates>127.9814729411089,34.85228130950221,261.7967364220044</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="09888C97753FFE335B28">
+		<name>임계 신규점2</name>
+		<description><![CDATA[<div>간선임도</div>]]></description>
+		<LookAt>
+			<longitude>128.942312064531</longitude>
+			<latitude>37.39456548526309</latitude>
+			<altitude>763.1189914842051</altitude>
+			<heading>358.4959985548394</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>270.4097605113202</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>128.9418371825214,37.39436250158441,763.4096030908923</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0BF682A9093FFE2EA818">
+		<name>임계 신규점</name>
+		<description><![CDATA[<div>간선임도</div>]]></description>
+		<LookAt>
+			<longitude>128.9741422947602</longitude>
+			<latitude>37.35950585909801</latitude>
+			<altitude>844.2706894614763</altitude>
+			<heading>-27.93792893878486</heading>
+			<tilt>16.82492520652212</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>261.4545155586893</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>128.9738654186052,37.35934595480055,844.3314757389008</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="032D9BE3D33FFE2AD566">
+		<name>청일 신규점3</name>
+		<LookAt>
+			<longitude>128.0759123208541</longitude>
+			<latitude>37.77593090792658</latitude>
+			<altitude>545.7876563447967</altitude>
+			<heading>-146.9659757337782</heading>
+			<tilt>49.53505511777087</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>423.779273049222</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_02691C5A4E3FFE22D901</styleUrl>
+		<Point>
+			<coordinates>128.0758576261053,37.77632632088127,532.3512672759808</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0EBE6066953FFE504A98">
+		<name>연곡 신규점</name>
+		<description><![CDATA[<div><br></div><div>연곡 신규점, 간선임도,&nbsp; 차단기 존재 유</div>]]></description>
+		<LookAt>
+			<longitude>128.5437759798414</longitude>
+			<latitude>37.9282792139898</latitude>
+			<altitude>504.4446376433442</altitude>
+			<heading>5.981839315900828e-09</heading>
+			<tilt>8.878751884790494</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1662.268129597069</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_09A8BF50B540043FDB6C</styleUrl>
+		<Point>
+			<coordinates>128.5449860973423,37.92911135600318,457.3629897194281</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="086326D0933FFE6540D0">
+		<name>연곡 신규점2</name>
+		<description><![CDATA[<div>간선임도<br></div><div>네이버지도 뷰로 확인함<br></div>]]></description>
+		<LookAt>
+			<longitude>128.5723101563586</longitude>
+			<latitude>37.81091877487614</latitude>
+			<altitude>1301.10988307321</altitude>
+			<heading>-2.376660764114609</heading>
+			<tilt>0.5281739211312149</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>168.6639931586251</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>128.5724603108273,37.81085059758968,1302.392089052737</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="008FF65CFB3FFE7724AC">
+		<name>장성 신규점2</name>
+		<description><![CDATA[<div>간선임도<br></div><div>카카오 뷰<br></div><div>차단기 확인 못함</div>]]></description>
+		<LookAt>
+			<longitude>129.1906350447225</longitude>
+			<latitude>37.18176915736404</latitude>
+			<altitude>492.6721309656033</altitude>
+			<heading>-1.20086851661474e-09</heading>
+			<tilt>0.726752480325415</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>293.8591172235829</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>129.1909316750972,37.18208097527811,499.7214858103342</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="083C0F73583FFF0CC959">
+		<name>예안 신규점1</name>
+		<description><![CDATA[<div>임도 아님,<br></div><div>삼각점 인근 지점으로 네이버뷰로 근처까지 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>128.8536265089711</longitude>
+			<latitude>36.7453500560062</latitude>
+			<altitude>291.5880365921761</altitude>
+			<heading>2.363485544177001</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>102.9806698465836</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>128.8535586011124,36.74539940038846,292.7524236562319</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="00A0F8C7EA40045F82FF">
+		<name>남해 신규점2</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>공동묘지 인근으로 카카오뷰로 확인 가능함</div>]]></description>
+		<LookAt>
+			<longitude>127.9656253990565</longitude>
+			<latitude>34.78249811968036</latitude>
+			<altitude>174.1905570669957</altitude>
+			<heading>0.8448473008350089</heading>
+			<tilt>0.1081605432806355</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>922.4691034916032</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_09A8BF50B540043FDB6C</styleUrl>
+		<Point>
+			<coordinates>127.9660729404088,34.78318038385331,164.734527092011</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0B5AA728453FFEE9D62E">
+		<name>죽변 신규점</name>
+		<description><![CDATA[<div>간선임도<br></div><div>네이버 뷰로 확인</div>]]></description>
+		<LookAt>
+			<longitude>129.2758472709899</longitude>
+			<latitude>37.00247186958062</latitude>
+			<altitude>298.3285310200768</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>476.8998276010825</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>129.2758472710925,37.00286308615154,290.0724050880909</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0A2CE85D8840040AF458">
+		<name>동곡 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>128.9044361583395</longitude>
+			<latitude>35.5755272882157</latitude>
+			<altitude>451.0107991469173</altitude>
+			<heading>-1.245017247765103e-07</heading>
+			<tilt>0.08746450009703573</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>2975.743426998379</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>128.9036120942552,35.57630502912634,456.4147536904809</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="052ECC77A84004114640">
+		<name>동곡 신규점2</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰로 전체 길을 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>128.8417753745897</longitude>
+			<latitude>35.59324994892178</latitude>
+			<altitude>389.0005165224852</altitude>
+			<heading>1.781182130957383e-07</heading>
+			<tilt>0.08744420665771628</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>1503.996740215371</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>128.8433905682006,35.59336469658261,321.3872455211477</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="059DE9CB914003761E00">
+		<name>무풍 신규점2</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰로 확인가능</div>]]></description>
+		<LookAt>
+			<longitude>127.9547348638185</longitude>
+			<latitude>35.9432355692959</latitude>
+			<altitude>344.0728489827691</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>230.3084575390312</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_08CA17847C4003766864</styleUrl>
+		<Point>
+			<coordinates>127.9546239754804,35.94313481447073,342.5300657245543</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="02CEE4AC3D3FFE1C1229">
+		<name>청일 신규점</name>
+		<description><![CDATA[<div>간선임도<br></div><div>차단기 존재 유</div>]]></description>
+		<LookAt>
+			<longitude>128.1662983276232</longitude>
+			<latitude>37.6627790569886</latitude>
+			<altitude>478.7543593091258</altitude>
+			<heading>358.8799494967055</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>220.6268266224652</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>128.1661344062851,37.66293099166674,478.7944331690509</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0518D98D463FFF6C9364">
+		<name>소천 신규점2</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.1546206727769</longitude>
+			<latitude>36.7656769217543</latitude>
+			<altitude>386.8334942287464</altitude>
+			<heading>7.210880614576488</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>478.9924403368786</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>129.1543412219253,36.7658480629166,380.1477061019435</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0AC5E9881640043F59AC">
+		<name>순창 신규점1</name>
+		<description><![CDATA[<div>순창 기존점이 저수지 인근이라<br></div><div>대체점으로 순위에 들어가지 않는 지역중<br></div><div>카카오뷰로 확인 가능한 지점</div>]]></description>
+		<LookAt>
+			<longitude>127.093851015505</longitude>
+			<latitude>35.28361672135499</latitude>
+			<altitude>179.6866113269192</altitude>
+			<heading>-9.077683944078309e-08</heading>
+			<tilt>0.08745172688667778</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>2108.99948396429</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AC520E9F3FFE512F29</styleUrl>
+		<Point>
+			<coordinates>127.092148450855,35.28482142509619,218.7948882639931</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="09136D6947400456F8FC">
+		<name>순천 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인 가능하나, 길이 끊긴 부분이 있음</div>]]></description>
+		<LookAt>
+			<longitude>127.29435148023</longitude>
+			<latitude>34.9043166763407</latitude>
+			<altitude>306.9375876162021</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>901.4624107982672</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.2947367585576,34.9047133738831,300.9989502623373</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="02F25E7CE63FFF8F7BD3">
+		<name>봉평 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인 가능<br></div><div>묘지 옆</div>]]></description>
+		<LookAt>
+			<longitude>128.4252674532422</longitude>
+			<latitude>37.72568139749631</latitude>
+			<altitude>785.759476018245</altitude>
+			<heading>7.566365308509304</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>98.77670528590897</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>128.4252750629643,37.72577545529771,786.6236535643816</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="02557C28FD3FFF9FF89E">
+		<name>청송 신규점1</name>
+		<description><![CDATA[<div>임도 아님,<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.1462679635801</longitude>
+			<latitude>36.38293669453458</latitude>
+			<altitude>318.9393314817191</altitude>
+			<heading>8.197401159003727</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>604.6844225993118</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>129.1457948610121,36.3828884768059,313.2928739713166</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0EA081DB5F3FFFA44A84">
+		<name>청송 신규점2</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오 뷰로&nbsp; 다리 전까지 확인 가능.<br></div><div>다리 건너서 측정가능 지점이 있나 확인 바람</div>]]></description>
+		<LookAt>
+			<longitude>129.168198690779</longitude>
+			<latitude>36.37752187759475</latitude>
+			<altitude>372.3750503245532</altitude>
+			<heading>8.208438743866294</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>233.2018563327074</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>129.1684104851484,36.3774608468018,376.1022134326952</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="02A8C98F103FFFB9B694">
+		<name>안계 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>128.5086801483616</longitude>
+			<latitude>36.47685396366907</latitude>
+			<altitude>177.7729638615495</altitude>
+			<heading>7.905163147313802</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>215.3472707971014</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>128.5087511658101,36.47669955936257,179.3052278621768</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0407DF24DF3FFFBD0144">
+		<name>안계 신규점2</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 길의 끝인것을 확인함</div>]]></description>
+		<LookAt>
+			<longitude>128.4945659281033</longitude>
+			<latitude>36.5094230484307</latitude>
+			<altitude>160.0493875659615</altitude>
+			<heading>7.908554427185242</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>94.58593457366987</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>128.494518740638,36.50938995571804,159.6243776333564</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="08C3B4D8433FFF6EC7E1">
+		<name>영양 신규점6</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 입구 확인</div>]]></description>
+		<LookAt>
+			<longitude>129.1814834668584</longitude>
+			<latitude>36.74361170473366</latitude>
+			<altitude>511.5375588942106</altitude>
+			<heading>7.236457376704086</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>405.755259262296</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>129.1813066933048,36.74362566972733,511.6126388313949</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0CD78C942040039D5E78">
+		<name>영천 기존점</name>
+		<description><![CDATA[<div>영천 기존점 인근.<br></div><div>카카오뷰로 어느정도 확인가능.<br></div><div>묘지 인근이라 답사 갈 필요가 있음.</div>]]></description>
+		<LookAt>
+			<longitude>128.9481150818093</longitude>
+			<latitude>35.7916387234483</latitude>
+			<altitude>567.3000140839437</altitude>
+			<heading>1.203098923949533e-08</heading>
+			<tilt>0.06167824587699582</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>331.4345022400448</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0828B44F3F40039DCC8C</styleUrl>
+		<Point>
+			<coordinates>128.9479547051202,35.79158763757044,565.1500872063864</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="04F58468EB3FFE6FEF44">
+		<name>장성 신규점</name>
+		<description><![CDATA[<div>간선임도<br></div><div>차단기 있음<br></div><div>카카오 뷰로 확인</div>]]></description>
+		<LookAt>
+			<longitude>129.1606515242711</longitude>
+			<latitude>37.22468697961979</latitude>
+			<altitude>497.7512685855319</altitude>
+			<heading>2.171350349421993e-08</heading>
+			<tilt>0.7268338852566146</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1007.375510515849</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>129.1599488056478,37.22502744368526,518.8567891068648</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0402C2867B40046954CB">
+		<name>통영 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰에서 확인됨<br></div><div>주변이 공동묘지임</div>]]></description>
+		<LookAt>
+			<longitude>128.3938122770656</longitude>
+			<latitude>34.79299079446853</latitude>
+			<altitude>78.65096849964813</altitude>
+			<heading>0.8448471888746414</heading>
+			<tilt>0.1081477188172444</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>172.2510859123395</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_09A8BF50B540043FDB6C</styleUrl>
+		<Point>
+			<coordinates>128.393827144731,34.79297592696695,78.57435373544003</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="067E900D7D4004A6AE10">
+		<name>오호 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>근처 묘지 있음<br></div><div>카카오뷰 확인가능</div>]]></description>
+		<LookAt>
+			<longitude>128.5212080758926</longitude>
+			<latitude>38.31922252266772</latitude>
+			<altitude>18.41245400168948</altitude>
+			<heading>-1.731792606635558</heading>
+			<tilt>5.450278315738101</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>916.4009298480232</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>128.5217548680812,38.31886932235239,20.73175852293489</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="006E6EA56B3FFDFF8CD8">
+		<name>화천 기존점</name>
+		<description><![CDATA[<div>화천 기존점,&nbsp; 조사지점으로 지정</div>]]></description>
+		<LookAt>
+			<longitude>127.6866973748049</longitude>
+			<latitude>38.11555530221735</latitude>
+			<altitude>130.5268093145802</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>46.83603250425676</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0A83AEAE273FFDFFC27B</styleUrl>
+		<Point>
+			<coordinates>127.6866897268465,38.11556409655708,130.2958729133924</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0FA2A483854003591C94">
+		<name>서천 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>126.6938148815169</longitude>
+			<latitude>36.2561585855737</latitude>
+			<altitude>303.2642995235635</altitude>
+			<heading>2.914809403250302</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>899.684503506578</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.6936297383049,36.25702490388797,278.4486410135621</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0DEBCE3DF240035B0F60">
+		<name>서천 신규점2</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>126.7066084001082</longitude>
+			<latitude>36.26639459900808</latitude>
+			<altitude>296.164261323728</altitude>
+			<heading>2.914809403146975</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>556.3991324706876</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.7069611881116,36.26684387512648,277.2605955592539</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="08F3FD3CE3400424BA50">
+		<name>담양 신규점1</name>
+		<description><![CDATA[<div>임도 없음.<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>126.9305452710587</longitude>
+			<latitude>35.47786045985178</latitude>
+			<altitude>388.6274830524514</altitude>
+			<heading>-7.766091174376206e-08</heading>
+			<tilt>0.08743346477988793</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>748.7639824722283</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.9303904222622,35.47797823040179,382.9580670108961</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0682DBC2B740042D2BD6">
+		<name>담양 신규점2</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>126.9617362542851</longitude>
+			<latitude>35.45578681295405</latitude>
+			<altitude>358.1138365487009</altitude>
+			<heading>-5.959149573118614e-09</heading>
+			<tilt>0.08742900514445834</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>434.3585028561939</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.9620540664469,35.45610127515203,349.9952479625502</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0B559DCF314004C5A9DC">
+		<name>모슬포 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>인근 묘지추정 있음<br></div><div>카카오뷰 확인가능</div>]]></description>
+		<LookAt>
+			<longitude>126.2715136534619</longitude>
+			<latitude>33.20710423967524</latitude>
+			<altitude>9.638460774666553</altitude>
+			<heading>-3.230496451991861</heading>
+			<tilt>2.307379743339414</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>219.7879829464364</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.2715930305104,33.20694742920657,9.554820858023994</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0E8D1FC55D3FFE0CCD6C">
+		<name>도암 신규점</name>
+		<description><![CDATA[<div>연곡 1등급 지점 남쪽으로 임도가 있어 그 주변 지점을 조사점으로 지정<br></div><div>간선임도, 차단기 존재 유<br></div>]]></description>
+		<LookAt>
+			<longitude>128.3245356008073</longitude>
+			<latitude>37.71185315694637</latitude>
+			<altitude>771.2929305853586</altitude>
+			<heading>-1.120033086222582</heading>
+			<tilt>10.0317352134616</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>48.52803781831881</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_00AC520E9F3FFE512F29</styleUrl>
+		<Point>
+			<coordinates>128.3245423765533,37.71187755461373,770.8240659893722</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="010846FBD53FFEDABDB0">
+		<name>소천 신규점</name>
+		<description><![CDATA[<div>간선임도<br></div><div>카카오뷰로 확인</div>]]></description>
+		<LookAt>
+			<longitude>129.1736297704985</longitude>
+			<latitude>36.98728270244569</latitude>
+			<altitude>563.0614537294116</altitude>
+			<heading>-0.2148593569237182</heading>
+			<tilt>0.5271894241649892</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1106.949073256547</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>129.1747901095075,36.98765752357968,551.0528993815252</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="05A909BC963FFEE2669C">
+		<name>장성 신규점3</name>
+		<description><![CDATA[<div>간선임도<br></div><div>네이버 뷰로 확인<br></div>]]></description>
+		<LookAt>
+			<longitude>129.152961857305</longitude>
+			<latitude>37.05639359267573</latitude>
+			<altitude>689.2676547063675</altitude>
+			<heading>1.207418269725733e-06</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1586.191460824921</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>129.1582751437144,37.05675456225253,701.7009402360508</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="009258C43D40048CA1B6">
+		<name>완도 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰 확인가능<br></div>]]></description>
+		<LookAt>
+			<longitude>126.5432871666443</longitude>
+			<latitude>34.32839151396207</latitude>
+			<altitude>127.294171937293</altitude>
+			<heading>-1.731785875397437</heading>
+			<tilt>5.45007530914689</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>678.7100128937165</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.5432145838337,34.3288255858801,130.8469320882405</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0F4CB9B42B3FFF04898F">
+		<name>울진 신규점4</name>
+		<description><![CDATA[<div>간선임도<br></div><div>차단기 있음<br></div><div>네이버뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.3183162400731</longitude>
+			<latitude>36.94646007587525</latitude>
+			<altitude>350.5170014070803</altitude>
+			<heading>2.363485544587306</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>232.718139834069</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_08CA17847C4003766864</styleUrl>
+		<Point>
+			<coordinates>129.3183451919394,36.9466100967748,348.4421826620645</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="098AA72A633FFF094BCE">
+		<name>춘양 신규점1</name>
+		<description><![CDATA[<div>임도는 아니지만,&nbsp; 네이버뷰로 확인 가능<br></div><div>즉, 차량으로 이동 가능한 길임.</div>]]></description>
+		<LookAt>
+			<longitude>128.8033357781767</longitude>
+			<latitude>36.7865659152792</latitude>
+			<altitude>451.786839435151</altitude>
+			<heading>2.363485544325698</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>502.1913630880591</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>128.8037495884997,36.78615619925525,469.1614722021832</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0965EE4B833FFF1D7A01">
+		<name>덕산 신규점1</name>
+		<description><![CDATA[<div>덕산 임도 지역은 작업임도로 접근불가.<br></div><div>저수지 끝 지역으로 카카오뷰로 확인하니<br></div><div>차량 접근 가능하고 전신주 없음<br></div><div>입구 차단막 있음.</div>]]></description>
+		<LookAt>
+			<longitude>128.1923992653085</longitude>
+			<latitude>36.88841104471362</latitude>
+			<altitude>388.1343585209328</altitude>
+			<heading>4.097233159850661e-08</heading>
+			<tilt>0.06511868984872239</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>206.4041940841344</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>128.19273855704,36.88852947168198,388.1017575892704</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="06D882744C40044DDAD4">
+		<name>운봉 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>127.5772073196841</longitude>
+			<latitude>35.24663849642069</latitude>
+			<altitude>415.5110587245717</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>758.8199084408552</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.5772828273775,35.24658958931118,410.9952264974041</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0804CA1004400481BB3E">
+		<name>회천 신규점1</name>
+		<description><![CDATA[<div>임도아님<br></div><div>근처 묘지 있음</div><div>카카오뷰 확인가능</div>]]></description>
+		<LookAt>
+			<longitude>127.1747886358761</longitude>
+			<latitude>34.70335171765644</latitude>
+			<altitude>118.0379011764214</altitude>
+			<heading>-1.731778329331175</heading>
+			<tilt>5.449706743498713</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>247.1569730192278</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.1750365365549,34.70336319835176,122.1070891992701</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0BEF8DEB724004850033">
+		<name>회천 신규점2</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>근처 묘지 있음<br></div><div>카카오뷰 확인가능</div>]]></description>
+		<LookAt>
+			<longitude>127.0475657572974</longitude>
+			<latitude>34.68106526281644</latitude>
+			<altitude>102.0271126332468</altitude>
+			<heading>-1.731779589321246</heading>
+			<tilt>5.449767157608306</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>317.8957711260227</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.0476604244681,34.68080506046805,98.64776575713276</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="046A95EAE53FFF291FCB">
+		<name>속리 신규점1</name>
+		<description><![CDATA[<div>작업임도<br></div><div>네이버 뷰로 입구확인 가능하나<br></div><div>주택으로 보이는 지점은 확인 불가<br></div><div>조사 필요함</div>]]></description>
+		<LookAt>
+			<longitude>127.904734788899</longitude>
+			<latitude>36.63632489487712</latitude>
+			<altitude>309.1720253599081</altitude>
+			<heading>-9.287790505923948e-07</heading>
+			<tilt>0.06511678564429316</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>83.46239043453352</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>127.9046437423393,36.63622276845837,309.7653891636433</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0EB73528893FFF2AC089">
+		<name>속리 신규점2</name>
+		<description><![CDATA[<div>간선임도,&nbsp;<br></div><div>네이버 뷰로 입구만 확인 가능<br></div><div><br></div>]]></description>
+		<LookAt>
+			<longitude>127.9001300199367</longitude>
+			<latitude>36.64208258803546</latitude>
+			<altitude>297.7021854132324</altitude>
+			<heading>-8.9972777702768e-07</heading>
+			<tilt>0.06511837376688778</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>243.5078685984263</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>127.9007808240733,36.64200454888741,293.061554287882</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="097E701D593FFF3B7CBC">
+		<name>속리 신규점3</name>
+		<description><![CDATA[<div>자연휴양림을 지나야 하는데, 차단기 존재<br></div><div><br></div><div>간선임도,&nbsp; 카카오 뷰로 입구 확인 가능</div><div><br></div>]]></description>
+		<LookAt>
+			<longitude>127.9596852176333</longitude>
+			<latitude>36.66799531542957</latitude>
+			<altitude>325.7977254699528</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>346.2055167792278</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>127.9593706026116,36.667756358111,331.3538911436239</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="06A8B7274A3FFF3F9028">
+		<name>속리 신규점4</name>
+		<description><![CDATA[<div>간선임도, 입구 철문으로 막혀 있음<br></div><div>입구까지는 네이버뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>127.795027322244</longitude>
+			<latitude>36.59608843901312</latitude>
+			<altitude>395.8041883287781</altitude>
+			<heading>359.9999985154911</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>308.3039070517771</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>127.7949766437094,36.596039613754,393.7883087406266</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0507B860873FFF447A8B">
+		<name>속리 신규점5</name>
+		<description><![CDATA[<div>임도는 아니지만, 카카오뷰로 확인 가능한 길임.&nbsp;<br></div><div>전신주 안 보임</div>]]></description>
+		<LookAt>
+			<longitude>127.8075998143145</longitude>
+			<latitude>36.57069160729385</latitude>
+			<altitude>419.8330090669846</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>293.3264496350967</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>127.8080514364037,36.57053829656147,427.9693674958675</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0CE1E3CC853FFF49166C">
+		<name>관기 신규점1</name>
+		<description><![CDATA[<div>임도는 아니지만, 네이버뷰로 길 확인 가능.<br></div><div>시멘트 길 옆 공터 확인</div>]]></description>
+		<LookAt>
+			<longitude>127.9116628451514</longitude>
+			<latitude>36.48579855131945</latitude>
+			<altitude>336.5840880529823</altitude>
+			<heading>2.845699636768208e-08</heading>
+			<tilt>0.1314953451841985</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>495.106573581361</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>127.9120686251986,36.4856232343806,331.4974276455082</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0DD766BC923FFF4E143E">
+		<name>관기 신규점2</name>
+		<description><![CDATA[<div>임도 아님,<br></div><div>카카오뷰로 길 확인가능<br></div><div>입구에 차단기가 있으나, 열려 있는 것으로&nbsp;<br></div><div>뷰에서는 보임</div>]]></description>
+		<LookAt>
+			<longitude>127.9700055472562</longitude>
+			<latitude>36.47993605480856</latitude>
+			<altitude>312.7675740867159</altitude>
+			<heading>6.467780880922127</heading>
+			<tilt>14.17852179161918</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>221.6924399306299</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>127.9697357458665,36.48009320040433,305.2990901527249</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0553A4FC483FFF597CA4">
+		<name>영양 신규점1</name>
+		<description><![CDATA[<div>간선임도, 카카오뷰로 전부 확인 가능<br></div>]]></description>
+		<LookAt>
+			<longitude>129.244551182629</longitude>
+			<latitude>36.74918866277995</latitude>
+			<altitude>654.133896792776</altitude>
+			<heading>7.17502695807084</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>723.2437304347695</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>129.2442738196532,36.74858064410038,677.3218255006586</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0024A501A93FFF60A186">
+		<name>영양신규점2</name>
+		<description><![CDATA[<div>간선임도,<br></div><div>카카오뷰로 전체 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.2190036139464</longitude>
+			<latitude>36.69516400739148</latitude>
+			<altitude>435.0682949731957</altitude>
+			<heading>7.184852269511904</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1289.326093076379</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>129.2172594259892,36.69511189196332,419.9950053214785</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="039695ED1F3FFF6288CC">
+		<name>영양 신규점3</name>
+		<description><![CDATA[<div>간선임도<br></div><div>카카오뷰로 전체 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.2424079637207</longitude>
+			<latitude>36.72095399905663</latitude>
+			<altitude>536.975915795678</altitude>
+			<heading>7.233962723021115</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1137.993335259816</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>129.2406590870398,36.72196358862849,487.6831106925995</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0538B1121E3FFF68165F">
+		<name>소천 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로&nbsp; 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.2182940709766</longitude>
+			<latitude>36.79871089569482</latitude>
+			<altitude>535.9464420319966</altitude>
+			<heading>7.236816352688929</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>197.9359568492509</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0F6E9253933FFE704E2F</styleUrl>
+		<Point>
+			<coordinates>129.2180404562748,36.79866017459182,530.7651187972671</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="05A79F23FC3FFF78858F">
+		<name>관리 신규점2</name>
+		<description><![CDATA[<div>임도 아님,&nbsp; 카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>127.9036515235314</longitude>
+			<latitude>36.32545316742574</latitude>
+			<altitude>339.0731744055977</altitude>
+			<heading>6.506225428073471</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1578.240617140546</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>127.9059824721153,36.32575522903509,382.5410370561498</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="09F7A674933FFF7EE7DF">
+		<name>관기 신규점4</name>
+		<description><![CDATA[<div>임도아님,<br></div><div>카카오뷰로 확인 가능<br></div><div>등산로 초입으로 보이며, 화장실 표시가 있으니, 그 지점으로 100미터 이상 떨어져야 할 듯..</div>]]></description>
+		<LookAt>
+			<longitude>127.901438791146</longitude>
+			<latitude>36.27814228388964</latitude>
+			<altitude>256.4470650638611</altitude>
+			<heading>6.524315780523914</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1706.781728981878</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>127.9000695858671,36.2785633194648,308.5074368018282</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="019E5FE9B83FFF93354F">
+		<name>현리 신규점2</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 시작지점 확인 가능<br></div><div><br></div>]]></description>
+		<LookAt>
+			<longitude>128.2806898878189</longitude>
+			<latitude>37.76594289980787</latitude>
+			<altitude>732.2558885541463</altitude>
+			<heading>7.545988802380919</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>524.7614312134101</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>128.28050428043,37.7660653555093,738.2275229157613</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0BF54D1D803FFF974D50">
+		<name>청송 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.2607075018001</longitude>
+			<latitude>36.31722013731694</latitude>
+			<altitude>229.4550046885519</altitude>
+			<heading>8.23222282829331</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1092.06163763578</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>129.2605970333509,36.31780213538721,254.2403204347632</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0D232206C63FFF9D441C">
+		<name>영덕 신규점1</name>
+		<description><![CDATA[<div>간선임도,&nbsp;<br></div><div>카카오뷰로 입구는 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.3034012939518</longitude>
+			<latitude>36.32477114882472</latitude>
+			<altitude>248.776330049384</altitude>
+			<heading>8.269033083349504</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>495.2264481252497</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>129.3031389622601,36.32399907902516,261.2172337224027</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0082D719CD3FFFB0FC96">
+		<name>길안 신규지1</name>
+		<description><![CDATA[임도 아님.카<br>카카오 뷰로 확인 가능. 저수지 윗쪽으로<br>판단됨.<br>주위 묘지 인근에서 측정 가능한지 살펴봐야 함<br><div><br></div>]]></description>
+		<LookAt>
+			<longitude>128.8243052423042</longitude>
+			<latitude>36.44581052335692</latitude>
+			<altitude>270.5521516374702</altitude>
+			<heading>7.982503724198954</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>121.3155415961228</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>128.8241879616991,36.44564655480515,273.4299521331209</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0C41CACEFA400327B4B3">
+		<name>고남 신규점1</name>
+		<description><![CDATA[<div>임도 아님, 1선정지역에서 거리는 있으나,<br></div><div>철도, 송전탑 지역 아님.<br></div><div>카카오뷰로 길 확인 가능<br></div><div><br></div>]]></description>
+		<LookAt>
+			<longitude>126.3548378008568</longitude>
+			<latitude>36.42657135441029</latitude>
+			<altitude>19.05057290524331</altitude>
+			<heading>0.0001517364994367974</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>619.6194186539651</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.3553140652102,36.42670721775983,13.41105848210697</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="028ABF7FF940032D1C4F">
+		<name>고남 신규점2</name>
+		<description><![CDATA[<div>임도 아님, 1등급 선정지 아님.<br></div><div>카카오 뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>126.3944764053694</longitude>
+			<latitude>36.45181844140673</latitude>
+			<altitude>45.3967309956571</altitude>
+			<heading>0.0001497003896910963</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>1610.349379927211</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.3958018888894,36.45230424457304,38.47757176016191</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="06C1548EBA40033A86C4">
+		<name>예산 신규점2</name>
+		<description><![CDATA[<div>임도 아님. 카카오뷰로 확인 가능.<br></div><div>묘지 보임</div>]]></description>
+		<LookAt>
+			<longitude>126.9356913704042</longitude>
+			<latitude>36.53413400143947</latitude>
+			<altitude>119.8308866296275</altitude>
+			<heading>0.0001406836597784338</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>204.8541225941517</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.9362690158113,36.53408514207647,115.900417234954</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="048E581CC2400340D6AF">
+		<name>전의 신규점1</name>
+		<description><![CDATA[<div>임도 아님.&nbsp;<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>127.0644041855766</longitude>
+			<latitude>36.57885895578869</latitude>
+			<altitude>267.2284849219726</altitude>
+			<heading>0.0001365023601282751</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>2700.815749754256</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.0687020147759,36.57937933867072,371.5962801525242</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="02695BA535400349243E">
+		<name>전의 신규점2</name>
+		<description><![CDATA[<div>임도 아님. 묘지 앞.&nbsp; <br></div><div>카카오뷰 확인 가능<br></div>]]></description>
+		<LookAt>
+			<longitude>126.9944356341499</longitude>
+			<latitude>36.58370671510306</latitude>
+			<altitude>327.030525374756</altitude>
+			<heading>0.0001335221188413939</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>720.4770203991939</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.9944556368924,36.5835099491282,326.7470370164672</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="03442A450640035DBBD8">
+		<name>서천 신규점3</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>입구까지 카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>126.7034324040443</longitude>
+			<latitude>36.2041227411018</latitude>
+			<altitude>182.674719735932</altitude>
+			<heading>2.914809403079675</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>605.0886399321462</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.7048526497633,36.20461209316072,174.1486904783266</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0B4ABE061B40036080EB">
+		<name>이원 신규점1</name>
+		<description><![CDATA[<div>연구원에서 답사 다녀 온 지역<br></div><div>측정가능 지역으로 판단되었음</div>]]></description>
+		<LookAt>
+			<longitude>127.5816492448872</longitude>
+			<latitude>36.16643604727764</latitude>
+			<altitude>298.5102226871902</altitude>
+			<heading>2.914809402731041</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>1490.173434536409</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.5831213303467,36.16662046711745,300.3188131990264</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="03311553C04003693176">
+		<name>진안 신규점1</name>
+		<description><![CDATA[<div>간선임도 이며, 입구는 막혀있는 것으로 보이나, 카카오뷰로 확인은 불가능함</div>]]></description>
+		<LookAt>
+			<longitude>127.3091276110703</longitude>
+			<latitude>35.89031027858788</latitude>
+			<altitude>290.5338953851009</altitude>
+			<heading>2.914809402162619</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>1633.676428447652</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.3090167226278,35.89130858310298,297.436131985326</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0EC0D498ED40036D06F7">
+		<name>진안 신규점2</name>
+		<description><![CDATA[<div>간선임도, 입구 막혀 있음.<br></div><div>입구까지는 카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>127.2584762440514</longitude>
+			<latitude>35.90529055786563</latitude>
+			<altitude>323.321679568374</altitude>
+			<heading>359.9999881640358</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>912.9636918629697</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.2604738846315,35.9042700171675,353.525321329229</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="02E9BBC648400374BAD9">
+		<name>무풍 신규점1</name>
+		<description><![CDATA[<div>임도 아님.&nbsp;<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>127.8011164084784</longitude>
+			<latitude>35.94513498812966</latitude>
+			<altitude>579.7076631926661</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>253.7353783351136</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.8008545288462,35.94521214635162,583.8998966669103</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="03A28C6ADF40037DDC74">
+		<name>가야 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인가능<br></div>]]></description>
+		<LookAt>
+			<longitude>128.0366299896396</longitude>
+			<latitude>35.7778732750332</latitude>
+			<altitude>822.1170539951954</altitude>
+			<heading>-1.704211738659729e-08</heading>
+			<tilt>0.06167757386340368</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>176.2063200654848</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_08CA17847C4003766864</styleUrl>
+		<Point>
+			<coordinates>128.0368331569574,35.77798639364149,824.8053227645031</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0390D35F59400384DEB4">
+		<name>가야 신규점2</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>128.1168454772923</longitude>
+			<latitude>35.76385015315029</latitude>
+			<altitude>484.9361073896597</altitude>
+			<heading>-2.290264376089654e-07</heading>
+			<tilt>0.06168849103844732</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>1328.306921362819</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>128.1177205973127,35.76497827804797,450.2164931095407</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="051F7710EC400388F1EC">
+		<name>창녕 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰로 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>128.2960136315398</longitude>
+			<latitude>35.6622514277603</latitude>
+			<altitude>167.5391606101889</altitude>
+			<heading>2.465847964269573e-07</heading>
+			<tilt>0.06169382926901735</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>1888.199659740204</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0BBDB6D86F400389427B</styleUrl>
+		<Point>
+			<coordinates>128.2980988885101,35.66258595792368,178.7309233560182</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="038A5D66E040038F7E7F">
+		<name>합천 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰로 확인 가능<br></div>]]></description>
+		<LookAt>
+			<longitude>128.2148630725501</longitude>
+			<latitude>35.63980745282152</latitude>
+			<altitude>221.9334137700634</altitude>
+			<heading>-5.565259789512197e-07</heading>
+			<tilt>0.06169416494007671</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>1940.694140978158</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0BBDB6D86F400389427B</styleUrl>
+		<Point>
+			<coordinates>128.2174712258698,35.6396822474293,206.6049861174821</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0B2299B5473FFFA967BE">
+		<name>청송 신규점3</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인 가능.<br></div><div>묘지 바로 앞인 것으로 보임</div>]]></description>
+		<LookAt>
+			<longitude>128.8702584692529</longitude>
+			<latitude>36.51447991134338</latitude>
+			<altitude>182.0638952099447</altitude>
+			<heading>7.978336225088354</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>139.2161114888586</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0619D109BF3FFE2FB540</styleUrl>
+		<Point>
+			<coordinates>128.8702880626007,36.51441302278962,182.1442685039699</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0DEBAD67FE40039B0AFF">
+		<name>대구 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오 뷰로 어느정도 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>128.5604016906727</longitude>
+			<latitude>35.78040952454923</latitude>
+			<altitude>275.5673690824988</altitude>
+			<heading>-6.761659763901802e-08</heading>
+			<tilt>0.06167968719748401</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>471.5612847853482</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>128.5604993837232,35.78057447972029,280.7485911712826</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0B66A8B8E24003A25DE9">
+		<name>경주 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 입구까지는 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.0450183950577</longitude>
+			<latitude>35.78568001363798</latitude>
+			<altitude>397.2217190775573</altitude>
+			<heading>1.738435814894508e-08</heading>
+			<tilt>0.06167932131160241</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>453.8932789245882</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_08CA17847C4003766864</styleUrl>
+		<Point>
+			<coordinates>129.0450932307782,35.78572428060171,397.1025453038017</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0AEC317A8C4003A7684B">
+		<name>언양 신규점1</name>
+		<description><![CDATA[<div>임도 아님.&nbsp;<br></div><div>카카오뷰로 입구까지 확인 가능</div>]]></description>
+		<LookAt>
+			<longitude>129.0298406341165</longitude>
+			<latitude>35.74246286860446</latitude>
+			<altitude>233.3613331139649</altitude>
+			<heading>-7.220970722413289e-09</heading>
+			<tilt>0.0616781303120268</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>338.0340455265468</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_08CA17847C4003766864</styleUrl>
+		<Point>
+			<coordinates>129.0298244177819,35.74236414842875,233.8986379298037</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="08E773DE314004198499">
+		<name>양산 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>카카오뷰로 길 확인 가능하나, 끝 지점임</div>]]></description>
+		<LookAt>
+			<longitude>128.9891190416174</longitude>
+			<latitude>35.44547785903038</latitude>
+			<altitude>536.6388998468007</altitude>
+			<heading>3.295864255748907e-08</heading>
+			<tilt>0.08743204208193657</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>626.8910659667017</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>128.9900473105747,35.44583614443295,550.7740046383935</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0C2AADC0F9400421023C">
+		<name>밀양 신규점1</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>구글어스 상에서는 길이 안 보이나,<br></div><div>카카오뷰로 길 확인 가능 (공터가 있는 것으로 보임)</div>]]></description>
+		<LookAt>
+			<longitude>128.8889642498181</longitude>
+			<latitude>35.47246197566844</latitude>
+			<altitude>464.0691820953089</altitude>
+			<heading>3.826635838546907e-08</heading>
+			<tilt>0.08742941142870259</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>445.7366181578983</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>128.8888970051844,35.47225983655908,472.8952911489901</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="080921D0DE400452225F">
+		<name>운봉 신규점2</name>
+		<description><![CDATA[<div>임도 아님.<br></div><div>카카오뷰로 확인 가능, 끝지점이긴 하나 주변<br></div><div>공터 혹은 묘지인것으로 추정되는 지역 있음</div>]]></description>
+		<LookAt>
+			<longitude>127.7810936259066</longitude>
+			<latitude>35.31135370016892</latitude>
+			<altitude>727.3228640526459</altitude>
+			<heading>0</heading>
+			<tilt>0</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>1684.663253202452</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.7820504909265,35.3107845059322,649.7822628278477</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0BD78649B44004727623">
+		<name>거제 신규점2</name>
+		<description><![CDATA[<div>임도와 사도가 갈림길<br></div><div>카카오뷰에서 확인됨</div>]]></description>
+		<LookAt>
+			<longitude>128.6711981049851</longitude>
+			<latitude>34.82634562469355</latitude>
+			<altitude>293.5056600145778</altitude>
+			<heading>-1.731778075594708</heading>
+			<tilt>5.449693686060312</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>231.8677768911584</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>128.6712298122644,34.82639766782538,292.1148685367483</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="0135E4DBAA400499EFB8">
+		<name>자은 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>근처 묘지 있음<br></div><div>카카오뷰 확인가능</div>]]></description>
+		<LookAt>
+			<longitude>126.049648252927</longitude>
+			<latitude>34.87192516786655</latitude>
+			<altitude>42.31764706307375</altitude>
+			<heading>-1.731784420757589</heading>
+			<tilt>5.449994550028241</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>584.1448048882739</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.0499447808075,34.87213056156891,47.85812668949396</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="02A35D263640049CE606">
+		<name>자은 신규점2</name>
+		<description><![CDATA[임도 아님<br>근처 묘지 있음<br>카카오뷰 확인가능<br><div><br></div>]]></description>
+		<LookAt>
+			<longitude>126.0613619750012</longitude>
+			<latitude>34.92297910629419</latitude>
+			<altitude>34.58066465259218</altitude>
+			<heading>-1.731778790764277</heading>
+			<tilt>5.449726845874186</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>270.6982057353525</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>126.0611534708469,34.92301899060558,33.3264743289222</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="09A22B5D954004B88F20">
+		<name>기계 신규점1</name>
+		<description><![CDATA[<div>임도 아님<br></div><div>인근 공터 있음<br></div><div>카카오뷰 확인가능</div>]]></description>
+		<LookAt>
+			<longitude>129.0142498815761</longitude>
+			<latitude>36.18500640117718</latitude>
+			<altitude>658.3041997665172</altitude>
+			<heading>-3.230498835568079</heading>
+			<tilt>2.307429233435152</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>356.5022811828021</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>129.0144598391951,36.18507966705441,655.378220893096</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark id="09FAD542A7400442908B">
+		<name>함양 신규점1</name>
+		<description><![CDATA[현지 답사 완료한 지점<br>간선임도, 카카오뷰로 확인불]]></description>
+		<LookAt>
+			<longitude>127.5745845746987</longitude>
+			<latitude>35.58738594728423</latitude>
+			<altitude>510.6897824944318</altitude>
+			<heading>-4.470488617983683e-08</heading>
+			<tilt>0.08744162441190775</tilt>
+			<gx:fovy>30.00028647293327</gx:fovy>
+			<range>1378.344947910227</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0B94C8BC9A4003284EF3</styleUrl>
+		<Point>
+			<coordinates>127.5746591337636,35.58624264033952,477.6180232968451</coordinates>
+		</Point>
+	</Placemark>
+</Document>
+</kml>
