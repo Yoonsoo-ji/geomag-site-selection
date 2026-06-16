@@ -12,7 +12,10 @@ import folium
 KML_PATH = Path(__file__).parent / "docs/output/20260616_kang_site_v1.kml"
 OUT_PATH  = Path(__file__).parent / "docs/kang_site_map.html"
 
-TERRAIN_URL = "http://localhost:8081/tiles/{z}/{x}/{y}.png"
+# AWS 공개 지형 타일 — API 키 불필요, GitHub Pages에서 바로 동작
+# Terrarium 인코딩: R*256 + G + B/256 - 32768 = 고도(m)
+TERRAIN_URL      = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
+TERRAIN_ENCODING = "terrarium"
 
 
 def strip_cdata_html(raw: str) -> str:
@@ -64,7 +67,7 @@ def popup_html(p):
     lat, lon = p["lat"], p["lon"]
     enc      = p["name"].replace(" ", "%20")
     kakao    = f"https://map.kakao.com/link/map/{enc},{lat:.6f},{lon:.6f}"
-    naver    = f"https://map.naver.com/v5/?c={lon:.6f},{lat:.6f},15,0,0,0,dh"
+    naver    = f"https://map.naver.com/v5/search/{lat:.6f},{lon:.6f}"
     return f"""<div style="font-family:'Malgun Gothic',sans-serif;font-size:13px;min-width:240px;max-width:320px;">
 <b style="color:{color};">{p['name']}</b>
 &nbsp;<span style="background:{color};color:white;padding:1px 6px;border-radius:3px;font-size:11px;">{label}</span>
@@ -114,7 +117,7 @@ JS_LAYERS = """\
         const lat=(p.lat!=null)?p.lat:f.geometry.coordinates[1];
         const lon=(p.lon!=null)?p.lon:f.geometry.coordinates[0];
         const kakao='https://map.kakao.com/link/map/P1%ED%9B%84%EB%B3%B4'+p.idx+','+lat.toFixed(6)+','+lon.toFixed(6);
-        const naver='https://map.naver.com/v5/?c='+lon.toFixed(6)+','+lat.toFixed(6)+',15,0,0,0,dh';
+        const naver='https://map.naver.com/v5/search/'+lat.toFixed(6)+','+lon.toFixed(6);
         l.bindPopup(`<div style="font-family:Malgun Gothic,sans-serif;font-size:12.5px;min-width:240px;">
           <b style="color:#CC0000;">후보지 #${p.idx}</b>
           <span style="background:#FF2200;color:white;padding:1px 5px;border-radius:3px;font-size:11px;margin-left:4px;">P1 최우선</span><br>
@@ -143,7 +146,7 @@ JS_LAYERS = """\
         const vf=(x,fmt)=>(x==null)?'-':fmt(x);
         const lat=p.lat, lon=p.lon;
         const kakao='https://map.kakao.com/link/map/'+encodeURIComponent(p.name)+','+lat.toFixed(6)+','+lon.toFixed(6);
-        const naver='https://map.naver.com/v5/?c='+lon.toFixed(6)+','+lat.toFixed(6)+',15,0,0,0,dh';
+        const naver='https://map.naver.com/v5/search/'+lat.toFixed(6)+','+lon.toFixed(6);
         l.bindPopup(`<div style="font-family:Malgun Gothic,sans-serif;font-size:12.5px;min-width:240px;">
           <b style="color:#8B4513;">⭐ ${p.name}</b><br>
           <hr style="margin:4px 0;">
@@ -213,9 +216,8 @@ JS_3D = """\
     </select>
   </label>
   <hr style="margin:7px 0;border-color:rgba(255,255,255,0.15);">
-  <div id="terrain-status" style="font-size:11px;color:#ffaa44;">
-    ⏳ 지형 서버 연결 중…<br>
-    <span style="color:#aaa;">dem_terrain_server_5m.py 실행 필요</span>
+  <div id="terrain-status" style="font-size:11px;color:#a8e6a3;">
+    ⏳ 3D 지형 로딩 중…
   </div>
 </div>
 
@@ -236,7 +238,7 @@ function makeStyle3D(basemap) {
     version: 8,
     sources: {
       basemap: { type:'raster', tiles:[BASEMAPS_3D[basemap]], tileSize:256 },
-      terrain: { type:'raster-dem', tiles:[TERRAIN_URL_3D], tileSize:256, encoding:'mapbox' },
+      terrain: { type:'raster-dem', tiles:[TERRAIN_URL_3D], tileSize:256, encoding:'terrarium' },
     },
     layers:[{id:'basemap',type:'raster',source:'basemap'}],
     terrain:{ source:'terrain', exaggeration: exag3d },
@@ -285,14 +287,11 @@ function toggle3D() {
       mlMap.addControl(new maplibregl.NavigationControl());
       mlMap.addControl(new maplibregl.ScaleControl({ unit:'metric' }));
       mlMap.on('error', e => {
-        if (e.error?.message?.includes('localhost')) {
-          document.getElementById('terrain-status').innerHTML =
-            '⚠️ 지형 서버 미연결<br><span style="color:#aaa;font-size:10.5px;">dem_terrain_server_5m.py를 실행하세요</span>';
-        }
+        console.warn('MapLibre error:', e);
       });
       mlMap.on('load', () => {
         document.getElementById('terrain-status').innerHTML =
-          '✅ 5m DEM 지형 로드 완료';
+          '✅ 3D 지형 로드 완료';
         setTimeout(() => {
           document.getElementById('terrain-status').style.display = 'none';
         }, 3000);
@@ -320,7 +319,7 @@ function toggleHillshade(on) {
   if (!mlMap) return;
   if (on) {
     if (!mlMap.getSource('terrain-hs'))
-      mlMap.addSource('terrain-hs', { type:'raster-dem', tiles:[TERRAIN_URL_3D], tileSize:256, encoding:'mapbox' });
+      mlMap.addSource('terrain-hs', { type:'raster-dem', tiles:[TERRAIN_URL_3D], tileSize:256, encoding:'terrarium' });
     if (!mlMap.getLayer('hillshade'))
       mlMap.addLayer({ id:'hillshade', type:'hillshade', source:'terrain-hs',
         paint:{ 'hillshade-exaggeration':0.6, 'hillshade-shadow-color':'#222' } });
