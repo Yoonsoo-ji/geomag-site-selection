@@ -3,7 +3,7 @@
 도상선점 조사 카드 + 마스터 목록 생성기
 - 목적: ① 현장 작업자 배포용 정보 ② 도상선점 위치 정리·보관용
 - 구성: 마스터 목록 시트 + 후보지별 카드(지도 4종 포함)
-- 섹션: ② 선점 정보 / ③ 주변 간섭요인(자동계산) / ④ 도상 판정 / ⑤ 현장조사 결과(공란)
+- 섹션: ① 선점 정보 / ② 주변 간섭요인(자동계산) / ③ 도상 판정 / ④ 현장조사 결과(공란)
 """
 import json, re, math
 from datetime import datetime
@@ -20,11 +20,11 @@ from capture_map_images import MapCapturer, IMG_DIR
 from interference import Interference
 
 ROOT     = Path(__file__).parent
-KML_PATH = ROOT / "docs/output/20260617_kang_site_v2.kml"
+KML_PATH = ROOT / "docs/output/20260617_kang_site_v4.kml"
 EXISTING = ROOT / "docs/data/existing_sites.geojson"
 TOPO     = ROOT / "docs/data/topo_sheets.geojson"
 OUT_DIR  = ROOT / "docs/output"
-N_CARDS  = 10
+N_CARDS  = 96
 EMBED_PX = 300
 FONT_KR  = "C:/Windows/Fonts/malgun.ttf"
 
@@ -210,7 +210,7 @@ def build_card(wb, idx, p, exi, dist, sh, inf, imgs):
     ws.row_dimensions[1].height = 30
 
     # ② 선점 정보
-    sec(ws, 2, "② 선점 정보")
+    sec(ws, 2, "① 선점 정보")
     merge_val(ws, 3, "관리번호", "A", ("B", "C"), sid)
     lbl(ws, "D3", "후보지명"); ws.merge_cells("E3:G3"); val(ws, "E3", p['name'])
     merge_val(ws, 4, "도엽번호", "A", ("B", "C"), sh.get('sheet_code', '-'))
@@ -243,7 +243,7 @@ def build_card(wb, idx, p, exi, dist, sh, inf, imgs):
         c.alignment = AL_C; c.border = BORDER
 
     # ③ 주변 간섭요인
-    sec(ws, 13, "③ 주변 간섭요인 (자동 계산)")
+    sec(ws, 13, "② 주변 간섭요인 (자동 계산)")
     ok = lambda b: "✓ 충족" if b else "✗ 미달"
     merge_val(ws, 14, "최근접 송전탑", "A", ("B", "C"), f"{inf['tower']*1000:.0f} m")
     lbl(ws, "D14", "기준 1km"); ws.merge_cells("E14:G14"); val(ws, "E14", ok(inf['tower'] >= 1.0))
@@ -253,7 +253,7 @@ def build_card(wb, idx, p, exi, dist, sh, inf, imgs):
     lbl(ws, "D16", "최근접 주거지"); ws.merge_cells("E16:G16"); val(ws, "E16", f"{inf['resid']:.2f} km")
 
     # ④ 도상 판정
-    sec(ws, 17, "④ 도상 판정")
+    sec(ws, 17, "③ 도상 판정")
     mark = {"적합": "■ 적합  □ 조건부 적합  □ 부적합",
             "조건부 적합": "□ 적합  ■ 조건부 적합  □ 부적합"}.get(jd)
     merge_val(ws, 18, "종합판정", "A", ("B", "G"), mark)
@@ -262,7 +262,7 @@ def build_card(wb, idx, p, exi, dist, sh, inf, imgs):
     ws.row_dimensions[19].height = 56
 
     # ⑤ 현장조사 결과 (작업자 기입)
-    sec(ws, 20, "⑤ 현장조사 결과 (현장 작업자 기입)")
+    sec(ws, 20, "④ 현장조사 결과 (현장 작업자 기입)")
     merge_val(ws, 21, "방문일", "A", ("B", "C"), "", field=True)
     lbl(ws, "D21", "조사자"); ws.merge_cells("E21:G21"); val(ws, "E21", "", field=True)
     merge_val(ws, 22, "실측 GPS", "A", ("B", "G"), "", field=True)

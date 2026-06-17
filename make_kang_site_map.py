@@ -1,5 +1,5 @@
 """
-20260617_kang_site_v2.kml → docs/kang_site_map.html
+20260617_kang_site_v4.kml → docs/kang_site_map.html
 2D(Leaflet) + 3D(MapLibre) 통합 지도
 3D 모드에서도 도상선점·P1·기존측정점·제외구역 모두 표시
 """
@@ -7,7 +7,7 @@ import json, re, xml.etree.ElementTree as ET
 from pathlib import Path
 import folium
 
-KML_PATH = Path(__file__).parent / "docs/output/20260617_kang_site_v2.kml"
+KML_PATH = Path(__file__).parent / "docs/output/20260617_kang_site_v4.kml"
 OUT_PATH  = Path(__file__).parent / "docs/kang_site_map.html"
 
 # AWS 공개 지형 타일 (API 키 불필요, GitHub Pages 동작)
