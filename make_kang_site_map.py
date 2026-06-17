@@ -82,7 +82,9 @@ def popup_html(p):
 # ── Leaflet용 GeoJSON fetch JS ──────────────────────────────────────────────
 LEAFLET_JS = """\
 <script>
-(function(){
+// Folium 초기화(map/feature_group) 완료 직후 실행 — DOMContentLoaded는 파싱 완료 시점이라
+// FG 변수는 정의돼 있고, 타일 로딩을 기다리지 않으므로 첫 진입에도 레이어가 바로 표시됨
+document.addEventListener('DOMContentLoaded', function(){
   fetch('data/zone_power.geojson').then(r=>r.json()).then(d=>{
     L.geoJSON(d,{style:()=>({fillColor:'#FF3300',color:'#CC0000',weight:1,fillOpacity:0.28}),
       onEachFeature:(f,l)=>l.bindTooltip('⚡ 고압철탑·송전탑 제외 (1.0 km)')
@@ -119,6 +121,21 @@ LEAFLET_JS = """\
     }).addTo(%%FG_P1%%);
   }).catch(e=>console.warn(e));
 
+  fetch('data/topo_sheets.geojson').then(r=>r.json()).then(d=>{
+    L.geoJSON(d,{
+      style:()=>({fillColor:'transparent',color:'#1a73e8',weight:1.2,fillOpacity:0,dashArray:'4 3',opacity:0.7}),
+      onEachFeature(f,l){
+        const p=f.properties;
+        l.bindTooltip(p.sheet_name+' ('+p.sheet_code+')',{sticky:true});
+        l.bindPopup(`<div style="font-family:Malgun Gothic,sans-serif;font-size:12.5px;">
+          <b>📋 ${p.sheet_name}</b><br>
+          <b>도엽코드:</b> ${p.sheet_code}<br>
+          <b>중심좌표:</b> ${Number(p.cy).toFixed(4)}°N, ${Number(p.cx).toFixed(4)}°E
+          </div>`,{maxWidth:240});
+      }
+    }).addTo(%%FG_TOPO%%);
+  }).catch(e=>console.warn(e));
+
   fetch('data/existing_sites.geojson').then(r=>r.json()).then(d=>{
     L.geoJSON(d,{
       pointToLayer:(f,ll)=>{
@@ -145,16 +162,56 @@ LEAFLET_JS = """\
       }
     }).addTo(%%FG_EXISTING%%);
   }).catch(e=>console.warn(e));
-})();
+
+  // ── 캡처용 헬퍼 (조사 카드 지도 캡처에 사용) ──────────────────────────────
+  window._kmap = %%MAP_VAR%%;
+  window._layers = {power:%%FG_POWER%%, rail:%%FG_RAIL%%, topo:%%FG_TOPO%%,
+                    p1:%%FG_P1%%, existing:%%FG_EXISTING%%};
+  window.gotoSite = function(lat, lon, zoom){
+    %%MAP_VAR%%.setView([lat, lon], zoom || 14);
+  };
+  window.setLayer = function(key, on){
+    var fg = window._layers[key]; if(!fg) return;
+    if(on) %%MAP_VAR%%.addLayer(fg); else %%MAP_VAR%%.removeLayer(fg);
+  };
+  window.setBase = function(kind){
+    if(window._curBase) %%MAP_VAR%%.removeLayer(window._curBase);
+    var url = (kind==='sat')
+      ? 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    window._curBase = L.tileLayer(url, {maxZoom:20, zIndex:50}).addTo(%%MAP_VAR%%);
+  };
+  window.captureMode = function(){
+    ['dosung-legend','toggle3d-btn','panel3d'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.style.display='none';
+    });
+    document.querySelectorAll('.leaflet-control-container').forEach(el=>el.style.display='none');
+  };
+});
 </script>
 """
 
 
 # ── 3D MapLibre 블록 ────────────────────────────────────────────────────────
-# %%POINTS_GEOJSON%% = 도상선점 GeoJSON, %%TERRAIN_URL%% = DEM 타일 URL
+# 치환 키: %%POINTS_GEOJSON%%, %%TERRAIN_URL%%, %%MAP_VAR%%, %%MAP_DIV%%
 MAPLIBRE_BLOCK = """\
 <link href="https://unpkg.com/maplibre-gl@3/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@3/dist/maplibre-gl.js"></script>
+<style>
+.topo-lbl {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-family: 'Malgun Gothic', sans-serif;
+  font-size: 11px;
+  color: #1a73e8;
+  font-weight: bold;
+  text-shadow: -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.topo-lbl::before { display: none !important; }
+</style>
 
 <div id="ml-wrap" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:500;">
   <div id="ml-map" style="width:100%;height:100%;"></div>
@@ -170,53 +227,74 @@ MAPLIBRE_BLOCK = """\
   🏔 3D 지형 보기
 </div>
 
-<!-- 3D 패널 -->
-<div id="panel3d" style="display:none;position:fixed;top:56px;left:12px;z-index:10001;
-    background:rgba(10,10,30,0.88);color:#e0e0f0;padding:13px 15px;border-radius:10px;
-    font-family:'Malgun Gothic',sans-serif;font-size:12.5px;line-height:1.8;
-    border:1px solid rgba(255,255,255,0.15);min-width:220px;">
-  <b style="font-size:13px;color:#a8e6a3;">🏔 3D 뷰 설정</b>
-  <hr style="margin:7px 0;border-color:rgba(255,255,255,0.15);">
-  <label style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+<!-- 3D 레이어 패널 (Leaflet LayerControl 동일 스타일, top-right) -->
+<div id="panel3d" style="display:none;position:fixed;top:10px;right:10px;z-index:10001;
+    background:white;color:#333;padding:6px 10px 10px 10px;border-radius:5px;
+    font-family:'Malgun Gothic',Malgun Gothic,sans-serif;font-size:13px;line-height:1.7;
+    border:2px solid rgba(0,0,0,0.2);min-width:200px;
+    box-shadow:0 1px 5px rgba(0,0,0,0.4);">
+  <div style="font-weight:bold;font-size:13px;margin-bottom:6px;border-bottom:1px solid #ddd;padding-bottom:5px;">
+    🏔 3D 뷰 설정
+  </div>
+  <label style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12.5px;">
     지형 과장&thinsp;
     <input type="range" id="exag3d" min="1" max="20" step="0.5" value="4"
-      style="width:90px;accent-color:#a8e6a3;" oninput="setExag(this.value)">
+      style="width:80px;" oninput="setExag(this.value)">
     <span id="exagVal">4x</span>
   </label>
-  <label style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+  <label style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12.5px;">
     <input type="checkbox" id="hs3d" onchange="toggleHillshade(this.checked)"> 힐쉐이드
   </label>
-  <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">배경지도&thinsp;
+  <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12.5px;">배경지도&thinsp;
     <select id="bm3d" onchange="changeBasemap(this.value)"
-      style="background:#1a1a2e;color:#e0e0f0;border:1px solid #444;border-radius:4px;padding:2px 4px;">
+      style="border:1px solid #aaa;border-radius:4px;padding:2px 4px;font-size:12px;">
       <option value="satellite">🛰 위성 (ESRI)</option>
       <option value="osm">🌍 OpenStreetMap</option>
       <option value="dark">🌑 다크</option>
     </select>
   </label>
-  <hr style="margin:6px 0;border-color:rgba(255,255,255,0.15);">
-  <b style="font-size:12px;color:#ccc;">레이어</b><br>
-  <label style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-    <input type="checkbox" id="l3d-dosung"   checked onchange="set3DLayer('dosung',   this.checked)">
-    <span style="color:#4ECDC4;">●</span> 도상 선점
+  <div style="font-weight:bold;font-size:12.5px;margin-bottom:4px;border-top:1px solid #ddd;padding-top:6px;">레이어</div>
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+    <input type="checkbox" id="l3d-power"    checked onchange="set3DLayer('power',    this.checked)">
+    ⚡ 고압철탑·송전탑 제외 (1km)
   </label>
-  <label style="display:flex;align-items:center;gap:6px;">
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+    <input type="checkbox" id="l3d-rail"     checked onchange="set3DLayer('rail',     this.checked)">
+    🚆 철도 제외 (5km)
+  </label>
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
     <input type="checkbox" id="l3d-p1"       checked onchange="set3DLayer('p1',       this.checked)">
-    <span style="color:#FF2200;">●</span> P1 우선순위 후보
+    🔴 P1 우선순위 1등급 후보지
   </label>
-  <label style="display:flex;align-items:center;gap:6px;">
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
     <input type="checkbox" id="l3d-existing" checked onchange="set3DLayer('existing', this.checked)">
-    <span style="color:#FFD700;">★</span> 기존 측정점
+    ⭐ 기존 측정점
   </label>
-  <label style="display:flex;align-items:center;gap:6px;">
-    <input type="checkbox" id="l3d-power"          onchange="set3DLayer('power',    this.checked)">
-    <span style="color:#FF3300;">■</span> 고압철탑 제외
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+    <input type="checkbox" id="l3d-topo"     checked onchange="set3DLayer('topo',     this.checked)">
+    📋 도엽 (1:50,000)
   </label>
-  <label style="display:flex;align-items:center;gap:6px;">
-    <input type="checkbox" id="l3d-rail"           onchange="set3DLayer('rail',     this.checked)">
-    <span style="color:#FF7700;">■</span> 철도 제외
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+    <input type="checkbox" id="l3d-ds-기존점"   checked onchange="set3DLayer('ds-기존점',   this.checked)">
+    🟠 도상선점 — 기존점
   </label>
-  <div id="ml-status" style="margin-top:7px;font-size:11px;color:#a8e6a3;">⏳ 지형 로딩 중…</div>
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+    <input type="checkbox" id="l3d-ds-간선임도" checked onchange="set3DLayer('ds-간선임도', this.checked)">
+    🟢 도상선점 — 간선임도
+  </label>
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+    <input type="checkbox" id="l3d-ds-작업임도" checked onchange="set3DLayer('ds-작업임도', this.checked)">
+    🟩 도상선점 — 작업임도
+  </label>
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+    <input type="checkbox" id="l3d-ds-임도외"   checked onchange="set3DLayer('ds-임도외',   this.checked)">
+    🔵 도상선점 — 임도 외
+  </label>
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+    <input type="checkbox" id="l3d-ds-기타"     checked onchange="set3DLayer('ds-기타',     this.checked)">
+    ⚫ 도상선점 — 기타
+  </label>
+  <div id="ml-status" style="margin-top:7px;font-size:11px;color:#2E8B57;">⏳ 지형 로딩 중…</div>
 </div>
 
 <script>
@@ -226,7 +304,7 @@ const DOSUNG_GJ = %%POINTS_GEOJSON%%;
 const BASEMAPS_3D = {
   satellite:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   osm:      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  dark:     'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png',
+  dark:     'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
 };
 const TERRAIN_URL_3D = '%%TERRAIN_URL%%';
 
@@ -265,6 +343,7 @@ function toggle3D(){
   btn.textContent     = is3D ? '🗺 2D 지도로 돌아가기' : '🏔 3D 지형 보기';
   btn.style.background= is3D ? '#555' : '#1a73e8';
 
+  positionLegend();
   if(!is3D) return;
   const {lng,lat,zoom} = getLeafletCenter();
 
@@ -284,7 +363,9 @@ function toggle3D(){
 }
 
 // ── 마커 풀 (MapLibre Marker 재사용) ────────────────────────────────────────
-const markerPool = {dosung:[], p1:[], existing:[]};
+const DS_CATS = ['기존점','간선임도','작업임도','임도 외','기타'];
+const DS_KEYS = {'기존점':'ds-기존점','간선임도':'ds-간선임도','작업임도':'ds-작업임도','임도 외':'ds-임도외','기타':'ds-기타'};
+const markerPool = {'ds-기존점':[],'ds-간선임도':[],'ds-작업임도':[],'ds-임도외':[],'ds-기타':[], p1:[], existing:[]};
 
 function clearMarkers(key){ markerPool[key].forEach(m=>m.remove()); markerPool[key]=[]; }
 
@@ -351,18 +432,23 @@ function onMlLoad(){
   // 도상 선점 마커
   addDosungMarkers();
 
-  // P1 후보 — GeoJSON 소스+레이어
+  // P1 후보 — HTML 마커 (3D 지형 위에서 안정적으로 표시)
+  clearMarkers('p1');
   fetchGj('data/candidates_p1.geojson','p1-src', gj=>{
-    mlMap.addSource('p1-src',{type:'geojson',data:gj});
-    mlMap.addLayer({id:'p1-circles',type:'circle',source:'p1-src',paint:{
-      'circle-radius':7,'circle-color':'#FF2200','circle-stroke-color':'#CC0000','circle-stroke-width':1.5,'circle-opacity':0.9
-    }});
-    mlMap.on('click','p1-circles', e=>{
-      const f=e.features[0];
-      mkPopup(p1PopupHtml(f)).setLngLat(f.geometry.coordinates.slice()).addTo(mlMap);
+    gj.features.forEach(f=>{
+      const p=f.properties;
+      const lon=(p.lon!=null)?p.lon:f.geometry.coordinates[0];
+      const lat=(p.lat!=null)?p.lat:f.geometry.coordinates[1];
+      const el=document.createElement('div');
+      el.style.cssText='width:15px;height:15px;border-radius:50%;background:#FF2200;'+
+        'border:2px solid #CC0000;cursor:pointer;box-shadow:0 0 5px rgba(0,0,0,0.7);';
+      const m=new maplibregl.Marker({element:el, anchor:'center'})
+        .setLngLat([lon,lat])
+        .setPopup(mkPopup(p1PopupHtml(f)))
+        .addTo(mlMap);
+      markerPool.p1.push(m);
     });
-    mlMap.on('mouseenter','p1-circles',()=>mlMap.getCanvas().style.cursor='pointer');
-    mlMap.on('mouseleave','p1-circles',()=>mlMap.getCanvas().style.cursor='');
+    set3DLayer('p1', document.getElementById('l3d-p1').checked);
   });
 
   // 기존 측정점 — HTML 마커
@@ -381,13 +467,18 @@ function onMlLoad(){
     });
   });
 
-  // 제외구역 소스만 미리 로드 (레이어는 체크박스로 제어)
+  // 제외구역·도엽 소스 로드 후 레이어 즉시 추가 (체크박스 상태 반영)
   fetchGj('data/zone_power.geojson','power-src', gj=>{
     mlMap.addSource('power-src',{type:'geojson',data:gj});
-    // 기본 비표시
+    set3DLayer('power', document.getElementById('l3d-power').checked);
   });
   fetchGj('data/zone_railway.geojson','rail-src', gj=>{
     mlMap.addSource('rail-src',{type:'geojson',data:gj});
+    set3DLayer('rail', document.getElementById('l3d-rail').checked);
+  });
+  fetchGj('data/topo_sheets.geojson','topo-src', gj=>{
+    mlMap.addSource('topo-src',{type:'geojson',data:gj});
+    set3DLayer('topo', document.getElementById('l3d-topo').checked);
   });
 }
 
@@ -397,9 +488,10 @@ function fetchGj(url, key, cb){
 }
 
 function addDosungMarkers(){
-  clearMarkers('dosung');
+  Object.keys(DS_KEYS).forEach(cat=>clearMarkers(DS_KEYS[cat]));
   DOSUNG_GJ.features.forEach(f=>{
     const p=f.properties;
+    const poolKey = DS_KEYS[p.label] || 'ds-기타';
     const el=document.createElement('div');
     el.style.cssText=`width:12px;height:12px;border-radius:50%;background:${p.color};
       border:2px solid rgba(255,255,255,0.7);cursor:pointer;
@@ -408,7 +500,7 @@ function addDosungMarkers(){
       .setLngLat(f.geometry.coordinates)
       .setPopup(mkPopup(dosungPopupHtml(f)))
       .addTo(mlMap);
-    markerPool.dosung.push(m);
+    markerPool[poolKey].push(m);
   });
 }
 
@@ -421,16 +513,38 @@ const ZONE_LAYERS = {
 function set3DLayer(key, on){
   if(!mlMap || !mlMap.isStyleLoaded()) return;
 
-  if(key==='dosung'){
-    markerPool.dosung.forEach(m=>{ m.getElement().style.display = on?'':'none'; });
+  if(key.startsWith('ds-')){
+    (markerPool[key]||[]).forEach(m=>{ m.getElement().style.display = on?'':'none'; });
     return;
   }
   if(key==='p1'){
-    if(mlMap.getLayer('p1-circles')) mlMap.setLayoutProperty('p1-circles','visibility',on?'visible':'none');
+    markerPool.p1.forEach(m=>{ m.getElement().style.display = on?'':'none'; });
     return;
   }
   if(key==='existing'){
     markerPool.existing.forEach(m=>{ m.getElement().style.display = on?'':'none'; });
+    return;
+  }
+  // topo
+  if(key==='topo'){
+    if(on){
+      if(!mlMap.getSource('topo-src')) return;
+      if(!mlMap.getLayer('topo-line')){
+        mlMap.addLayer({id:'topo-line',type:'line',source:'topo-src',
+          paint:{'line-color':'#1a73e8','line-width':1.2,'line-opacity':0.7,'line-dasharray':[4,3]}
+        });
+        mlMap.addLayer({id:'topo-label',type:'symbol',source:'topo-src',minzoom:8,
+          layout:{'text-field':['get','sheet_name'],'text-size':11,'text-anchor':'center','text-allow-overlap':false},
+          paint:{'text-color':'#1a73e8','text-halo-color':'white','text-halo-width':2}
+        });
+      } else {
+        mlMap.setLayoutProperty('topo-line','visibility','visible');
+        mlMap.setLayoutProperty('topo-label','visibility','visible');
+      }
+    } else {
+      if(mlMap.getLayer('topo-line'))  mlMap.setLayoutProperty('topo-line','visibility','none');
+      if(mlMap.getLayer('topo-label')) mlMap.setLayoutProperty('topo-label','visibility','none');
+    }
     return;
   }
   // power / rail
@@ -441,7 +555,7 @@ function set3DLayer(key, on){
       mlMap.addLayer({
         id:cfg.lid, type:'fill', source:cfg.src,
         paint:{'fill-color':cfg.color,'fill-opacity':0.28,'fill-outline-color':cfg.stroke}
-      }, 'p1-circles'); // P1 레이어 아래에 삽입
+      });
     } else {
       mlMap.setLayoutProperty(cfg.lid,'visibility','visible');
     }
@@ -477,27 +591,50 @@ function changeBasemap(v){
     onMlLoad(); // 레이어 재추가
   });
 }
+
+// ── 범례를 활성 레이어 컨트롤 아래에 배치 ────────────────────────────────────
+function positionLegend(){
+  const leg = document.getElementById('dosung-legend');
+  if(!leg) return;
+  let ref;
+  if(is3D){
+    ref = document.getElementById('panel3d');
+  } else {
+    ref = document.querySelector('.leaflet-control-layers');
+  }
+  if(!ref){ leg.style.top='80px'; return; }
+  const r = ref.getBoundingClientRect();
+  leg.style.top  = (r.bottom + 8) + 'px';
+  leg.style.right= '10px';
+  leg.style.bottom='';
+  leg.style.left  ='';
+}
+
+window.addEventListener('load', ()=>{ setTimeout(positionLegend, 300); });
 </script>
 """
 
 # ── 범례 (좌측 하단) ──────────────────────────────────────────────────────
 LEGEND_HTML = """\
-<div style="position:fixed;bottom:24px;left:14px;width:230px;
-    background:rgba(255,255,255,0.96);border:2px solid #555;z-index:9999;
-    padding:11px 13px;border-radius:8px;
-    font-family:'Malgun Gothic',sans-serif;font-size:12.5px;line-height:1.75;
-    box-shadow:2px 2px 6px rgba(0,0,0,0.28);">
-  <b style="font-size:13.5px;">🗺 도상 선점 후보지</b><br>
-  <span style="font-size:11px;color:#666;">총 %%TOTAL%%개 지점 | 2026.06.16</span>
-  <hr style="margin:6px 0;">
-  <span style="color:#FF8C00;">⭐</span>&thinsp;기존점 &nbsp;<b>%%C0%%</b>개<br>
-  <span style="color:#2E8B57;">🌲</span>&thinsp;간선임도 &nbsp;<b>%%C1%%</b>개<br>
-  <span style="color:#5B8C5A;">🌿</span>&thinsp;작업임도 &nbsp;<b>%%C2%%</b>개<br>
-  <span style="color:#4488CC;">🔵</span>&thinsp;임도 외 &nbsp;<b>%%C3%%</b>개<br>
-  <span style="color:#888;">⚫</span>&thinsp;기타 &nbsp;<b>%%C4%%</b>개<br>
-  <hr style="margin:6px 0;border-color:#ccc;">
-  <a href="index.html" style="color:#1a73e8;text-decoration:none;font-weight:bold;">
-    ← 입지 선정 분석 지도</a>
+<div id="dosung-legend" style="position:fixed;top:80px;right:10px;z-index:9999;
+    background:white;border:2px solid rgba(0,0,0,0.2);border-radius:5px;
+    padding:6px 10px 10px 10px;
+    font-family:'Malgun Gothic',Malgun Gothic,sans-serif;font-size:13px;line-height:1.7;
+    box-shadow:0 1px 5px rgba(0,0,0,0.4);min-width:180px;">
+  <div style="font-weight:bold;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:5px;margin-bottom:4px;">
+    🗺 도상 선점 후보지
+  </div>
+  <div style="font-size:11px;color:#666;margin-bottom:4px;">총 %%TOTAL%%개 지점 | 2026.06.16</div>
+  <div style="display:grid;grid-template-columns:1.4em auto 2em;align-items:center;row-gap:1px;">
+    <span style="color:#FF8C00;text-align:center;">⭐</span><span>기존점</span><span style="text-align:right;font-weight:bold;">%%C0%%</span>
+    <span style="color:#2E8B57;text-align:center;">🌲</span><span>간선임도</span><span style="text-align:right;font-weight:bold;">%%C1%%</span>
+    <span style="color:#5B8C5A;text-align:center;">🌿</span><span>작업임도</span><span style="text-align:right;font-weight:bold;">%%C2%%</span>
+    <span style="color:#4488CC;text-align:center;">🔵</span><span>임도 외</span><span style="text-align:right;font-weight:bold;">%%C3%%</span>
+    <span style="color:#888;text-align:center;">⚫</span><span>기타</span><span style="text-align:right;font-weight:bold;">%%C4%%</span>
+  </div>
+  <div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;">
+    <a href="index.html" style="color:#1a73e8;text-decoration:none;font-size:13px;">← 입지 선정 분석 지도</a>
+  </div>
 </div>
 """
 
@@ -519,10 +656,11 @@ def make_map():
                      attr="Google Maps",   name="🗺 구글 지도",       max_zoom=20).add_to(m)
     folium.TileLayer("OpenStreetMap", name="🌍 OpenStreetMap").add_to(m)
 
-    fg_power    = folium.FeatureGroup(name="⚡ 고압철탑·송전탑 제외 (1km)", show=False)
-    fg_rail     = folium.FeatureGroup(name="🚆 철도 제외 (5km)",             show=False)
+    fg_power    = folium.FeatureGroup(name="⚡ 고압철탑·송전탑 제외 (1km)", show=True)
+    fg_rail     = folium.FeatureGroup(name="🚆 철도 제외 (5km)",             show=True)
     fg_p1       = folium.FeatureGroup(name="🔴 P1 우선순위 1등급 후보지",   show=True)
     fg_existing = folium.FeatureGroup(name="⭐ 기존 측정점",                 show=True)
+    fg_topo     = folium.FeatureGroup(name="📋 도엽 (1:50,000)",             show=True)
     fg_cat = {
         "기존점":   folium.FeatureGroup(name="🟠 도상선점 — 기존점",   show=True),
         "간선임도": folium.FeatureGroup(name="🟢 도상선점 — 간선임도", show=True),
@@ -530,7 +668,7 @@ def make_map():
         "임도 외":  folium.FeatureGroup(name="🔵 도상선점 — 임도 외",  show=True),
         "기타":     folium.FeatureGroup(name="⚫ 도상선점 — 기타",     show=True),
     }
-    for fg in [fg_power, fg_rail, fg_p1, fg_existing] + list(fg_cat.values()):
+    for fg in [fg_power, fg_rail, fg_p1, fg_existing, fg_topo] + list(fg_cat.values()):
         m.add_child(fg)
     folium.LayerControl(collapsed=False).add_to(m)
 
@@ -549,7 +687,7 @@ def make_map():
     # ── 변수명 추출 ──────────────────────────────────────────────────────────
     ov_m   = re.search(r'overlays\s*:\s*\{([^}]+)\}', html, re.DOTALL)
     fg_vars= re.findall(r'(feature_group_[a-f0-9]+)', ov_m.group(1))
-    fgv_power, fgv_rail, fgv_p1, fgv_existing = fg_vars[:4]
+    fgv_power, fgv_rail, fgv_p1, fgv_existing, fgv_topo = fg_vars[:5]
 
     div_m   = re.search(r'id="(map_[a-f0-9]+)"', html)
     map_div = div_m.group(1) if div_m else "map"
@@ -578,10 +716,12 @@ def make_map():
 
     # ── Leaflet JS 치환 ──────────────────────────────────────────────────────
     leaflet_js = (LEAFLET_JS
+                  .replace("%%MAP_VAR%%",     map_var)
                   .replace("%%FG_POWER%%",    fgv_power)
                   .replace("%%FG_RAIL%%",     fgv_rail)
                   .replace("%%FG_P1%%",       fgv_p1)
-                  .replace("%%FG_EXISTING%%", fgv_existing))
+                  .replace("%%FG_EXISTING%%", fgv_existing)
+                  .replace("%%FG_TOPO%%",     fgv_topo))
 
     # ── MapLibre JS 치환 ─────────────────────────────────────────────────────
     ml_block = (MAPLIBRE_BLOCK
