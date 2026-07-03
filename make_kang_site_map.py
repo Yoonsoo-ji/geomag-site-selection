@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function(){
     window._curBase = L.tileLayer(url, {maxZoom:20, zIndex:50}).addTo(%%MAP_VAR%%);
   };
   window.captureMode = function(){
-    ['dosung-legend','toggle3d-btn','panel3d'].forEach(id=>{
+    ['dosung-legend','toggle3d-btn','panel3d','back-link'].forEach(id=>{
       const el=document.getElementById(id); if(el) el.style.display='none';
     });
     document.querySelectorAll('.leaflet-control-container').forEach(el=>el.style.display='none');
@@ -242,10 +242,11 @@ window.addEventListener('load', function(){
   }
   if(typeof positionLegend === 'function') setTimeout(positionLegend, 400);
 
-  /* 3D 뷰 설정 패널: 헤더 클릭으로 접기/펼치기 */
-  var p3 = document.getElementById('panel3d');
-  if(p3 && p3.firstElementChild){
-    var head = p3.firstElementChild;
+  /* 패널 헤더 클릭으로 접기/펼치기 (2D 범례 + 3D 뷰 설정 패널 공통) */
+  function makeCollapsible(panelId){
+    var p = document.getElementById(panelId);
+    if(!p || !p.firstElementChild) return;
+    var head = p.firstElementChild;
     head.style.cursor = 'pointer';
     head.title = '클릭하여 접기/펼치기';
     var arrow = document.createElement('span');
@@ -253,14 +254,23 @@ window.addEventListener('load', function(){
     arrow.style.cssText = 'float:right;color:#888;';
     head.appendChild(arrow);
     head.addEventListener('click', function(){
-      var collapsed = p3.getAttribute('data-collapsed') === '1';
-      Array.prototype.slice.call(p3.children, 1).forEach(function(el){
-        el.style.display = collapsed ? '' : 'none';
+      var collapsed = p.getAttribute('data-collapsed') === '1';
+      Array.prototype.slice.call(p.children, 1).forEach(function(el){
+        if(collapsed){
+          /* 원래 인라인 display 복원 (display:grid/flex 유실 방지) */
+          el.style.display = el.getAttribute('data-prev-display') || '';
+        } else {
+          el.setAttribute('data-prev-display', el.style.display);
+          el.style.display = 'none';
+        }
       });
       arrow.textContent = collapsed ? ' ▾' : ' ▸';
-      p3.setAttribute('data-collapsed', collapsed ? '0' : '1');
+      p.setAttribute('data-collapsed', collapsed ? '0' : '1');
+      if(typeof positionLegend === 'function') setTimeout(positionLegend, 30);
     });
   }
+  makeCollapsible('panel3d');
+  makeCollapsible('dosung-legend');
 });
 </script>
 
@@ -683,10 +693,15 @@ LEGEND_HTML = """\
     <span style="color:#4488CC;text-align:center;">🔵</span><span>임도 외</span><span style="text-align:right;font-weight:bold;">%%C3%%</span>
     <span style="color:#888;text-align:center;">⚫</span><span>기타</span><span style="text-align:right;font-weight:bold;">%%C4%%</span>
   </div>
-  <div style="border-top:1px solid #ddd;margin-top:6px;padding-top:5px;">
-    <a href="index.html" style="color:#1a73e8;text-decoration:none;font-size:13px;">← 입지 선정 분석 지도</a>
-  </div>
 </div>
+
+<a id="back-link" href="index.html" style="
+    position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
+    z-index:9999;background:rgba(255,255,255,0.97);
+    border:2px solid #1a73e8;border-radius:18px;padding:7px 16px;
+    font-family:'Malgun Gothic',sans-serif;font-size:13px;font-weight:bold;
+    color:#1a73e8;text-decoration:none;white-space:nowrap;
+    box-shadow:0 2px 8px rgba(0,0,0,0.3);">← 입지 선정 분석 지도</a>
 """
 
 

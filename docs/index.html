@@ -498,15 +498,26 @@
             <div class="folium-map" id="map_c15350a216a6eb5bab5799a83b1058f4" ></div>
 
     <style>
-    .mobile-panel-toggle{display:none;}
+    /* 범례·산정기준: 모든 화면에서 버튼 클릭 토글 */
+    #legend-panel, #scoring-panel{
+      display:none;
+      bottom:52px !important;
+      max-height:62vh !important;
+      overflow-y:auto !important;
+      -webkit-overflow-scrolling:touch;
+    }
+    .mobile-panel-toggle{
+      display:block; position:fixed; bottom:8px; z-index:10000;
+      background:rgba(255,255,255,0.97); border:1.5px solid #555;
+      border-radius:16px; padding:6px 12px;
+      font-family:sans-serif; font-size:12px; font-weight:bold;
+      box-shadow:1px 1px 5px rgba(0,0,0,0.3); cursor:pointer;
+    }
+    #legend-toggle{left:8px;}
+    #scoring-toggle{right:8px;}
     @media (max-width:768px){
       #legend-panel, #scoring-panel{
-        display:none;
         width:min(82vw,300px) !important;
-        max-height:56vh !important;
-        overflow-y:auto !important;
-        bottom:52px !important;
-        -webkit-overflow-scrolling:touch;
       }
       #legend-panel{left:8px !important;}
       #scoring-panel{right:8px !important;}
@@ -522,15 +533,6 @@
         font-size:11.5px !important; padding:5px 10px !important;
         white-space:nowrap;
       }
-      .mobile-panel-toggle{
-        display:block; position:fixed; bottom:8px; z-index:10000;
-        background:rgba(255,255,255,0.97); border:1.5px solid #555;
-        border-radius:16px; padding:6px 12px;
-        font-family:sans-serif; font-size:12px; font-weight:bold;
-        box-shadow:1px 1px 5px rgba(0,0,0,0.3); cursor:pointer;
-      }
-      #legend-toggle{left:8px;}
-      #scoring-toggle{right:8px;}
       .leaflet-control-layers-expanded{
         max-height:55vh; overflow-y:auto; max-width:75vw;
         -webkit-overflow-scrolling:touch;
@@ -562,23 +564,23 @@
       var st=document.getElementById('scoring-toggle');
       if(lt) lt.addEventListener('click',function(){toggle('legend-panel','scoring-panel');});
       if(st) st.addEventListener('click',function(){toggle('scoring-panel','legend-panel');});
-      window.addEventListener('resize',function(){
-        if(window.innerWidth>768){
-          var l=document.getElementById('legend-panel');
-          var s=document.getElementById('scoring-panel');
-          if(l) l.style.display='';
-          if(s) s.style.display='';
-        }
-      });
       /* 레이어 컨트롤 클릭 토글 (모바일·데스크톱 공통):
-         접힌 아이콘 클릭 → 펼침(Leaflet 내장), 컨트롤 바깥 클릭 → 접힘 */
+         접힌 아이콘 클릭 → 펼침(Leaflet 내장), 컨트롤 바깥 클릭 → 접힘.
+         모바일에서는 펼쳐진 동안 상단 타이틀 숨김(겹침 방지) */
       window.addEventListener('load',function(){
         var c=document.querySelector('.leaflet-control-layers');
         if(!c) return;
         c.classList.remove('leaflet-control-layers-expanded');
+        function syncTitle(){
+          var t=document.getElementById('map-title');
+          if(t) t.style.visibility=(window.innerWidth<=768 &&
+            c.classList.contains('leaflet-control-layers-expanded'))?'hidden':'';
+        }
         document.addEventListener('click',function(e){
           if(!c.contains(e.target)) c.classList.remove('leaflet-control-layers-expanded');
+          setTimeout(syncTitle,30);
         }, true);
+        window.addEventListener('resize',syncTitle);
       });
       /* 주소 검색 박스: 버튼 클릭으로 펼침/접힘 */
       var gt=document.getElementById('gc-toggle');
