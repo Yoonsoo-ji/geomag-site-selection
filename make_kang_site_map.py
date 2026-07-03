@@ -216,7 +216,7 @@ MAPLIBRE_BLOCK = """\
 @media (max-width: 768px) {
   .leaflet-control-layers { max-width: 74vw; }
   .leaflet-control-layers-expanded {
-    max-height: 36vh; overflow-y: auto;
+    max-height: 44vh; overflow-y: auto;
     font-size: 12px; line-height: 1.5;
     -webkit-overflow-scrolling: touch;
   }
@@ -229,17 +229,9 @@ MAPLIBRE_BLOCK = """\
 </style>
 
 <script>
-/* 모바일: 레이어 컨트롤 접힌 상태로 시작 (아이콘 탭 → Leaflet 자체 펼침,
-   컨트롤 바깥 탭 → 접힘) */
+/* 모바일: 레이어 컨트롤은 항상 펼침 유지, 범례 위치만 재계산 */
 window.addEventListener('load', function(){
   if(window.innerWidth > 768) return;
-  var c = document.querySelector('.leaflet-control-layers');
-  if(!c) return;
-  c.classList.remove('leaflet-control-layers-expanded');
-  document.addEventListener('click', function(e){
-    if(!c.contains(e.target)) c.classList.remove('leaflet-control-layers-expanded');
-    if(typeof positionLegend === 'function') setTimeout(positionLegend, 60);
-  }, true);
   if(typeof positionLegend === 'function') setTimeout(positionLegend, 400);
 });
 </script>
