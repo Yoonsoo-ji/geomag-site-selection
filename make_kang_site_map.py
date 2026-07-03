@@ -229,10 +229,38 @@ MAPLIBRE_BLOCK = """\
 </style>
 
 <script>
-/* 모바일: 레이어 컨트롤은 항상 펼침 유지, 범례 위치만 재계산 */
+/* 레이어 컨트롤 클릭 토글 (모바일·데스크톱 공통):
+   접힌 아이콘 클릭 → 펼침(Leaflet 내장), 컨트롤 바깥 클릭 → 접힘 */
 window.addEventListener('load', function(){
-  if(window.innerWidth > 768) return;
+  var c = document.querySelector('.leaflet-control-layers');
+  if(c){
+    c.classList.remove('leaflet-control-layers-expanded');
+    document.addEventListener('click', function(e){
+      if(!c.contains(e.target)) c.classList.remove('leaflet-control-layers-expanded');
+      if(typeof positionLegend === 'function') setTimeout(positionLegend, 60);
+    }, true);
+  }
   if(typeof positionLegend === 'function') setTimeout(positionLegend, 400);
+
+  /* 3D 뷰 설정 패널: 헤더 클릭으로 접기/펼치기 */
+  var p3 = document.getElementById('panel3d');
+  if(p3 && p3.firstElementChild){
+    var head = p3.firstElementChild;
+    head.style.cursor = 'pointer';
+    head.title = '클릭하여 접기/펼치기';
+    var arrow = document.createElement('span');
+    arrow.textContent = ' ▾';
+    arrow.style.cssText = 'float:right;color:#888;';
+    head.appendChild(arrow);
+    head.addEventListener('click', function(){
+      var collapsed = p3.getAttribute('data-collapsed') === '1';
+      Array.prototype.slice.call(p3.children, 1).forEach(function(el){
+        el.style.display = collapsed ? '' : 'none';
+      });
+      arrow.textContent = collapsed ? ' ▾' : ' ▸';
+      p3.setAttribute('data-collapsed', collapsed ? '0' : '1');
+    });
+  }
 });
 </script>
 

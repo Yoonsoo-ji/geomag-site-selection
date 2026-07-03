@@ -2949,9 +2949,13 @@ def create_folium_map(
         max-height:55vh; overflow-y:auto; max-width:75vw;
         -webkit-overflow-scrolling:touch;
       }
+      #gc-toggle{
+        top:110px !important; left:8px !important;
+        font-size:12px !important; padding:5px 9px !important;
+      }
       #geocoder-box{
         width:min(76vw,278px) !important;
-        top:110px !important; left:8px !important;
+        top:150px !important; left:8px !important;
       }
       .leaflet-popup-content{max-width:76vw !important;}
       .leaflet-popup-content > div{min-width:0 !important;}
@@ -2980,16 +2984,24 @@ def create_folium_map(
           if(s) s.style.display='';
         }
       });
-      /* 모바일: 레이어 컨트롤 접힌 상태로 시작 (아이콘 탭 → Leaflet 자체 펼침,
-         컨트롤 바깥 탭 → 접힘) */
+      /* 레이어 컨트롤 클릭 토글 (모바일·데스크톱 공통):
+         접힌 아이콘 클릭 → 펼침(Leaflet 내장), 컨트롤 바깥 클릭 → 접힘 */
       window.addEventListener('load',function(){
-        if(window.innerWidth>768) return;
         var c=document.querySelector('.leaflet-control-layers');
         if(!c) return;
         c.classList.remove('leaflet-control-layers-expanded');
         document.addEventListener('click',function(e){
           if(!c.contains(e.target)) c.classList.remove('leaflet-control-layers-expanded');
         }, true);
+      });
+      /* 주소 검색 박스: 버튼 클릭으로 펼침/접힘 */
+      var gt=document.getElementById('gc-toggle');
+      var gb=document.getElementById('geocoder-box');
+      if(gt&&gb) gt.addEventListener('click',function(){
+        var shown=getComputedStyle(gb).display!=='none';
+        gb.style.display=shown?'none':'block';
+        gt.innerHTML=shown?'🔍 주소 검색 ▾':'🔍 주소 검색 ▴';
+        if(!shown){var i=document.getElementById('gc-input');if(i)setTimeout(function(){i.focus();},60);}
       });
     })();
     </script>
@@ -3086,8 +3098,16 @@ def create_folium_map(
     # Nominatim OSM geocoder — 한국 도로명·지번·지명 검색
     # 3단계 폴백: ① countrycodes=kr ② +대한민국 ③ 상위 행정구역만
     geocoder_html = """
-    <div id="geocoder-box" style="
+    <button id="gc-toggle" type="button" style="
         position:fixed; top:130px; left:10px; z-index:9999;
+        background:rgba(255,255,255,0.97); border:2px solid #336699;
+        border-radius:8px; padding:6px 11px;
+        font-family:'Malgun Gothic',sans-serif; font-size:12.5px; font-weight:bold;
+        color:#336699; cursor:pointer;
+        box-shadow:2px 2px 8px rgba(0,0,0,0.25);">&#128269; 주소 검색 ▾</button>
+    <div id="geocoder-box" style="
+        display:none;
+        position:fixed; top:172px; left:10px; z-index:9999;
         background:rgba(255,255,255,0.97); border:2px solid #336699;
         border-radius:8px; padding:9px 11px;
         font-family:'Malgun Gothic',sans-serif; font-size:12px;
