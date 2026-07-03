@@ -211,7 +211,38 @@ MAPLIBRE_BLOCK = """\
   pointer-events: none;
 }
 .topo-lbl::before { display: none !important; }
+
+/* ── 모바일 반응형 ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  .leaflet-control-layers { max-width: 74vw; }
+  .leaflet-control-layers-expanded {
+    max-height: 36vh; overflow-y: auto;
+    font-size: 12px; line-height: 1.5;
+    -webkit-overflow-scrolling: touch;
+  }
+  #toggle3d-btn { top: 8px !important; font-size: 12px !important; padding: 6px 14px !important; white-space: nowrap; }
+  #panel3d { max-height: 58vh; overflow-y: auto; max-width: 74vw; -webkit-overflow-scrolling: touch; }
+  #dosung-legend { max-height: 30vh; overflow-y: auto; font-size: 12px !important; -webkit-overflow-scrolling: touch; }
+  .leaflet-popup-content { max-width: 78vw !important; }
+  .leaflet-popup-content > div { min-width: 0 !important; }
+}
 </style>
+
+<script>
+/* 모바일: 레이어 컨트롤 접힌 상태로 시작 (아이콘 탭 → Leaflet 자체 펼침,
+   컨트롤 바깥 탭 → 접힘) */
+window.addEventListener('load', function(){
+  if(window.innerWidth > 768) return;
+  var c = document.querySelector('.leaflet-control-layers');
+  if(!c) return;
+  c.classList.remove('leaflet-control-layers-expanded');
+  document.addEventListener('click', function(e){
+    if(!c.contains(e.target)) c.classList.remove('leaflet-control-layers-expanded');
+    if(typeof positionLegend === 'function') setTimeout(positionLegend, 60);
+  }, true);
+  if(typeof positionLegend === 'function') setTimeout(positionLegend, 400);
+});
+</script>
 
 <div id="ml-wrap" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:500;">
   <div id="ml-map" style="width:100%;height:100%;"></div>

@@ -2762,7 +2762,7 @@ def create_folium_map(
                 f'vertical-align:middle;margin-right:4px;"></span>{label}<br>')
 
     legend_html = f"""
-    <div style="
+    <div id="legend-panel" style="
         position:fixed; bottom:30px; left:30px; width:280px;
         background:rgba(255,255,255,0.96); border:2px solid #555;
         z-index:9999; padding:12px 14px; border-radius:8px;
@@ -2818,7 +2818,7 @@ def create_folium_map(
 
     # ── 타이틀 ────────────────────────────────────────────────
     m.get_root().html.add_child(folium.Element("""
-    <div style="
+    <div id="map-title" style="
         position:fixed; top:10px; left:50%; transform:translateX(-50%);
         z-index:9999; background:rgba(255,255,255,0.93);
         padding:8px 22px; border-radius:6px; border:1px solid #999;
@@ -2830,7 +2830,7 @@ def create_folium_map(
 
     # ── 입지 점수 산정 기준 패널 (지도 우측 하단 고정) ────────────
     scoring_html = """
-    <div style="
+    <div id="scoring-panel" style="
         position:fixed; bottom:30px; right:20px; width:290px;
         background:rgba(255,255,255,0.96); border:2px solid #446;
         z-index:9999; padding:11px 13px; border-radius:8px;
@@ -2908,6 +2908,93 @@ def create_folium_map(
     </div>
     """
     m.get_root().html.add_child(folium.Element(scoring_html))
+
+    # ── 모바일 반응형: 패널 접기 토글 + 미디어쿼리 ──────────────
+    responsive_html = """
+    <style>
+    .mobile-panel-toggle{display:none;}
+    @media (max-width:768px){
+      #legend-panel, #scoring-panel{
+        display:none;
+        width:min(82vw,300px) !important;
+        max-height:56vh !important;
+        overflow-y:auto !important;
+        bottom:52px !important;
+        -webkit-overflow-scrolling:touch;
+      }
+      #legend-panel{left:8px !important;}
+      #scoring-panel{right:8px !important;}
+      #map-title{
+        top:6px !important; font-size:11.5px !important;
+        padding:4px 10px !important; max-width:62vw;
+        white-space:normal; text-align:center;
+      }
+      #map-link{
+        top:auto !important; bottom:8px !important;
+        left:50% !important; right:auto !important;
+        transform:translateX(-50%);
+        font-size:11.5px !important; padding:5px 10px !important;
+        white-space:nowrap;
+      }
+      .mobile-panel-toggle{
+        display:block; position:fixed; bottom:8px; z-index:10000;
+        background:rgba(255,255,255,0.97); border:1.5px solid #555;
+        border-radius:16px; padding:6px 12px;
+        font-family:sans-serif; font-size:12px; font-weight:bold;
+        box-shadow:1px 1px 5px rgba(0,0,0,0.3); cursor:pointer;
+      }
+      #legend-toggle{left:8px;}
+      #scoring-toggle{right:8px;}
+      .leaflet-control-layers-expanded{
+        max-height:55vh; overflow-y:auto; max-width:75vw;
+        -webkit-overflow-scrolling:touch;
+      }
+      #geocoder-box{
+        width:min(76vw,278px) !important;
+        top:110px !important; left:8px !important;
+      }
+      .leaflet-popup-content{max-width:76vw !important;}
+      .leaflet-popup-content > div{min-width:0 !important;}
+    }
+    </style>
+    <button id="legend-toggle" class="mobile-panel-toggle" type="button">📋 범례</button>
+    <button id="scoring-toggle" class="mobile-panel-toggle" type="button">📊 산정기준</button>
+    <script>
+    (function(){
+      function toggle(id, otherId){
+        var p=document.getElementById(id), o=document.getElementById(otherId);
+        if(!p) return;
+        var shown = getComputedStyle(p).display!=='none';
+        p.style.display = shown?'none':'block';
+        if(!shown && o) o.style.display='none';
+      }
+      var lt=document.getElementById('legend-toggle');
+      var st=document.getElementById('scoring-toggle');
+      if(lt) lt.addEventListener('click',function(){toggle('legend-panel','scoring-panel');});
+      if(st) st.addEventListener('click',function(){toggle('scoring-panel','legend-panel');});
+      window.addEventListener('resize',function(){
+        if(window.innerWidth>768){
+          var l=document.getElementById('legend-panel');
+          var s=document.getElementById('scoring-panel');
+          if(l) l.style.display='';
+          if(s) s.style.display='';
+        }
+      });
+      /* 모바일: 레이어 컨트롤 접힌 상태로 시작 (아이콘 탭 → Leaflet 자체 펼침,
+         컨트롤 바깥 탭 → 접힘) */
+      window.addEventListener('load',function(){
+        if(window.innerWidth>768) return;
+        var c=document.querySelector('.leaflet-control-layers');
+        if(!c) return;
+        c.classList.remove('leaflet-control-layers-expanded');
+        document.addEventListener('click',function(e){
+          if(!c.contains(e.target)) c.classList.remove('leaflet-control-layers-expanded');
+        }, true);
+      });
+    })();
+    </script>
+    """
+    m.get_root().html.add_child(folium.Element(responsive_html))
 
     # ── 1:50,000 도엽 격자 레이어 (외부 GeoJSON fetch) ──────────
     topo_file = OUTPUT_DIR / data_subdir / "topo_sheets.geojson"

@@ -74,7 +74,7 @@
     <script>(function(){fetch('data/candidates_p3.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){return L.circleMarker(ll,{radius:5,color:'#008800',fillColor:'#00BB00',fillOpacity:0.85,weight:1.5});},onEachFeature:function(f,l){var p=f.properties;var vn=function(x){return(x===null||x===undefined||isNaN(+x))?'-':(+x).toFixed(1);};var lat=(p.lat!=null)?p.lat:f.geometry.coordinates[1];var lon=(p.lon!=null)?p.lon:f.geometry.coordinates[0];var html='<div style="font-family:sans-serif;font-size:12.5px;min-width:250px;">'+'<b style="color:#008800;">측정 후보지 #'+p.idx+'</b>&nbsp;'+'<span style="background:#00BB00;color:white;padding:1px 5px;border-radius:3px;font-size:11px;">일반</span><br>'+'<hr style="margin:4px 0;">'+'<b>위도:</b> '+lat.toFixed(5)+'° N &nbsp; <b>경도:</b> '+lon.toFixed(5)+'° E<br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>입지 점수: '+vn(p.score)+' / 100</b><br>'+'<span style="font-size:11.5px;color:#333;">'+'&nbsp;① 희소성: '+vn(p.s1)+' / 25<br>'+'&nbsp;② 지형 경사도: '+vn(p.s2)+' / 15 '+'<span style="color:#888;">(경사 '+vn(p.dem)+'°)</span><br>'+'&nbsp;③ 전력·철도 이격: '+vn(p.s3)+' / 15 '+'<span style="color:#888;">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '+'<span style="color:#888;">(도시 '+vn(p.du)+'km)</span><br>'+'&nbsp;⑤ 자기이상·지질경계 모델 기여도: '+vn(p.s5)+' / 10<br>'+'&nbsp;⑥ 암상 적합성: '+vn(p.s6)+' / 5<br>'+'&nbsp;<span style="color:#999;">⑦ 부지 지속성: 현장검토 / 10</span><br>'+'&nbsp;<span style="color:#999;">⑧ 관리 접근성: 현장검토 / 5</span>'+'</span></div>';l.bindPopup(html,{maxWidth:270});l.bindTooltip('후보지 #'+p.idx+' P3 ('+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E)');}}).addTo(feature_group_9f1e2fc728a6b54f9d5f7fe3196c3487);}).catch(function(e){console.warn('candidates_p3:',e.message);});})();</script>
     <script>(function(){fetch('data/existing_sites.geojson').then(function(r){return r.json();}).then(function(d){L.geoJSON(d,{pointToLayer:function(f,ll){var icon=L.divIcon({html:'<div style="font-size:22px;line-height:1;text-shadow:1px 1px 2px rgba(0,0,0,0.4);">⭐</div>',className:'',iconAnchor:[11,11]});return L.marker(ll,{icon:icon});},onEachFeature:function(f,l){var p=f.properties;var vf=function(x,fmt){return(x===null||x===undefined)?'-':fmt(x);};var html='<div style="font-family:sans-serif;font-size:12.5px;min-width:260px;">'+'<b style="color:#8B4513;">⭐ 기존 측정점: '+p.name+'</b><br>'+'<hr style="margin:4px 0;">'+'<b>위도:</b> '+p.lat.toFixed(6)+'° N &nbsp; <b>경도:</b> '+p.lon.toFixed(6)+'° E<br>'+'<b>주소:</b> <span style="font-size:11px;">'+(p.address||'-')+'</span><br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>최초설치:</b> '+(p.inst_year?p.inst_year+'년':'-')+' &nbsp; <b>최신관측:</b> '+p.obs_year+'년<br>'+'<b>표고:</b> '+vf(p.elev,function(x){return x.toFixed(1)+' m'})+'<br>'+'<hr style="margin:4px 0;border-color:#ddd;">'+'<b>측정값 ('+p.obs_year+'년)</b><br>'+'<span style="font-size:11.5px;color:#333;">'+'&nbsp;편각: '+vf(p.decl,function(x){return x.toFixed(4)+'°'})+'<br>'+'&nbsp;복각: '+vf(p.incl,function(x){return x.toFixed(4)+'°'})+'<br>'+'&nbsp;총자력: '+vf(p.total,function(x){return x.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1})+' nT';})+'</span></div>';l.bindPopup(html,{maxWidth:290});l.bindTooltip('⭐ '+p.name+' ('+p.obs_year+'년 관측)');}}).addTo(feature_group_db5980b3cef949cf1d16c70ca186a66b);}).catch(function(e){console.warn('existing_sites:',e.message);});})();</script>
     
-    <div style="
+    <div id="legend-panel" style="
         position:fixed; bottom:30px; left:30px; width:280px;
         background:rgba(255,255,255,0.96); border:2px solid #555;
         z-index:9999; padding:12px 14px; border-radius:8px;
@@ -127,7 +127,7 @@
     </div>
     
     
-    <div style="
+    <div id="map-title" style="
         position:fixed; top:10px; left:50%; transform:translateX(-50%);
         z-index:9999; background:rgba(255,255,255,0.93);
         padding:8px 22px; border-radius:6px; border:1px solid #999;
@@ -135,7 +135,7 @@
         box-shadow:1px 1px 5px rgba(0,0,0,0.2);">
       🧭 대한민국 지구자기장 총자력 측정 입지 선정 지도
     </div>
-    <div style="
+    <div id="map-link" style="
         position:fixed; top:10px; right:310px;
         z-index:9999; background:rgba(255,255,255,0.95);
         padding:7px 15px; border-radius:6px; border:1px solid #2E8B57;
@@ -147,7 +147,7 @@
     </div>
     
     
-    <div style="
+    <div id="scoring-panel" style="
         position:fixed; bottom:30px; right:20px; width:290px;
         background:rgba(255,255,255,0.96); border:2px solid #446;
         z-index:9999; padding:11px 13px; border-radius:8px;
@@ -488,7 +488,89 @@
     
     
             <div class="folium-map" id="map_c15350a216a6eb5bab5799a83b1058f4" ></div>
-        
+
+    <style>
+    .mobile-panel-toggle{display:none;}
+    @media (max-width:768px){
+      #legend-panel, #scoring-panel{
+        display:none;
+        width:min(82vw,300px) !important;
+        max-height:56vh !important;
+        overflow-y:auto !important;
+        bottom:52px !important;
+        -webkit-overflow-scrolling:touch;
+      }
+      #legend-panel{left:8px !important;}
+      #scoring-panel{right:8px !important;}
+      #map-title{
+        top:6px !important; font-size:11.5px !important;
+        padding:4px 10px !important; max-width:62vw;
+        white-space:normal; text-align:center;
+      }
+      #map-link{
+        top:auto !important; bottom:8px !important;
+        left:50% !important; right:auto !important;
+        transform:translateX(-50%);
+        font-size:11.5px !important; padding:5px 10px !important;
+        white-space:nowrap;
+      }
+      .mobile-panel-toggle{
+        display:block; position:fixed; bottom:8px; z-index:10000;
+        background:rgba(255,255,255,0.97); border:1.5px solid #555;
+        border-radius:16px; padding:6px 12px;
+        font-family:sans-serif; font-size:12px; font-weight:bold;
+        box-shadow:1px 1px 5px rgba(0,0,0,0.3); cursor:pointer;
+      }
+      #legend-toggle{left:8px;}
+      #scoring-toggle{right:8px;}
+      .leaflet-control-layers-expanded{
+        max-height:55vh; overflow-y:auto; max-width:75vw;
+        -webkit-overflow-scrolling:touch;
+      }
+      #geocoder-box{
+        width:min(76vw,278px) !important;
+        top:110px !important; left:8px !important;
+      }
+      .leaflet-popup-content{max-width:76vw !important;}
+      .leaflet-popup-content > div{min-width:0 !important;}
+    }
+    </style>
+    <button id="legend-toggle" class="mobile-panel-toggle" type="button">📋 범례</button>
+    <button id="scoring-toggle" class="mobile-panel-toggle" type="button">📊 산정기준</button>
+    <script>
+    (function(){
+      function toggle(id, otherId){
+        var p=document.getElementById(id), o=document.getElementById(otherId);
+        if(!p) return;
+        var shown = getComputedStyle(p).display!=='none';
+        p.style.display = shown?'none':'block';
+        if(!shown && o) o.style.display='none';
+      }
+      var lt=document.getElementById('legend-toggle');
+      var st=document.getElementById('scoring-toggle');
+      if(lt) lt.addEventListener('click',function(){toggle('legend-panel','scoring-panel');});
+      if(st) st.addEventListener('click',function(){toggle('scoring-panel','legend-panel');});
+      window.addEventListener('resize',function(){
+        if(window.innerWidth>768){
+          var l=document.getElementById('legend-panel');
+          var s=document.getElementById('scoring-panel');
+          if(l) l.style.display='';
+          if(s) s.style.display='';
+        }
+      });
+      /* 모바일: 레이어 컨트롤 접힌 상태로 시작 (아이콘 탭 → Leaflet 자체 펼침,
+         컨트롤 바깥 탭 → 접힘) */
+      window.addEventListener('load',function(){
+        if(window.innerWidth>768) return;
+        var c=document.querySelector('.leaflet-control-layers');
+        if(!c) return;
+        c.classList.remove('leaflet-control-layers-expanded');
+        document.addEventListener('click',function(e){
+          if(!c.contains(e.target)) c.classList.remove('leaflet-control-layers-expanded');
+        }, true);
+      });
+    })();
+    </script>
 </body>
 <script>
     
