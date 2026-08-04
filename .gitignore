@@ -6,6 +6,10 @@ pptx/
 
 # ── 대용량 데이터 원본 ────────────────────────────────────────
 data/zone_cache/
+# CYG 1분 자료 캐시 (HAPI 에서 재다운로드 가능)
+data/cyg/
+# KASA 관측소 자료 캐시 (kasa_geomag.py 로 재다운로드 가능, README_coverage.md 는 커밋)
+data/kasa/*.csv
 data/*.zip
 data/*.hwp
 data/*.pdf
