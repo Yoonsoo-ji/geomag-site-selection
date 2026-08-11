@@ -808,12 +808,17 @@ CYG 로 제거 가능한 일변동은 편각 6.7′ 인데 미설명 잔차가 3
 
 ## 15. 3D 지구 자기장 (IGRF-14) — `docs/geomag_globe.html`
 
-전 지구 자기장을 3D 지구본에 표출. **1단계 완료**: 정확한 degree-13 IGRF 자기력선 +
-호버 D·I·F. (2단계 한국 LMM 조밀화, 3단계 작업물 레이어는 예정.)
+전 지구 자기장을 3D 지구본에 표출. **1단계 완료**: 자기장을 지구 표면에 색으로 입힌
+"세계 자기지도" — 성분(F·D·I) 전환 + 등치선(등자력·등편각·등복각, agonic·dip-equator
+강조) + 세계 해안선 + 한국 경계 + 자기력선 + 범례 + 호버 D·I·F. ⚠️ 사용자 제공 예시
+(degree-1 쌍극자·파란 구+선)를 **그대로 답습하지 말 것** — 표면 색지도 중심의 다른 디자인.
+(2단계 한국 LMM 조밀화, 3단계 선점/기존점 레이어 예정.)
 
 ```
-docs/igrf14.js         # IGRF-14 구면조화 엔진(재사용 모듈) — window.IGRF
-docs/geomag_globe.html # Three.js 3D 지구 + 자기력선 + bloom (CDN three, Pages 배포)
+docs/igrf14.js               # IGRF-14 구면조화 엔진(재사용 모듈) — window.IGRF
+docs/geomag_globe.html       # Three.js 세계 자기지도 3D (CDN three, Pages 배포)
+docs/data/world_coastline.geojson  # Natural Earth 110m 해안선(134선, 로컬 저장)
+docs/data/korea_boundary.geojson   # root data/ 에서 복사(fetch 는 docs 기준 상대경로)
 ```
 
 - **`igrf14.js`** 는 `lmm.html` 의 검증된 IGRF 엔진(`function igrf`·legendre·interpCoef)과
@@ -829,5 +834,8 @@ docs/geomag_globe.html # Three.js 3D 지구 + 자기력선 + bloom (CDN three, P
 |---|---|
 | **CDN 필요** | three@0.180 + addons(EffectComposer·UnrealBloomPass)를 importmap 으로 CDN 로드 → **Artifact CSP 불가, Pages 로만 배포**. igrf14.js·geojson 은 로컬 fetch |
 | **패널 미표시 시 렌더 0** | 미리보기 패널이 화면에 없으면 innerWidth=0 → 캔버스 0×0 (기능은 정상). 실제 브라우저/Pages 에서 렌더 |
-| **필드 추적 성능** | igrf(nmax13)×RK4 4회×~900스텝×라인수 → rebuild 는 디바운스(연도·라인 변경 시만). 모바일 라인수/픽셀비 축소 |
+| **필드 추적 성능** | igrf(nmax13)×RK4 4회×~800스텝×라인수 → rebuild 는 디바운스(연도 변경 시만). 모바일 라인수/픽셀비 축소 |
 | **엔진 동기화** | igrf14.js 는 lmm.html 엔진의 **사본**. lmm.html IGRF 를 고치면 igrf14.js 도 재추출할 것 |
+| **초기 계산은 setTimeout** | 표면 색지도·등치선 계산을 `requestAnimationFrame` 으로 지연하면 **패널/탭 숨김 시 rAF 멈춰** 계산 안 됨. `setTimeout`(숨겨도 실행)으로 할 것 |
+| **표면 색지도 정합** | Earth 셰이더가 지오메트리 UV 대신 **오브젝트 좌표 normal→lat/lon**(`lat=asin(n.y), lon=atan2(n.z,n.x)`)로 equirect 텍스처 샘플 → 호버·해안선·자기력선과 좌표계 일치. 자전은 earthGroup 전체를 돌려 지리계 동반 |
+| **경계 fetch 경로** | geojson 은 `docs/` 기준 상대경로(`data/...`)로 fetch. root `data/` 파일은 `docs/data/` 로 복사해야 Pages 에서 로드됨 |
