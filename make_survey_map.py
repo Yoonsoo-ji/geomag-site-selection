@@ -106,78 +106,73 @@ def _fmt_az(s):
     return str(s) if s else "-"
 
 
-def svg_sketch(d):
-    """기준점+방위표지1·2 를 실제 방위·거리로 배치한 약도(SVG). 좌표 없으면 안내문."""
-    import math
+def bangwi_entry(d):
+    """후보지 클릭 시 지도에 찍을 방위표지 데이터. 좌표 없으면 None."""
     base, m1, m2 = d.get("기준점ll"), d.get("표지1ll"), d.get("표지2ll")
     if not (base and m1 and m2):
-        return ("<div style='margin-top:7px;color:#999;font-size:11px'>"
-                "방위표지 좌표 미확정 — 약도 없음</div>")
+        return None
     det = d.get("방위표지상세", {})
-    W, H = 296, 236
-    cx, cy = W / 2, H / 2 + 6
-    lat0 = base[1]
 
-    def en(ll):
-        de = (ll[0] - base[0]) * 111320 * math.cos(math.radians(lat0))
-        dn = (ll[1] - base[1]) * 111320
-        return de, dn
-    e1, e2 = en(m1), en(m2)
-    maxr = max(math.hypot(*e1), math.hypot(*e2), 1.0)
-    scale = (min(W, H) / 2 - 46) / maxr
-
-    def xy(e):
-        return cx + e[0] * scale, cy - e[1] * scale
-    x1, y1 = xy(e1)
-    x2, y2 = xy(e2)
-
-    def mark(x, y, color, glyph):
-        return (f"<circle cx='{x:.1f}' cy='{y:.1f}' r='7' fill='{color}' "
-                f"stroke='#fff' stroke-width='1.5'/>"
-                f"<text x='{x:.1f}' y='{y+3.5:.1f}' font-size='9' fill='#fff' "
-                f"text-anchor='middle' font-weight='bold'>{glyph}</text>")
-
-    def label(x, y, txt, color, dy=-12):
-        return (f"<text x='{x:.1f}' y='{y+dy:.1f}' font-size='10' fill='{color}' "
-                f"text-anchor='middle' font-weight='bold' "
-                f"style='paint-order:stroke;stroke:#fff;stroke-width:3px'>{txt}</text>")
-
-    def leg(tag, xm, ym):   # 방위각·거리 중점 라벨
+    def leg(tag):
         c = det.get(tag, {})
-        az = _fmt_az(c.get("방위각", ""))
-        dist = c.get("거리", "")
-        t = f"{az}" + (f" · {dist}m" if dist and dist != "-" else "")
-        mx, my = (cx + xm) / 2, (cy + ym) / 2
-        return (f"<text x='{mx:.1f}' y='{my:.1f}' font-size='8.5' fill='#222' "
-                f"text-anchor='middle' style='paint-order:stroke;stroke:#fff;"
-                f"stroke-width:3px'>{t}</text>")
+        return _fmt_az(c.get("방위각", "")), (c.get("거리", "") or "-")
+    az1, d1 = leg("표지1")
+    az2, d2 = leg("표지2")
+    return {
+        "name": d["후보지명"], "mid": d["관리번호"],
+        "base": [round(base[1], 7), round(base[0], 7)],   # [lat, lon]
+        "m1": [round(m1[1], 7), round(m1[0], 7)], "az1": az1, "d1": d1,
+        "m2": [round(m2[1], 7), round(m2[0], 7)], "az2": az2, "d2": d2,
+    }
 
-    parts = [f"<svg viewBox='0 0 {W} {H}' width='100%' style='max-width:{W}px;"
-             "background:#f7f8fa;border:1px solid #ddd;border-radius:5px'>"]
-    # 북 화살표
-    parts.append(f"<line x1='{W-20}' y1='30' x2='{W-20}' y2='14' stroke='#444' "
-                 "stroke-width='1.6' marker-end='url(#arr)'/>"
-                 "<defs><marker id='arr' markerWidth='7' markerHeight='7' refX='3' refY='3' "
-                 "orient='auto'><path d='M0,0 L6,3 L0,6 Z' fill='#444'/></marker></defs>"
-                 f"<text x='{W-20}' y='42' font-size='10' fill='#444' text-anchor='middle' "
-                 "font-weight='bold'>N</text>")
-    # 라인
-    parts.append(f"<line x1='{cx}' y1='{cy}' x2='{x1:.1f}' y2='{y1:.1f}' stroke='#1D4ED8' stroke-width='2'/>")
-    parts.append(f"<line x1='{cx}' y1='{cy}' x2='{x2:.1f}' y2='{y2:.1f}' stroke='#0E8A6B' stroke-width='2'/>")
-    # 중점 방위각·거리
-    parts.append(leg("표지1", x1, y1))
-    parts.append(leg("표지2", x2, y2))
-    # 마커 + 이름
-    parts.append(mark(x1, y1, "#1D4ED8", "1"))
-    parts.append(mark(x2, y2, "#0E8A6B", "2"))
-    parts.append(mark(cx, cy, "#E8531F", "★"))
-    parts.append(label(x1, y1, "방위표지 1", "#1D4ED8"))
-    parts.append(label(x2, y2, "방위표지 2", "#0E8A6B"))
-    parts.append(label(cx, cy, "기준점", "#E8531F"))
-    parts.append("</svg>")
-    return ("<div style='margin-top:8px'>"
-            "<div style='color:#666;font-size:11px;margin-bottom:3px'>방위표지 약도 (진북 기준)</div>"
-            + "".join(parts) + "</div>")
+
+def bangwi_script(data):
+    """후보지 마커 클릭 → 기준점·방위표지1·2 를 지도에 찍고 방위각·거리 표시."""
+    payload = json.dumps(data, ensure_ascii=False)
+    return """
+<script>
+(function(){
+  var DATA = __DATA__;
+  function pin(color, ch){
+    return L.divIcon({className:'', iconAnchor:[13,30], html:
+      "<div style='position:relative'><div style='width:22px;height:22px;border-radius:50% 50% 50% 0;"
+      +"background:"+color+";border:2px solid #fff;transform:rotate(-45deg);box-shadow:0 1px 3px rgba(0,0,0,.5)'></div>"
+      +"<div style='position:absolute;top:3px;left:0;width:22px;text-align:center;color:#fff;"
+      +"font:bold 12px sans-serif'>"+ch+"</div></div>"});
+  }
+  function init(){
+    var mk = Object.keys(window).find(function(k){return k.indexOf('map_')===0 && window[k] instanceof L.Map;});
+    if(!mk){ return setTimeout(init,200); }
+    var map = window[mk];
+    var grp = L.layerGroup().addTo(map);
+    function plot(b){
+      grp.clearLayers();
+      var base=b.base, m1=b.m1, m2=b.m2;
+      L.polyline([base,m1],{color:'#1D4ED8',weight:2.5}).addTo(grp);
+      L.polyline([base,m2],{color:'#0E8A6B',weight:2.5}).addTo(grp);
+      L.circleMarker(base,{radius:7,color:'#fff',weight:2,fillColor:'#E8531F',fillOpacity:1})
+        .bindTooltip('기준점 · '+b.name,{direction:'top'}).addTo(grp);
+      L.marker(m1,{icon:pin('#1D4ED8','1')})
+        .bindTooltip('<b>방위표지 1</b><br>방위각 '+b.az1+'<br>거리 '+b.d1+' m',
+          {permanent:true,direction:'right',offset:[8,-14],className:'bw-tip'}).addTo(grp);
+      L.marker(m2,{icon:pin('#0E8A6B','2')})
+        .bindTooltip('<b>방위표지 2</b><br>방위각 '+b.az2+'<br>거리 '+b.d2+' m',
+          {permanent:true,direction:'right',offset:[8,-14],className:'bw-tip'}).addTo(grp);
+      map.fitBounds(L.latLngBounds([base,m1,m2]).pad(0.8),{maxZoom:18});
+    }
+    map.eachLayer(function(l){
+      if(l instanceof L.CircleMarker && l.getLatLng){
+        var ll=l.getLatLng();
+        var key=ll.lat.toFixed(5)+','+ll.lng.toFixed(5);
+        if(DATA[key]){ l.on('click', function(){ plot(DATA[key]); }); }
+      }
+    });
+  }
+  init();
+})();
+</script>
+<style>.bw-tip{font-size:11px;line-height:1.3;border-color:#888}</style>
+""".replace("__DATA__", payload)
 
 
 def popup_html(d, grade, concl, note):
@@ -206,7 +201,6 @@ def popup_html(d, grade, concl, note):
         f"border-radius:4px 4px 0 0;font-weight:bold'>"
         f"[{grade}] {esc(d['관리번호'])} · {esc(d['후보지명'])}</div>"
         f"<table style='border-collapse:collapse'>{body}</table>"
-        f"{svg_sketch(d)}"
         f"{photo_html(d)}"
         f"<div style='margin-top:6px;color:#999;font-size:11px'>{esc(d['관할본부'])}</div>"
         f"</div>")
@@ -307,6 +301,7 @@ def build(records):
     groups = {g: folium.FeatureGroup(name=f"{lab}", show=True)
               for g, (c, lab) in GRADE.items()}
     counts = {}
+    bangwi = {}
     for d in records:
         lat, lon = fnum(d["위도"]), fnum(d["경도"])
         if lat is None or lon is None:
@@ -317,9 +312,12 @@ def build(records):
         folium.CircleMarker(
             location=[lat, lon], radius=7, color="#333", weight=1.2,
             fill=True, fill_color=color, fill_opacity=0.92,
-            tooltip=f"[{grade}] {d['관리번호']} {d['후보지명']}",
+            tooltip=f"[{grade}] {d['관리번호']} {d['후보지명']} (클릭: 방위표지 표시)",
             popup=folium.Popup(popup_html(d, grade, concl, note), max_width=360),
         ).add_to(groups[grade])
+        be = bangwi_entry(d)
+        if be:
+            bangwi[f"{lat:.5f},{lon:.5f}"] = be
     for g in GRADE:
         groups[g].add_to(m)
 
@@ -329,6 +327,7 @@ def build(records):
     folium.LayerControl(collapsed=False).add_to(m)
     total = sum(counts.values())
     m.get_root().html.add_child(folium.Element(legend_html(counts, total)))
+    m.get_root().html.add_child(folium.Element(bangwi_script(bangwi)))
 
     title = (
         "<div style='position:fixed;top:12px;left:50%;transform:translateX(-50%);"
