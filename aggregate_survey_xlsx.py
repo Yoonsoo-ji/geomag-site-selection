@@ -49,10 +49,15 @@ DIST_ITEMS = [("차량 영향", "차량영향"), ("전력시설", "전력시설"
               ("자연환경", "자연환경")]
 
 # ── 검토 단계 수동 재판정 (도상선점↔현장 기준점 좌표 1km 이상 불일치 5건) ──
-# 도상 후보지가 통신 음영지역이라 현장 확인이 어려워 부적합 처리. 원본 카드는 불변.
-OVERRIDE_NOTE = "도상 후보지 통신 음영지역으로 확인 어려운 지역 → 부적합"
-JUDGMENT_OVERRIDE = {mid: "부적합" for mid in
-                     ("DS-087", "DS-002", "DS-011", "DS-041", "DS-061")}
+# {관리번호: (종합판정, 재판정 사유)}. 원본 카드는 불변, 취합·검토·총괄·웹에만 반영.
+_SHADOW = "도상 후보지 통신 음영지역으로 확인 어려운 지역 → 부적합"
+JUDGMENT_OVERRIDE = {
+    "DS-002": ("부적합", _SHADOW),
+    "DS-041": ("부적합", _SHADOW),
+    "DS-061": ("부적합", _SHADOW),
+    "DS-011": ("부적합", "현장 이설·좌표 불일치 → 부적합"),
+    "DS-087": ("부적합", "상공장애로 취득 불가 → 부적합"),
+}
 
 
 # ── 카드 시트 파싱 ────────────────────────────────────────────────────────────
@@ -171,10 +176,11 @@ def parse_card(ws):
 
     # ── 검토 단계 수동 재판정(원본 카드는 불변, 취합·검토·총괄·웹에만 반영) ──
     if d["관리번호"] in JUDGMENT_OVERRIDE:
-        d["종합판정"] = JUDGMENT_OVERRIDE[d["관리번호"]]
-        d["재판정"] = OVERRIDE_NOTE
+        verdict_ov, reason = JUDGMENT_OVERRIDE[d["관리번호"]]
+        d["종합판정"] = verdict_ov
+        d["재판정"] = reason
         note = d["판정의견"].strip()
-        d["판정의견"] = (note + "  ※재판정: " + OVERRIDE_NOTE).strip("  ") if note else OVERRIDE_NOTE
+        d["판정의견"] = (note + "  ※재판정: " + reason) if note else reason
     else:
         d["재판정"] = ""
 
