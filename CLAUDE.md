@@ -739,9 +739,15 @@ CYG 로 제거 가능한 일변동은 편각 6.7′ 인데 미설명 잔차가 3
 채운 워크북)를 취합하고, 선점 가능성을 검토해 지도 마커로 웹에 표출한다.
 
 ```
-① python aggregate_survey_xlsx.py   # 조사서 xlsx 전체 → 취합·검토 xlsx (docs/output/)
-② python make_survey_map.py         # 취합 결과 → docs/survey_review.html (Folium 마커)
+① python aggregate_survey_xlsx.py   # 조사서 xlsx 전체 → 취합·검토 + 일괄취합 xlsx (docs/output/)
+② python make_survey_map.py         # 취합 결과 → docs/survey_review.html (Folium 마커) + 사진 추출
 ```
+
+`aggregate_survey_xlsx.py` 는 **두 파일**을 낸다: `*_현장조사_취합검토_*.xlsx`(3시트, 등급
+검토 포함)와 `*_현장조사_일괄취합_*.xlsx`(단일 시트 플랫 덤프 — 자기교란 존재/이격 분리,
+방위표지 1·2 좌표·방위각·거리까지 전부). `make_survey_map.py` 는 카드 임베드 사진을
+`docs/survey_photos/{DS}_{중심|동|서|남|북}.jpg` 로 다운스케일(≤300px) 저장하고 팝업에
+썸네일(클릭 확대)과 방위표지 좌표를 넣는다.
 
 - 입력: `20260811_사전 현장 보사서 취합/2.조사서_부산울산/` 폴더의 `*.xlsx` 11개
   (폴더명은 부산울산이나 **11개 본부 103개 카드 전부** 들어있음). 각 파일 = 총괄 목록 +
@@ -758,6 +764,8 @@ CYG 로 제거 가능한 일변동은 편각 6.7′ 인데 미설명 잔차가 3
 | **방위표지 불가 = 등급 C** | 지자기점은 방위표지 필수. 종합판정이 조건부여도 방위표지 '불가'면 검토 등급 C(대체 검토)로 강등 |
 | **PDF 회신본 파서** | 초기엔 PDF 로 회신돼 `aggregate_survey_reports.py`(pymupdf 좌표 파싱)를 만들었으나, 이후 **엑셀 카드로 회신**되어 `aggregate_survey_xlsx.py` 가 정식 경로. PDF 파서는 참고용 |
 | **prefer_canvas 마커** | Folium `prefer_canvas=True` 면 CircleMarker 가 캔버스 렌더 → DOM `path` 쿼리로 안 잡힌다. 검증은 `map.eachLayer` 로 카운트 |
+| **사진 앵커 분류** | 카드 임베드 이미지는 anchor (row,col) 0-index 로 슬롯 판별. **col≥7 은 지도**(I/K 열), col<7 이 사진(중심 row44·동/서 row47·남/북 row50). `extract_photos()` 참조 |
+| **③ 위도 앵커 충돌** | A맵의 '위도'는 A5(위도(십진))가 선점 → 방위표지 좌표(A35 위도)를 못 읽는다. '경도'(A34) 앵커 +offset 으로 읽을 것 |
 | **미완료 실사례** | DS-093 거제 신규점2 는 8항목 전부 미입력으로 회신 — 재조사 대상 |
 
 첫 검토(103건, 2026-08): 등급 A 41 · B 51 · C 10 · 미완료 1. 최다 교란요인 자연환경(수목)

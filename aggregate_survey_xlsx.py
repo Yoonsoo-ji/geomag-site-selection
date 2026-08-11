@@ -140,22 +140,82 @@ def parse_card(ws):
     d["방위불가"] = bang_bad
     d["판정의견"] = bA("판정 의견")
 
-    # ── 방위표지 좌표 유무 (③) ──
-    r_az = A.get("방위각")   # '방위각(°)' → '방위각'
-    az1 = _s(ws.cell(r_az, 4).value) if r_az else ""
+    # ── 방위표지 좌표 상세 (③) ──
+    # A맵의 '위도'는 A5(위도(십진))와 충돌하므로 '경도'(A34) 앵커에서 offset 으로 읽는다.
+    r_lon = A.get("경도")   # 34
+    detail = {}
+    if r_lon:
+        def coord(col):   # col 4=표지1(D), 6=표지2(F)
+            return {"경도": _s(ws.cell(r_lon, col).value),
+                    "위도": _s(ws.cell(r_lon + 1, col).value),
+                    "방위각": _s(ws.cell(r_lon + 3, col).value),
+                    "거리": _s(ws.cell(r_lon + 4, col).value)}
+        detail = {"표지1": coord(4), "표지2": coord(6)}
+    d["방위표지상세"] = detail
+    az1 = detail.get("표지1", {}).get("방위각", "")
     d["방위표지좌표"] = "입력" if az1 and az1 != "-" else "미입력"
     return d
 
 
-def parse_workbook(path):
+# ── 카드 임베드 사진 추출 (중심·동·서·남·북·교란원) ──────────────────────────
+def _photo_slot(row, col):
+    """anchor (row,col) 0-index → 사진 슬롯. 지도(col>=7)·해당없음은 None."""
+    if col >= 7:
+        return None
+    if col in (0, 1):   # A·B 열
+        if 28 <= row <= 31:
+            return "교란원"
+        if 43 <= row <= 45:
+            return "중심"
+        if 46 <= row <= 48:
+            return "동"
+        if 49 <= row <= 52:
+            return "남"
+    if col in (3, 4):   # D·E 열
+        if 46 <= row <= 48:
+            return "서"
+        if 49 <= row <= 52:
+            return "북"
+    return None
+
+
+def extract_photos(ws, code, outdir, maxpx=300, quality=75):
+    """카드 시트의 방위/중심 사진을 다운스케일 JPEG 로 저장. {슬롯: 파일명} 반환."""
+    import io as _io
+    from PIL import Image
+    outdir.mkdir(parents=True, exist_ok=True)
+    got = {}
+    for im in getattr(ws, "_images", []):
+        try:
+            a = im.anchor._from
+        except AttributeError:
+            continue
+        slot = _photo_slot(a.row, a.col)
+        if not slot or slot in got:
+            continue
+        try:
+            img = Image.open(_io.BytesIO(im._data())).convert("RGB")
+        except Exception:   # noqa: BLE001
+            continue
+        img.thumbnail((maxpx, maxpx))
+        fname = f"{code}_{slot}.jpg"
+        img.save(outdir / fname, "JPEG", quality=quality, optimize=True)
+        got[slot] = fname
+    return got
+
+
+def parse_workbook(path, photo_dir=None):
     wb = load_workbook(path, data_only=True)
     out = []
     for name in wb.sheetnames:
         if name == "총괄 목록":
             continue
-        d = parse_card(wb[name])
+        ws = wb[name]
+        d = parse_card(ws)
         if d.get("관리번호"):
             d["_src"] = path.name
+            if photo_dir is not None:
+                d["사진"] = extract_photos(ws, d["관리번호"], Path(photo_dir))
             out.append(d)
     wb.close()
     return out
@@ -405,6 +465,67 @@ def sheet_summary(wb, recs):
         ws.column_dimensions[get_column_letter(j)].width = w
 
 
+# ── 일괄취합(플랫) 워크북 — 분석·등급 없이 모든 원자료를 한 시트에 ──────────
+def _action(v):
+    return {"적합": "자기구배 조사 진행", "조건부 적합": "추가 자기조사 후 재판정",
+            "부적합": "대체 후보지 검토"}.get(v, "② 조사 완료 후")
+
+
+FLAT_COLS = ["관할 본부", "관리번호", "후보지명", "도엽번호", "도엽명", "위도", "경도",
+             "표고(m)", "유형", "지번 주소", "도로명 주소", "연계 기존점",
+             "소유권", "조사대상", "조사일", "조사자", "기상",
+             "차량영향 존재", "차량영향 이격", "전력시설 존재", "전력시설 이격",
+             "통신시설 존재", "통신시설 이격", "금속류 존재", "금속류 이격",
+             "매설물 존재", "매설물 이격", "건축물 존재", "건축물 이격",
+             "자연환경 존재", "자연환경 이격", "방위표지 가능",
+             "부적합 건수", "종합 판정", "판정 의견", "향후 조치",
+             "방위1 경도", "방위1 위도", "방위1 방위각", "방위1 거리(m)",
+             "방위2 경도", "방위2 위도", "방위2 방위각", "방위2 거리(m)",
+             "접근 경로", "차량 진입", "유의사항", "도상 간섭요인", "회신 파일"]
+
+
+def build_flat_workbook(recs, out_path):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "일괄취합"
+    n = len(FLAT_COLS)
+    _title(ws, n, f"지자기 도상선점 — 현장 조사서 일괄취합 ({len(recs)}건)   ·   {datetime.now():%Y-%m-%d}")
+    _header(ws, FLAT_COLS)
+    for ri, d in enumerate(recs, 3):
+        dist = d["자기교란"]
+
+        def g(key):
+            ex, gap = dist.get(key, ("", ""))
+            return ex, gap
+        b1 = d.get("방위표지상세", {}).get("표지1", {})
+        b2 = d.get("방위표지상세", {}).get("표지2", {})
+        row = [d["관할본부"], d["관리번호"], d["후보지명"], d["도엽번호"], d["도엽명"],
+               d["위도"], d["경도"], d["표고"], d["유형"], d["지번주소"], d["도로명주소"],
+               d["연계기존점"], d["소유권"], d["조사대상"], d["조사일"], d["조사자"], d["기상"],
+               *g("차량영향"), *g("전력시설"), *g("통신시설"), *g("금속류"),
+               *g("매설물"), *g("건축물"), *g("자연환경"), d["방위표지"],
+               d["부적합수"], d["종합판정"], d["판정의견"].replace("\n", " "), _action(d["종합판정"]),
+               b1.get("경도", ""), b1.get("위도", ""), b1.get("방위각", ""), b1.get("거리", ""),
+               b2.get("경도", ""), b2.get("위도", ""), b2.get("방위각", ""), b2.get("거리", ""),
+               d["접근경로"], d["차량진입"], d["유의사항"], d["도상간섭"], d["_src"]]
+        for j, v in enumerate(row, 1):
+            c = ws.cell(ri, j, v)
+            c.font = F_VAL
+            c.border = BORDER
+            c.alignment = AL_L if FLAT_COLS[j - 1] in (
+                "지번 주소", "도로명 주소", "판정 의견", "접근 경로", "유의사항", "도상 간섭요인") else AL_C
+    ws.freeze_panes = "C3"
+    ws.auto_filter.ref = f"A2:{get_column_letter(n)}{len(recs) + 2}"
+    for j, col in enumerate(FLAT_COLS, 1):
+        w = 30 if col in ("판정 의견", "도상 간섭요인") else \
+            24 if col in ("지번 주소", "접근 경로") else \
+            18 if col == "유의사항" else \
+            13 if "방위" in col or col in ("조사일", "조사자", "관할 본부", "후보지명") else 9
+        ws.column_dimensions[get_column_letter(j)].width = w
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(out_path)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default=str(DEF_DIR))
@@ -435,7 +556,11 @@ def main():
     out = Path(a.out) if a.out else OUT_DIR / f"{ts}_현장조사_취합검토_{len(recs)}건.xlsx"
     out.parent.mkdir(parents=True, exist_ok=True)
     wb.save(out)
-    print(f"\n저장: {out}")
+    print(f"\n저장(취합·검토): {out}")
+
+    flat = OUT_DIR / f"{ts}_현장조사_일괄취합_{len(recs)}건.xlsx"
+    build_flat_workbook(recs, flat)
+    print(f"저장(일괄취합): {flat}")
 
 
 if __name__ == "__main__":

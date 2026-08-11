@@ -27,6 +27,7 @@ from aggregate_survey_xlsx import (DEF_DIR, parse_workbook, review, key_disturb)
 
 ROOT = Path(__file__).parent
 OUT = ROOT / "docs" / "survey_review.html"
+PHOTO_DIR = ROOT / "docs" / "survey_photos"
 
 GRADE = {   # 등급 → (색, 라벨)
     "A": ("#2E8B57", "A · 선점 가능 (자기구배 조사)"),
@@ -48,14 +49,53 @@ def esc(s):
             if s is not None else "")
 
 
+def az_text(d):
+    """방위표지 1·2 방위각·거리 요약."""
+    det = d.get("방위표지상세", {})
+    out = []
+    for i, k in enumerate(("표지1", "표지2"), 1):
+        c = det.get(k, {})
+        az, dist = c.get("방위각", ""), c.get("거리", "")
+        if az and az != "-":
+            seg = f"표지{i} 방위각 {esc(az)}"
+            if dist and dist != "-":
+                seg += f" · {esc(dist)}m"
+            out.append(seg)
+    return " / ".join(out)
+
+
+def photo_html(d):
+    ph = d.get("사진", {})
+    if not ph:
+        return ""
+    cells = ""
+    for slot in ("중심", "동", "서", "남", "북"):
+        f = ph.get(slot)
+        if not f:
+            continue
+        url = "survey_photos/" + f
+        cells += (
+            f"<a href='{url}' target='_blank' title='{slot}측 (클릭 확대)' "
+            f"style='text-decoration:none;display:inline-block;text-align:center;margin:2px'>"
+            f"<img src='{url}' loading='lazy' style='width:66px;height:66px;"
+            f"object-fit:cover;border:1px solid #ccc;border-radius:3px'/>"
+            f"<div style='font-size:10px;color:#666'>{slot}</div></a>")
+    if not cells:
+        return ""
+    return ("<div style='margin-top:7px'>"
+            "<div style='color:#666;font-size:11px;margin-bottom:2px'>주변 사진 (클릭 확대)</div>"
+            f"<div style='display:flex;flex-wrap:wrap'>{cells}</div></div>")
+
+
 def popup_html(d, grade, concl, note):
     color = GRADE[grade][0]
     dist = key_disturb(d) or "없음"
     bang = d["방위표지"] or "-"
+    az = az_text(d)
     rows = [
         ("종합 판정", esc(d["종합판정"])),
         ("핵심 교란요인", esc(dist)),
-        ("방위표지", esc(bang)),
+        ("방위표지", esc(bang) + (f" <span style='color:#888'>({az})</span>" if az else "")),
         ("검토 결론", f"<b>{esc(concl)}</b>"),
         ("조사자 의견", esc(note)),
         ("조사", f"{esc(d['조사일'])} · {esc(d['조사자'])}"),
@@ -68,11 +108,12 @@ def popup_html(d, grade, concl, note):
         for k, v in rows)
     return (
         f"<div style='font-family:\"맑은 고딕\",sans-serif;font-size:12.5px;"
-        f"width:320px;line-height:1.45'>"
+        f"width:330px;line-height:1.45'>"
         f"<div style='background:{color};color:#fff;padding:6px 10px;margin:-2px -2px 6px;"
         f"border-radius:4px 4px 0 0;font-weight:bold'>"
         f"[{grade}] {esc(d['관리번호'])} · {esc(d['후보지명'])}</div>"
         f"<table style='border-collapse:collapse'>{body}</table>"
+        f"{photo_html(d)}"
         f"<div style='margin-top:6px;color:#999;font-size:11px'>{esc(d['관할본부'])}</div>"
         f"</div>")
 
@@ -149,9 +190,13 @@ def main():
     files = sorted(Path(a.dir).glob("*.xlsx"),
                    key=lambda p: int(re.match(r"(\d+)", p.name).group(1))
                    if re.match(r"(\d+)", p.name) else 999)
+    PHOTO_DIR.mkdir(parents=True, exist_ok=True)
     recs = []
     for f in files:
-        recs += parse_workbook(f)
+        cards = parse_workbook(f, photo_dir=PHOTO_DIR)
+        nph = sum(len(c.get("사진", {})) for c in cards)
+        print(f"  {f.name:28} 카드 {len(cards):3}건  사진 {nph:3}장")
+        recs += cards
     recs.sort(key=lambda d: (d["관할본부"] or "", d["관리번호"] or ""))
     m, counts = build(recs)
     OUT.parent.mkdir(parents=True, exist_ok=True)
