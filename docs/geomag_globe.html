@@ -120,7 +120,7 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1
 app.appendChild(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true; controls.dampingFactor=.06; controls.enablePan=false;
-controls.minDistance=isMobile?2.4:2.6; controls.maxDistance=12;
+controls.minDistance=isMobile?1.3:1.25; controls.maxDistance=12;
 controls.rotateSpeed=isMobile?.55:.85; controls.zoomSpeed=isMobile?.75:1;
 scene.add(new THREE.AmbientLight(0xffffff,1.15));
 const sun=new THREE.DirectionalLight(0xfff4e0,1.6); sun.position.set(6,3,4); scene.add(sun);
@@ -311,7 +311,7 @@ function buildKoreaLMM(json){
   geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
   geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
   geo.setIndex(idx);
-  koreaPatch=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,side:THREE.FrontSide}));
+  koreaPatch=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
   koreaPatch.visible=false; koreaPatch.renderOrder=2; earthGroup.add(koreaPatch);
   koreaCenter=sph((latS+latN)/2,(lonW+lonE)/2,1);
 }
@@ -363,7 +363,7 @@ btnKorea.onclick=()=>{
   if(koreaPatch){koreaPatch.visible=true;tgLMM.classList.add('on');}
   spin=false;tgS.classList.remove('on');
   const kc=(koreaCenter||sph(36,127.7,1)).clone().applyEuler(earthGroup.rotation);
-  camTween={from:camera.position.clone(),to:kc.multiplyScalar(1.85),t:0};
+  camTween={from:camera.position.clone(),to:kc.multiplyScalar(1.7),t:0};
 };
 const mob=document.getElementById('mob'),title=document.getElementById('title');
 mob.onclick=()=>{title.classList.toggle('min');mob.textContent=title.classList.contains('min')?'+':'−';};
