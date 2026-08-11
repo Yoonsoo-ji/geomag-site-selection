@@ -30,7 +30,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 ROOT = Path(__file__).parent
-DEF_DIR = Path(r"D:\LX_yoons\2026_research\2026_지자기 연구\20260811_사전 현장 보사서 취합"
+DEF_DIR = Path(r"D:\LX_yoons\2026_research\2026_지자기 연구\20260811_사전 현장 조사서 취합"
                r"\2.조사서_부산울산")
 OUT_DIR = ROOT / "docs" / "output"
 
