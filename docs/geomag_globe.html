@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>세계 자기지도 3D — IGRF-14 (한국 LMM 확장 예정)</title>
+<title>세계 자기지도 3D — IGRF-14 + 한국 LMM</title>
 <style>
   :root{--ink:#eaf3ff;--pan:rgba(9,17,33,.82);--edge:rgba(120,175,255,.18);--acc:#ffb454}
   html,body{margin:0;height:100%;overflow:hidden;background:#00030a;color:var(--ink);
@@ -59,7 +59,7 @@
 <div id="title" class="card">
   <span class="bd">IGRF‑14 · 13차 구면조화 · ppigrf 검증 엔진</span>
   <h1>세계 자기지도 3D</h1>
-  <p>전 지구 지자기를 표면에 색으로 입히고 등치선·자기력선을 함께 표시합니다. 성분을 바꿔 총자력·편각·복각을 보고, 표면에 커서를 올리면 실시간 값이 나옵니다. <b>한국 LMM 조밀화는 2단계.</b></p>
+  <p>전 지구 지자기를 표면에 색으로 입히고 등치선·자기력선을 함께 표시합니다. 성분을 바꿔 총자력·편각·복각을 보고, 표면에 커서를 올리면 실시간 값이 나옵니다. <b style="color:#ffd7a0">「한국으로 ↦」 → 「한국 LMM」 켜면 IGRF보다 조밀한 2.8km 지각이상이 나타납니다.</b></p>
 </div>
 
 <div id="right" class="card">
@@ -85,6 +85,8 @@
   <button class="tg on" id="tgContour">등치선</button>
   <button class="tg on" id="tgLines">자기력선</button>
   <button class="tg on" id="tgSpin">자전</button>
+  <button class="tg" id="tgLMM" style="border-color:rgba(255,180,84,.5);color:#ffd7a0">한국 LMM</button>
+  <button class="tg" id="btnKorea">한국으로 ↦</button>
   <span id="yr">연도 <input id="year" type="range" min="2025" max="2030" step="0.1" value="2026.6"><b id="yearv">2026.6</b></span>
 </div>
 <div id="hint">드래그 회전 · 휠 확대 · 표면 커서 → 값</div>
@@ -281,6 +283,40 @@ function buildLines(year){
   }
 }
 
+// ── 한국 LMM 조밀 패치 (crustal 2.8km 지각이상 격자) ──
+let koreaPatch=null, koreaCenter=null, lmmRange=300;
+function buildKoreaLMM(json){
+  const C=json.crustal;
+  const valid=C.values.filter(v=>v!==null).slice().sort((a,b)=>a-b);
+  if(!valid.length) return;
+  const q=t=>valid[Math.min(valid.length-1,Math.floor(t*(valid.length-1)))];
+  lmmRange=Math.max(Math.abs(q(0.02)),Math.abs(q(0.98)),50);   // 0 중심 대칭 발산 색범위
+  const data=new Uint8Array(C.nlon*C.nlat*4);
+  for(let j=0;j<C.nlat;j++)for(let i=0;i<C.nlon;i++){
+    const v=C.values[j*C.nlon+i], k=(j*C.nlon+i)*4;
+    if(v===null){data[k+3]=0;continue;}                        // 자료공백 → 투명(IGRF 노출)
+    const c=ramp((v+lmmRange)/(2*lmmRange),CM_DIV);
+    data[k]=c[0];data[k+1]=c[1];data[k+2]=c[2];data[k+3]=232;
+  }
+  const tex=new THREE.DataTexture(data,C.nlon,C.nlat,THREE.RGBAFormat);
+  tex.flipY=false;tex.minFilter=THREE.LinearFilter;tex.magFilter=THREE.LinearFilter;tex.colorSpace=THREE.SRGBColorSpace;tex.needsUpdate=true;
+  const lonW=C.lon0, lonE=C.lon0+(C.nlon-1)*C.dlon, latS=C.lat0, latN=C.lat0+(C.nlat-1)*C.dlat;
+  const cols=80, rows=104, rr=1.008, pos=[], uv=[], idx=[];
+  for(let r=0;r<rows;r++)for(let cc=0;cc<cols;cc++){
+    const u=cc/(cols-1), vv=r/(rows-1);
+    const P=sph(latS+(latN-latS)*vv, lonW+(lonE-lonW)*u, rr); pos.push(P.x,P.y,P.z); uv.push(u,vv);
+  }
+  for(let r=0;r<rows-1;r++)for(let cc=0;cc<cols-1;cc++){const a=r*cols+cc,b=a+1,d=a+cols,e=d+1;idx.push(a,d,b,b,d,e);}
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  geo.setIndex(idx);
+  koreaPatch=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,side:THREE.FrontSide}));
+  koreaPatch.visible=false; koreaPatch.renderOrder=2; earthGroup.add(koreaPatch);
+  koreaCenter=sph((latS+latN)/2,(lonW+lonE)/2,1);
+}
+fetch('data/lmm_model.json').then(r=>r.json()).then(buildKoreaLMM).catch(e=>console.warn('LMM:',e));
+
 // ── legend ──
 const legc=document.getElementById('legcanvas'), lg=legc.getContext('2d');
 const legtitle=document.getElementById('legtitle'), tk=[document.getElementById('t0'),document.getElementById('t1'),document.getElementById('t2')];
@@ -320,6 +356,15 @@ tgC.onclick=()=>{showContour=!showContour;tgC.classList.toggle('on',showContour)
 tgL.onclick=()=>{showLines=!showLines;tgL.classList.toggle('on',showLines);
   if(showLines)buildLines(+yearEl.value);else{lineGroup.clear();partGroup.clear();particles=[];}};
 let spin=true; tgS.onclick=()=>{spin=!spin;tgS.classList.toggle('on',spin);};
+const tgLMM=document.getElementById('tgLMM'), btnKorea=document.getElementById('btnKorea');
+let camTween=null;
+tgLMM.onclick=()=>{if(!koreaPatch)return;const on=!koreaPatch.visible;koreaPatch.visible=on;tgLMM.classList.toggle('on',on);};
+btnKorea.onclick=()=>{
+  if(koreaPatch){koreaPatch.visible=true;tgLMM.classList.add('on');}
+  spin=false;tgS.classList.remove('on');
+  const kc=(koreaCenter||sph(36,127.7,1)).clone().applyEuler(earthGroup.rotation);
+  camTween={from:camera.position.clone(),to:kc.multiplyScalar(1.85),t:0};
+};
 const mob=document.getElementById('mob'),title=document.getElementById('title');
 mob.onclick=()=>{title.classList.toggle('min');mob.textContent=title.classList.contains('min')?'+':'−';};
 if(isMobile){title.classList.add('min');mob.textContent='+';}
@@ -345,6 +390,8 @@ fullRebuild(+yearEl.value);
 let last=performance.now();
 function animate(t){requestAnimationFrame(animate);const dt=Math.min(.05,(t-last)/1000);last=t;
   if(spin)earthGroup.rotation.y+=dt*.045;
+  if(camTween){camTween.t=Math.min(1,camTween.t+dt*1.3);const e=camTween.t*camTween.t*(3-2*camTween.t);
+    camera.position.lerpVectors(camTween.from,camTween.to,e);controls.target.set(0,0,0);if(camTween.t>=1)camTween=null;}
   for(const p of particles){p.userData.phase=(p.userData.phase+dt*p.userData.speed)%1;p.position.copy(p.userData.curve.getPointAt(p.userData.phase));}
   controls.update();comp.render();}
 requestAnimationFrame(animate);
