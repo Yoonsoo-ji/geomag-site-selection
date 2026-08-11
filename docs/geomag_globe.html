@@ -167,8 +167,8 @@ function buildTexture(mode){
 const mapMat=new THREE.ShaderMaterial({
   uniforms:{map:{value:null}},
   vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-  fragmentShader:`varying vec3 vP;uniform sampler2D map;#define PI 3.141592653589793
-    void main(){vec3 n=normalize(vP);float lat=asin(clamp(n.y,-1.,1.));float lon=atan(n.z,n.x);
+  fragmentShader:`varying vec3 vP;uniform sampler2D map;
+    void main(){float PI=3.141592653589793;vec3 n=normalize(vP);float lat=asin(clamp(n.y,-1.,1.));float lon=atan(-n.z,n.x);
       vec3 col=texture2D(map,vec2((lon+PI)/(2.*PI),(PI*0.5-lat)/PI)).rgb;
       float sh=0.35+0.65*clamp(dot(n,normalize(vec3(6.,3.,4.))),0.,1.);
       gl_FragColor=vec4(col*(0.62+0.5*sh),1.0);}`
@@ -178,7 +178,7 @@ earthGroup.add(earth);
 
 // graticule
 const gmat=new THREE.LineBasicMaterial({color:0x0a1420,transparent:true,opacity:.28});
-function sph(lat,lon,rr){const p=lat*D2R,L=lon*D2R;return new THREE.Vector3(Math.cos(p)*Math.cos(L),Math.sin(p),Math.cos(p)*Math.sin(L)).multiplyScalar(rr);}
+function sph(lat,lon,rr){const p=lat*D2R,L=lon*D2R;return new THREE.Vector3(Math.cos(p)*Math.cos(L),Math.sin(p),-Math.cos(p)*Math.sin(L)).multiplyScalar(rr);}
 for(let lat=-60;lat<=60;lat+=30){const pts=[];for(let lon=0;lon<=360;lon+=4)pts.push(sph(lat,lon,1.001));earthGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),gmat));}
 for(let lon=0;lon<360;lon+=30){const pts=[];for(let lat=-90;lat<=90;lat+=4)pts.push(sph(lat,lon,1.001));earthGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),gmat));}
 
@@ -246,12 +246,12 @@ function buildContours(mode){
 // ── field lines (RK4 in geographic frame → children of earthGroup) ──
 const R_KM=6371.2;
 function Bvec(P,year){const r=P.length();
-  const lat=Math.asin(THREE.MathUtils.clamp(P.y/r,-1,1))/D2R, lon=Math.atan2(P.z,P.x)/D2R;
+  const lat=Math.asin(THREE.MathUtils.clamp(P.y/r,-1,1))/D2R, lon=Math.atan2(-P.z,P.x)/D2R;
   const b=IGRF.igrf(lat,lon,(r-1)*R_KM*1000,year);
   const la=lat*D2R,lo=lon*D2R;
-  const north=new THREE.Vector3(-Math.sin(la)*Math.cos(lo),Math.cos(la),-Math.sin(la)*Math.sin(lo));
-  const east=new THREE.Vector3(-Math.sin(lo),0,Math.cos(lo));
-  const rhat=new THREE.Vector3(Math.cos(la)*Math.cos(lo),Math.sin(la),Math.cos(la)*Math.sin(lo));
+  const north=new THREE.Vector3(-Math.sin(la)*Math.cos(lo),Math.cos(la),Math.sin(la)*Math.sin(lo));
+  const east=new THREE.Vector3(-Math.sin(lo),0,-Math.cos(lo));
+  const rhat=new THREE.Vector3(Math.cos(la)*Math.cos(lo),Math.sin(la),-Math.cos(la)*Math.sin(lo));
   return north.multiplyScalar(b.X).add(east.multiplyScalar(b.Y)).add(rhat.multiplyScalar(-b.Z));}
 function trace(seed,year,dir){let p=seed.clone();const pts=[p.clone()];const ds=.02;
   for(let i=0;i<820;i++){const r=p.length();if(r<1.0015||r>4.6)break;
@@ -331,7 +331,7 @@ renderer.domElement.addEventListener('pointermove',ev=>{
   mouse.x=ev.clientX/innerWidth*2-1;mouse.y=-(ev.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);
   const hit=ray.intersectObject(earth)[0];if(!hit)return;
   const p=earth.worldToLocal(hit.point.clone()).normalize();
-  const lat=Math.asin(p.y)/D2R,lon=Math.atan2(p.z,p.x)/D2R;const e=IGRF.igrfElements(lat,lon,0,+yearEl.value);
+  const lat=Math.asin(p.y)/D2R,lon=Math.atan2(-p.z,p.x)/D2R;const e=IGRF.igrfElements(lat,lon,0,+yearEl.value);
   oLat.textContent=lat.toFixed(2)+'°';oLon.textContent=lon.toFixed(2)+'°';
   oF.textContent=Math.round(e.F).toLocaleString()+' nT';oD.textContent=e.D.toFixed(1)+'°';oI.textContent=e.I.toFixed(1)+'°';
 });
