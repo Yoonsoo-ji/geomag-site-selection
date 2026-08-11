@@ -74,7 +74,7 @@ def dms2dd(v):
     s = str(v).strip()
     if not s or s == "-":
         return None
-    nums = re.findall(r"\d+\.?\d*", s)
+    nums = re.findall(r"\d*\.?\d+", s)   # '.6614'(앞자리 0 생략)도 초로 인식
     if len(nums) < 3:
         return None
     d, mi, se = float(nums[0]), float(nums[1]), float(nums[2])
@@ -176,10 +176,17 @@ def parse_card(ws):
                     "거리": _s(ws.cell(r_lon + 4, col).value)}
         detail = {"기준점": coord(2), "표지1": coord(4), "표지2": coord(6)}
 
-        def ll(col):   # (경도, 위도) 십진 or None
-            lon = dms2dd(ws.cell(r_lon, col).value)
-            lat = dms2dd(ws.cell(r_lon + 1, col).value)
-            return (lon, lat) if lon is not None and lat is not None else None
+        def ll(col):   # (경도, 위도) 십진 or None. 경도/위도 칸 스왑 입력 자동 교정.
+            a = dms2dd(ws.cell(r_lon, col).value)      # '경도' 라벨 칸
+            b = dms2dd(ws.cell(r_lon + 1, col).value)  # '위도' 라벨 칸
+            if a is None or b is None:
+                return None
+            # 한반도 범위(경도 124~132 · 위도 33~40)로 판별 — 본부별 칸 뒤바뀜 대응
+            if 124 <= a <= 132 and 33 <= b <= 40:
+                return (a, b)
+            if 124 <= b <= 132 and 33 <= a <= 40:
+                return (b, a)
+            return None   # 범위 밖이면 무효
         d["기준점ll"] = ll(2)
         d["표지1ll"] = ll(4)
         d["표지2ll"] = ll(6)
