@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>지구 자기장 3D — IGRF-14 (한국 LMM 확장 예정)</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#01050e;color:#e9f4ff;
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif}
+  #app{position:fixed;inset:0}
+  canvas{display:block;touch-action:none}
+  #hud{position:absolute;left:20px;top:18px;width:min(340px,calc(100vw - 40px));box-sizing:border-box;
+    padding:18px 18px 15px;border:1px solid rgba(130,190,255,.20);border-radius:16px;
+    background:linear-gradient(180deg,rgba(8,19,38,.90),rgba(3,10,23,.78));backdrop-filter:blur(12px);
+    box-shadow:0 20px 50px rgba(0,0,0,.4);z-index:5}
+  h1{font-size:18px;margin:0 0 4px;letter-spacing:.2px}
+  .sub{font-size:12px;color:#95acc5;line-height:1.5;margin-bottom:14px}
+  #badge{display:inline-block;font-size:10px;padding:4px 8px;border-radius:99px;
+    background:rgba(74,160,255,.16);border:1px solid rgba(74,160,255,.38);margin-bottom:10px;letter-spacing:.3px}
+  .row{display:flex;align-items:center;gap:10px;margin:10px 0}
+  .row label{font-size:12px;color:#b8cadc;width:78px}
+  input[type=range]{flex:1;accent-color:#4fb7ff}
+  .val{font-variant-numeric:tabular-nums;font-size:12px;width:52px;text-align:right;color:#e5f4ff}
+  .btns{display:flex;gap:8px;margin-top:4px}
+  button{border:1px solid rgba(125,192,255,.28);color:#dff3ff;background:rgba(30,91,145,.18);
+    border-radius:10px;padding:8px 10px;cursor:pointer;font-size:12px;flex:1}
+  button:hover{background:rgba(30,91,145,.36)}
+  button.on{background:rgba(79,183,255,.30);border-color:rgba(79,183,255,.6)}
+  #readout{position:absolute;right:20px;top:18px;width:min(230px,calc(100vw - 40px));box-sizing:border-box;
+    padding:15px 16px;border-radius:15px;background:rgba(4,12,26,.76);border:1px solid rgba(130,190,255,.16);
+    backdrop-filter:blur(10px);z-index:5}
+  #readout .rt{font-size:13px;font-weight:700;margin-bottom:8px}
+  .k{display:flex;justify-content:space-between;font-size:12px;margin:7px 0;color:#a9bed3}
+  .k b{color:#f0f8ff;font-weight:600;font-variant-numeric:tabular-nums}
+  #note{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font-size:11px;color:#8ea4ba;
+    background:rgba(2,8,18,.66);border:1px solid rgba(130,190,255,.12);padding:7px 12px;border-radius:999px;
+    z-index:5;white-space:nowrap}
+  #busy{position:absolute;left:50%;top:14px;transform:translateX(-50%);font-size:11px;color:#bfe0ff;
+    background:rgba(20,60,110,.7);border:1px solid rgba(120,190,255,.35);padding:5px 12px;border-radius:99px;
+    z-index:6;opacity:0;transition:opacity .2s}
+  #mobileToggle{display:none}
+  @media (max-width:760px){
+    #hud{left:8px;top:8px;width:calc(100vw - 16px);padding:12px 13px}
+    #hud h1{font-size:15px}#hud .sub{font-size:11px;margin-bottom:8px}
+    .row label{width:64px;font-size:11px}.val{width:44px;font-size:11px}
+    #readout{left:8px;right:auto;top:auto;bottom:calc(40px + env(safe-area-inset-bottom));width:calc(100vw - 16px);
+      display:grid;grid-template-columns:repeat(3,1fr);gap:2px 14px;padding:9px 12px}
+    #readout .rt{grid-column:1/-1;margin-bottom:2px}.k{font-size:10px;margin:2px 0}
+    #note{display:none}
+    #mobileToggle{display:block;position:absolute;right:12px;top:12px;z-index:7;width:32px;height:32px;
+      border-radius:50%;padding:0;font-size:17px;line-height:28px;background:rgba(3,12,25,.78);flex:none}
+    #hud.collapsed .sub,#hud.collapsed .row,#hud.collapsed .btns,#hud.collapsed #badge{display:none}
+    #hud.collapsed{width:auto;padding:8px 12px}#hud.collapsed h1{margin:0;font-size:13px}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="busy">자기력선 계산 중…</div>
+<button id="mobileToggle" aria-label="패널 접기">−</button>
+<div id="hud">
+  <div id="badge">IGRF‑14 · degree 13 · 측지 X/Y/Z (ppigrf 검증 엔진)</div>
+  <h1>지구 자기장 3D</h1>
+  <div class="sub">IGRF‑14 구면조화(13차) 전개로 전 지구 자기장을 합성해 자기력선을 그리고,
+    지구 위에 커서를 올리면 편각 D·복각 I·총자력 F 를 실시간 계산합니다. <b>한국 LMM 조밀화는 2단계 예정.</b></div>
+  <div class="row"><label>연도</label><input id="year" type="range" min="2025" max="2030" step="0.1" value="2026.6"><span id="yearv" class="val">2026.6</span></div>
+  <div class="row"><label>자기력선</label><input id="lines" type="range" min="8" max="48" step="1" value="30"><span id="linesv" class="val">30</span></div>
+  <div class="row"><label>입자속도</label><input id="speed" type="range" min="0" max="2.5" step=".05" value=".8"><span id="speedv" class="val">0.80</span></div>
+  <div class="btns">
+    <button id="toggle" class="on">자전 ⏸</button>
+    <button id="intens" class="on">세기색</button>
+    <button id="reset">시점 초기화</button>
+  </div>
+</div>
+<div id="readout">
+  <div class="rt">커서 위치 자기장</div>
+  <div class="k"><span>위도</span><b id="lat">—</b></div>
+  <div class="k"><span>경도</span><b id="lon">—</b></div>
+  <div class="k"><span>총자력 F</span><b id="F">—</b></div>
+  <div class="k"><span>수평 H</span><b id="H">—</b></div>
+  <div class="k"><span>편각 D</span><b id="D">—</b></div>
+  <div class="k"><span>복각 I</span><b id="I">—</b></div>
+</div>
+<div id="note">드래그: 회전 · 휠: 확대/축소 · 지구 위 커서 → D·I·F 표시</div>
+
+<script src="igrf14.js"></script>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+const IGRF = window.IGRF;
+const app = document.getElementById('app');
+const isMobile = matchMedia('(max-width:760px)').matches;
+
+// ── scene / camera / renderer ─────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x01050e, 0.015);
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, .1, 100);
+camera.position.set(0, 1.2, isMobile?4.7:5.4);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile?1.4:2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+app.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = .06;
+controls.minDistance = isMobile?2.5:2.7; controls.maxDistance = 12; controls.enablePan = false;
+controls.rotateSpeed = isMobile?.55:.85; controls.zoomSpeed = isMobile?.75:1.0;
+
+// ── lights ────────────────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0x8db9ff, .85));
+const sun = new THREE.DirectionalLight(0xffffff, 2.4); sun.position.set(5, 2.5, 4); scene.add(sun);
+const rim = new THREE.DirectionalLight(0x2c82ff, 1.5); rim.position.set(-5,-1.5,-4); scene.add(rim);
+
+// ── earth ─────────────────────────────────────────────────────────────
+const earthGroup = new THREE.Group(); scene.add(earthGroup);
+const R = 1.0;
+const earth = new THREE.Mesh(
+  new THREE.SphereGeometry(R, isMobile?72:112, isMobile?48:72),
+  new THREE.MeshStandardMaterial({color:0x0c2c4a, roughness:.86, metalness:.06, emissive:0x04121f, emissiveIntensity:.5}));
+earthGroup.add(earth);
+
+// graticule
+const gmat = new THREE.LineBasicMaterial({color:0x2f74a6, transparent:true, opacity:.30});
+function sph(lat,lon,rr){const p=THREE.MathUtils.degToRad(lat),L=THREE.MathUtils.degToRad(lon);
+  return new THREE.Vector3(Math.cos(p)*Math.cos(L),Math.sin(p),Math.cos(p)*Math.sin(L)).multiplyScalar(rr);}
+for(let lat=-60;lat<=60;lat+=30){const pts=[];for(let lon=0;lon<=360;lon+=3)pts.push(sph(lat,lon,1.003));
+  earthGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),gmat));}
+for(let lon=0;lon<360;lon+=30){const pts=[];for(let lat=-90;lat<=90;lat+=3)pts.push(sph(lat,lon,1.003));
+  earthGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),gmat));}
+// equator brighter
+{const pts=[];for(let lon=0;lon<=360;lon+=2)pts.push(sph(0,lon,1.004));
+  earthGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({color:0x59d1ff,transparent:true,opacity:.5})));}
+
+// atmosphere glow (fresnel back-side)
+const atm = new THREE.Mesh(new THREE.SphereGeometry(1.06,64,48),
+  new THREE.ShaderMaterial({transparent:true, side:THREE.BackSide, blending:THREE.AdditiveBlending,
+    uniforms:{c:{value:new THREE.Color(0x2b8dff)}},
+    vertexShader:`varying vec3 vN;void main(){vN=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader:`varying vec3 vN;uniform vec3 c;void main(){float i=pow(1.0-abs(vN.z),3.0);gl_FragColor=vec4(c,i*0.9);}`}));
+earthGroup.add(atm);
+
+// poles markers
+function poleMark(lat,color){const m=new THREE.Mesh(new THREE.SphereGeometry(.02,12,12),
+  new THREE.MeshBasicMaterial({color}));m.position.copy(sph(lat,0,1.0));earthGroup.add(m);}
+poleMark(90,0xff6b57); poleMark(-90,0x6bb8ff);
+
+// stars
+{const n=isMobile?1000:2200,p=new Float32Array(n*3);
+ for(let i=0;i<n;i++){const r=18+Math.random()*30,u=Math.random()*2-1,a=Math.random()*Math.PI*2,s=Math.sqrt(1-u*u);
+   p[i*3]=r*s*Math.cos(a);p[i*3+1]=r*u;p[i*3+2]=r*s*Math.sin(a);}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));
+ scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:.03,color:0xb9d9ff,transparent:true,opacity:.7})));}
+
+// ── IGRF field in scene coords ────────────────────────────────────────
+const R_EARTH_KM = 6371.2;
+// scene point P (|P|=1 at surface) → magnetic field vector in scene coords
+function Bvec(P, year){
+  const r = P.length();
+  const lat = Math.asin(THREE.MathUtils.clamp(P.y/r,-1,1))*180/Math.PI;
+  const lon = Math.atan2(P.z, P.x)*180/Math.PI;
+  const elevM = (r-1)*R_EARTH_KM*1000;
+  const b = IGRF.igrf(lat, lon, elevM, year);     // X north, Y east, Z down (nT)
+  const la=THREE.MathUtils.degToRad(lat), lo=THREE.MathUtils.degToRad(lon);
+  const north = new THREE.Vector3(-Math.sin(la)*Math.cos(lo), Math.cos(la), -Math.sin(la)*Math.sin(lo));
+  const east  = new THREE.Vector3(-Math.sin(lo), 0, Math.cos(lo));
+  const rhat  = new THREE.Vector3(Math.cos(la)*Math.cos(lo), Math.sin(la), Math.cos(la)*Math.sin(lo));
+  const down  = rhat.clone().multiplyScalar(-1);
+  return north.multiplyScalar(b.X).add(east.multiplyScalar(b.Y)).add(down.multiplyScalar(b.Z));
+}
+
+const fieldGroup = new THREE.Group(); scene.add(fieldGroup);
+const particleGroup = new THREE.Group(); scene.add(particleGroup);
+let curves = [], particles = [];
+
+function trace(seed, year, dir){
+  let p = seed.clone(); const pts = [p.clone()]; const ds = .02;
+  for(let i=0;i<900;i++){
+    const r = p.length();
+    if(r<1.0015 || r>5.0) break;
+    const k1 = Bvec(p, year).normalize().multiplyScalar(ds*dir);
+    const k2 = Bvec(p.clone().addScaledVector(k1,.5), year).normalize().multiplyScalar(ds*dir);
+    const k3 = Bvec(p.clone().addScaledVector(k2,.5), year).normalize().multiplyScalar(ds*dir);
+    const k4 = Bvec(p.clone().add(k3), year).normalize().multiplyScalar(ds*dir);
+    p = p.clone().add(k1.clone().addScaledVector(k2,2).addScaledVector(k3,2).add(k4).multiplyScalar(1/6));
+    pts.push(p.clone());
+  }
+  return pts;
+}
+
+// intensity → color ramp (blue → cyan → white)
+function fColor(F){
+  const t = THREE.MathUtils.clamp((F-24000)/(42000), 0, 1);
+  const c = new THREE.Color();
+  c.setHSL(0.58 - 0.10*t, 0.9, 0.45 + 0.35*t);
+  return c;
+}
+
+const busy = document.getElementById('busy');
+let useIntens = true;
+function rebuild(){
+  const year = parseFloat(yearEl.value);
+  const n = Math.min(parseInt(linesEl.value), isMobile?34:48);
+  fieldGroup.clear(); particleGroup.clear();
+  curves = []; particles = [];
+  for(let i=0;i<n;i++){
+    // 시드: 경도 등분 × 위도 살짝 분산(양반구 커버)
+    const lon = (i/n)*360;
+    const lat = -46 + ((i*67)%92);           // -46 ~ +46 사이 분산
+    const seed = sph(lat, lon, 1.02);
+    const back = trace(seed, year, -1).reverse();
+    const fwd  = trace(seed, year, 1);
+    const pts = back.concat(fwd.slice(1));
+    if(pts.length < 16) continue;
+    const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal', .5);
+    const np = Math.min(420, pts.length*2);
+    const cp = curve.getPoints(np);
+    const geom = new THREE.BufferGeometry().setFromPoints(cp);
+    let mat;
+    if(useIntens){
+      const cols = new Float32Array(cp.length*3);
+      for(let j=0;j<cp.length;j++){
+        const r = cp[j].length();
+        // 지표 근처만 실제 F, 고고도는 약하게 → 시각적 세기
+        const F = Bvec(cp[j], year).length();
+        const c = fColor(F * Math.pow(r, 0)); // F already altitude-attenuated by igrf
+        cols[j*3]=c.r; cols[j*3+1]=c.g; cols[j*3+2]=c.b;
+      }
+      geom.setAttribute('color', new THREE.BufferAttribute(cols,3));
+      mat = new THREE.LineBasicMaterial({vertexColors:true, transparent:true, opacity:.55, blending:THREE.AdditiveBlending});
+    } else {
+      mat = new THREE.LineBasicMaterial({color:0x4fb7ff, transparent:true, opacity:.34, blending:THREE.AdditiveBlending});
+    }
+    fieldGroup.add(new THREE.Line(geom, mat));
+    curves.push(curve);
+    for(let j=0;j<3;j++){
+      const sp = new THREE.Mesh(new THREE.SphereGeometry(.016,8,8),
+        new THREE.MeshBasicMaterial({color:0xd8faff, transparent:true, opacity:.95, blending:THREE.AdditiveBlending}));
+      sp.userData = {curve, phase:(j/3+Math.random()*.1)%1, speed:.02+Math.random()*.012};
+      particleGroup.add(sp); particles.push(sp);
+    }
+  }
+}
+function queueRebuild(){
+  busy.style.opacity=1;
+  clearTimeout(rebuild._t);
+  rebuild._t = setTimeout(()=>{ rebuild(); busy.style.opacity=0; }, 60);
+}
+
+// ── controls wiring ───────────────────────────────────────────────────
+const yearEl=document.getElementById('year'), linesEl=document.getElementById('lines'), speedEl=document.getElementById('speed');
+const yearv=document.getElementById('yearv'), linesv=document.getElementById('linesv'), speedv=document.getElementById('speedv');
+yearEl.oninput=()=>{yearv.textContent=(+yearEl.value).toFixed(1);queueRebuild()};
+linesEl.oninput=()=>{linesv.textContent=linesEl.value;queueRebuild()};
+speedEl.oninput=()=>speedv.textContent=(+speedEl.value).toFixed(2);
+let rotating=true;
+const bToggle=document.getElementById('toggle'), bIntens=document.getElementById('intens');
+bToggle.onclick=()=>{rotating=!rotating;bToggle.classList.toggle('on',rotating);bToggle.textContent=rotating?'자전 ⏸':'자전 ▶'};
+bIntens.onclick=()=>{useIntens=!useIntens;bIntens.classList.toggle('on',useIntens);queueRebuild()};
+document.getElementById('reset').onclick=()=>{camera.position.set(0,1.2,isMobile?4.7:5.4);controls.target.set(0,0,0);controls.update()};
+
+// hover → D/I/F
+const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
+const el={lat:document.getElementById('lat'),lon:document.getElementById('lon'),F:document.getElementById('F'),
+  H:document.getElementById('H'),D:document.getElementById('D'),I:document.getElementById('I')};
+renderer.domElement.addEventListener('pointermove',ev=>{
+  mouse.x=ev.clientX/innerWidth*2-1; mouse.y=-(ev.clientY/innerHeight)*2+1;
+  ray.setFromCamera(mouse,camera);
+  const hit=ray.intersectObject(earth)[0];
+  if(!hit) return;
+  const p=earth.worldToLocal(hit.point.clone()).normalize();
+  const lat=Math.asin(p.y)*180/Math.PI, lon=Math.atan2(p.z,p.x)*180/Math.PI;
+  const e=IGRF.igrfElements(lat,lon,0,+yearEl.value);
+  el.lat.textContent=lat.toFixed(2)+'°'; el.lon.textContent=lon.toFixed(2)+'°';
+  el.F.textContent=Math.round(e.F).toLocaleString()+' nT';
+  el.H.textContent=Math.round(e.H).toLocaleString()+' nT';
+  el.D.textContent=e.D.toFixed(1)+'°'; el.I.textContent=e.I.toFixed(1)+'°';
+});
+
+// mobile HUD collapse
+const hud=document.getElementById('hud'), mt=document.getElementById('mobileToggle');
+mt.onclick=()=>{hud.classList.toggle('collapsed');mt.textContent=hud.classList.contains('collapsed')?'+':'−'};
+if(isMobile){hud.classList.add('collapsed');mt.textContent='+';linesEl.value='20';linesv.textContent='20';}
+
+// ── postprocessing (bloom) ────────────────────────────────────────────
+const comp=new EffectComposer(renderer);
+comp.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight), isMobile?0.7:0.9, 0.6, 0.2);
+comp.addPass(bloom);
+
+rebuild();
+let last=performance.now();
+function animate(t){
+  requestAnimationFrame(animate);
+  const dt=Math.min(.05,(t-last)/1000); last=t;
+  if(rotating) earthGroup.rotation.y += dt*.05;
+  const s=+speedEl.value;
+  for(const p of particles){p.userData.phase=(p.userData.phase+dt*p.userData.speed*s)%1;
+    p.position.copy(p.userData.curve.getPointAt(p.userData.phase));}
+  controls.update();
+  comp.render();
+}
+requestAnimationFrame(animate);
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight); comp.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>

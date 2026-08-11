@@ -803,3 +803,31 @@ CYG 로 제거 가능한 일변동은 편각 6.7′ 인데 미설명 잔차가 3
 
 첫 검토(103건, 2026-08): 등급 A 41 · B 51 · C 10 · 미완료 1. 최다 교란요인 자연환경(수목)
 38건, 방위표지 불가 8건.
+
+---
+
+## 15. 3D 지구 자기장 (IGRF-14) — `docs/geomag_globe.html`
+
+전 지구 자기장을 3D 지구본에 표출. **1단계 완료**: 정확한 degree-13 IGRF 자기력선 +
+호버 D·I·F. (2단계 한국 LMM 조밀화, 3단계 작업물 레이어는 예정.)
+
+```
+docs/igrf14.js         # IGRF-14 구면조화 엔진(재사용 모듈) — window.IGRF
+docs/geomag_globe.html # Three.js 3D 지구 + 자기력선 + bloom (CDN three, Pages 배포)
+```
+
+- **`igrf14.js`** 는 `lmm.html` 의 검증된 IGRF 엔진(`function igrf`·legendre·interpCoef)과
+  계수 `DATA.igrf`(nmax13·4에폭 2015~2030)를 **추출**해 IIFE 로 감싼 것. `window.IGRF =
+  {igrf(lat,lon,elevM,year)→{X,Y,Z}, igrfElements→{X,Y,Z,H,F,D,I}, IGRF14}`.
+  **ppigrf 와 완전 일치 검증**(서울 D −8.983°·I 54.553°·F 51,372nT, 남대서양이상 F 22,842nT).
+- **globe.html**: 예시(사용자 제공 degree-1 쌍극자)를 **degree-13 실측 필드**로 교체.
+  `Bvec(P,year)` 가 씬 좌표 P→(lat,lon,elev)→igrf X/Y/Z→국소 북·동·하 기저로 3D 벡터 합성,
+  RK4 로 자기력선 추적. 세기색(F 램프)·입자흐름·대기 글로우·UnrealBloom·자전·연도 슬라이더.
+- 좌표 규약: Y축=북극, `rhat=(cosφcosλ, sinφ, cosφsinλ)`. lmm.html/예시와 동일.
+
+| 유의점 | 내용 |
+|---|---|
+| **CDN 필요** | three@0.180 + addons(EffectComposer·UnrealBloomPass)를 importmap 으로 CDN 로드 → **Artifact CSP 불가, Pages 로만 배포**. igrf14.js·geojson 은 로컬 fetch |
+| **패널 미표시 시 렌더 0** | 미리보기 패널이 화면에 없으면 innerWidth=0 → 캔버스 0×0 (기능은 정상). 실제 브라우저/Pages 에서 렌더 |
+| **필드 추적 성능** | igrf(nmax13)×RK4 4회×~900스텝×라인수 → rebuild 는 디바운스(연도·라인 변경 시만). 모바일 라인수/픽셀비 축소 |
+| **엔진 동기화** | igrf14.js 는 lmm.html 엔진의 **사본**. lmm.html IGRF 를 고치면 igrf14.js 도 재추출할 것 |
