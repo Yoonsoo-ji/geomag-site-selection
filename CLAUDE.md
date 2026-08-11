@@ -742,11 +742,22 @@ CYG 로 제거 가능한 일변동은 편각 6.7′ 인데 미설명 잔차가 3
 ① python aggregate_survey_xlsx.py   # 조사서 xlsx 전체 → 취합·검토 + 일괄취합 xlsx (docs/output/)
 ② python make_survey_map.py         # 취합 결과 → docs/survey_review.html (Folium 마커) + 사진 추출
 ③ python merge_survey_workbooks.py  # 회신본 → 배포 양식(총괄+카드103) 그대로 병합 (대용량)
+④ python make_sketches.py                     # 기준점+방위표지1·2 → 위성배경 약도 PNG
+⑤ python merge_survey_workbooks.py --augment  # 취합 엑셀에 결과 열·약도 삽입(원본 미접근)
 ```
 
-⚠️ **입력 폴더명 주의** — 회신 폴더는 `20260811_사전 현장 **조사서** 취합/2.조사서_부산울산/`
-(초기 `보사서` 오타에서 **조사서로 변경됨**). 스크립트 상수(`DEF_DIR`·`SRC_DIR`·`DEF_PDF_DIR`)가
-이 경로를 가리킨다. 폴더명 바뀌면 세 곳 함께 고칠 것.
+⚠️ **입력 폴더명 주의** — 회신 폴더는 자주 이름이 바뀐다(`보사서→조사서`, 하위
+`2.조사서_부산울산→조사서`). 그래서 경로 하드코딩 대신 **베이스 폴더 `20260811_사전 현장
+조사서 취합` 아래에서 `*.조사서_*.xlsx` 를 재귀 탐색**한다(`aggregate_survey_xlsx.survey_files()`,
+`~$` 임시파일 제외). `make_sketches`·`merge_survey_workbooks` 모두 이걸 재사용한다.
+
+**약도(⑥) 생성·삽입** — 카드 ③의 기준점·방위표지1·2 좌표(본부마다 형식 상이:
+`대시`/`°'\"`/`공백` → `dms2dd()` 가 숫자 3개 추출로 통일)로 위성배경(Esri z18) 약도를
+그린다(`make_sketches.py`, 방위각·거리 라벨·북 화살표·축척). 좌표 완비 93/103 생성.
+`--augment` 는 **원본 회신본을 다시 읽지 않고** 이미 만든 취합 엑셀을 열어 ⑥약도 칸에
+약도를 넣고 총괄 목록에 결과 열(소유권·조사일·조사자·기상·종합판정·방위표지·핵심
+교란요인·판정의견)을 추가한다. openpyxl 3.1.5 는 **이미지 라운드트립 보존**(load→save
+시 사진 유지 확인). 산출 `*_취합_총괄_약도포함_전체103건.xlsx` ≈ 286 MB, `.gitignore` 제외.
 
 `merge_survey_workbooks.py` 는 11개 회신본에 흩어진 카드 103장을 **원본 배포 양식과 동일
 구조**(총괄 목록 + 카드시트, DS 번호순)로 한 파일에 합친다 — 값·수식·서식·병합셀·행높이·
@@ -777,6 +788,9 @@ CYG 로 제거 가능한 일변동은 편각 6.7′ 인데 미설명 잔차가 3
 | **prefer_canvas 마커** | Folium `prefer_canvas=True` 면 CircleMarker 가 캔버스 렌더 → DOM `path` 쿼리로 안 잡힌다. 검증은 `map.eachLayer` 로 카운트 |
 | **사진 앵커 분류** | 카드 임베드 이미지는 anchor (row,col) 0-index 로 슬롯 판별. **col≥7 은 지도**(I/K 열), col<7 이 사진(중심 row44·동/서 row47·남/북 row50). `extract_photos()` 참조 |
 | **③ 위도 앵커 충돌** | A맵의 '위도'는 A5(위도(십진))가 선점 → 방위표지 좌표(A35 위도)를 못 읽는다. '경도'(A34) 앵커 +offset 으로 읽을 것 |
+| **약도 위성타일** | Esri WorldImagery 는 시골서 z19 미제공('Map data not yet available') → z18→17→16 폴백. contextily 는 타임아웃이 없어 끊기면 무한대기 → `socket.setdefaulttimeout(20)` |
+| **좌표 형식 3종** | 방위표지 좌표가 본부마다 대시/도분초/공백 혼용 → `dms2dd()` 숫자 3개 추출. 범위검증(경도124~132·위도33~39)으로 뒤바뀜·오기입 배제 |
+| **약도 anchor 검증** | openpyxl 이 쓰는 drawing XML 은 **prefix 없는 기본 네임스페이스**(`<from><col><row>` — `<xdr:>` 아님). 약도는 ⑥약도 칸(col≤1·row 51~55 0-index)에 앉는다 |
 | **미완료 실사례** | DS-093 거제 신규점2 는 8항목 전부 미입력으로 회신 — 재조사 대상 |
 
 첫 검토(103건, 2026-08): 등급 A 41 · B 51 · C 10 · 미완료 1. 최다 교란요인 자연환경(수목)

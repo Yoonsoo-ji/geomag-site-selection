@@ -31,6 +31,8 @@ docs/output/data/
 docs/output/*_도상선점_조사카드_*.xlsx
 # 병합 취합 워크북(103카드+사진, 수백 MB) — 로컬 보관, 커밋 안 함
 docs/output/*_현장조사_취합_총괄_*.xlsx
+# 약도 PNG (make_sketches.py 로 재생성, 위성타일 필요)
+docs/output/_sketches/
 
 # ── Claude 내부 폴더 ─────────────────────────────────────────
 .claude/

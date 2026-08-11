@@ -30,9 +30,18 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 ROOT = Path(__file__).parent
-DEF_DIR = Path(r"D:\LX_yoons\2026_research\2026_지자기 연구\20260811_사전 현장 조사서 취합"
-               r"\2.조사서_부산울산")
+# 회신 조사서가 놓인 베이스 폴더(하위 폴더명은 자주 바뀌므로 재귀 탐색한다)
+DEF_BASE = Path(r"D:\LX_yoons\2026_research\2026_지자기 연구\20260811_사전 현장 조사서 취합")
+DEF_DIR = DEF_BASE   # 하위호환 별칭
 OUT_DIR = ROOT / "docs" / "output"
+
+
+def survey_files(base=None):
+    """베이스 폴더 아래에서 'N.조사서_지역.xlsx' 회신본을 재귀 탐색(폴더명 변경에 견고)."""
+    base = Path(base) if base else DEF_BASE
+    fs = [p for p in base.rglob("*.조사서_*.xlsx") if not p.name.startswith("~$")]
+    return sorted(fs, key=lambda p: int(re.match(r"(\d+)", p.name).group(1))
+                  if re.match(r"(\d+)", p.name) else 999)
 
 # (카드 라벨, 취합 열 이름)
 DIST_ITEMS = [("차량 영향", "차량영향"), ("전력시설", "전력시설"), ("통신시설", "통신시설"),
@@ -56,6 +65,20 @@ def label_rows(ws, col):
 
 def _s(v):
     return "" if v is None else str(v).strip()
+
+
+def dms2dd(v):
+    """도분초 문자열 → 십진도. 형식 무관(대시·°'\"·공백). 앞 숫자 3개를 도·분·초로 본다."""
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s or s == "-":
+        return None
+    nums = re.findall(r"\d+\.?\d*", s)
+    if len(nums) < 3:
+        return None
+    d, mi, se = float(nums[0]), float(nums[1]), float(nums[2])
+    return d + mi / 60 + se / 3600
 
 
 def _fmt_date(v):
@@ -144,13 +167,22 @@ def parse_card(ws):
     # A맵의 '위도'는 A5(위도(십진))와 충돌하므로 '경도'(A34) 앵커에서 offset 으로 읽는다.
     r_lon = A.get("경도")   # 34
     detail = {}
+    d["기준점ll"] = d["표지1ll"] = d["표지2ll"] = None
     if r_lon:
-        def coord(col):   # col 4=표지1(D), 6=표지2(F)
+        def coord(col):   # col 2=기준점(B), 4=표지1(D), 6=표지2(F)
             return {"경도": _s(ws.cell(r_lon, col).value),
                     "위도": _s(ws.cell(r_lon + 1, col).value),
                     "방위각": _s(ws.cell(r_lon + 3, col).value),
                     "거리": _s(ws.cell(r_lon + 4, col).value)}
-        detail = {"표지1": coord(4), "표지2": coord(6)}
+        detail = {"기준점": coord(2), "표지1": coord(4), "표지2": coord(6)}
+
+        def ll(col):   # (경도, 위도) 십진 or None
+            lon = dms2dd(ws.cell(r_lon, col).value)
+            lat = dms2dd(ws.cell(r_lon + 1, col).value)
+            return (lon, lat) if lon is not None and lat is not None else None
+        d["기준점ll"] = ll(2)
+        d["표지1ll"] = ll(4)
+        d["표지2ll"] = ll(6)
     d["방위표지상세"] = detail
     az1 = detail.get("표지1", {}).get("방위각", "")
     d["방위표지좌표"] = "입력" if az1 and az1 != "-" else "미입력"
@@ -528,14 +560,13 @@ def build_flat_workbook(recs, out_path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dir", default=str(DEF_DIR))
+    ap.add_argument("--dir", default=str(DEF_BASE))
     ap.add_argument("--out")
     a = ap.parse_args()
 
-    files = sorted(Path(a.dir).glob("*.xlsx"), key=lambda p: int(re.match(r"(\d+)", p.name).group(1))
-                   if re.match(r"(\d+)", p.name) else 999)
+    files = survey_files(a.dir)
     if not files:
-        print("조사서 xlsx 를 찾지 못했습니다.")
+        print(f"조사서 xlsx 를 찾지 못했습니다: {a.dir}")
         return
 
     recs = []
