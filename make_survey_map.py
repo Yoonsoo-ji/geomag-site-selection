@@ -16,6 +16,7 @@ aggregate_survey_xlsx 의 파서·검토 로직을 재사용해 103개 후보지
     python make_survey_map.py --dir <조사서폴더>
 """
 import argparse
+import json
 import re
 import sys
 from datetime import datetime
@@ -23,11 +24,23 @@ from pathlib import Path
 
 import folium
 
-from aggregate_survey_xlsx import (DEF_DIR, parse_workbook, review, key_disturb)
+from aggregate_survey_xlsx import parse_workbook, review, key_disturb, survey_files
 
 ROOT = Path(__file__).parent
+DATA = ROOT / "docs" / "data"
 OUT = ROOT / "docs" / "survey_review.html"
 PHOTO_DIR = ROOT / "docs" / "survey_photos"
+
+# 기존 지자기 측정점(24) — 첨부 현황표에서 1차 비고 초록 ∪ 2차 비고 파랑.
+# existing_sites.geojson(33) 중 아래 이름을 선별. (경주=영천, 임계=삼척 개명 반영)
+EXISTING_USE = [
+    # 1차 비고 초록(2012~2019 반복측정)
+    "춘양", "서산", "청양", "이원", "와도", "남지", "거제", "장흥",
+    "성산", "여주", "화천", "삼척", "제천",
+    # 2차 비고 파랑(2020~2025 측량)
+    "상주", "미원", "부안", "강화", "함양", "가야", "순천",
+]
+EXISTING_ALIAS = {"영천": "경주", "삼척": "임계"}   # 표 이름 → geojson 이름
 
 GRADE = {   # 등급 → (색, 라벨)
     "A": ("#2E8B57", "A · 선점 가능 (자기구배 조사)"),
@@ -136,6 +149,68 @@ def legend_html(counts, total):
         f"{items}</div>")
 
 
+def add_topo_layer(m):
+    """도엽(1:50,000) 경계 폴리곤 토글 — index.html 과 동일 스타일, 기본 꺼짐."""
+    p = DATA / "topo_sheets.geojson"
+    if not p.exists():
+        return 0
+    fc = json.load(open(p, encoding="utf-8"))
+    fg = folium.FeatureGroup(name="🗺️ 도엽 경계 (1:50,000)", show=False)
+    for f in fc["features"]:
+        pr = f["properties"]
+        nm, code = pr.get("sheet_name", ""), pr.get("sheet_code", "")
+        mcd = pr.get("sheet_mapidcd", "")
+        tip = (f"<b>{nm}</b><br><span style='color:#555;font-size:11px;'>"
+               f"NGII No.&nbsp;{(mcd + '  /  ' + code) if mcd else code}</span>")
+        coords = [[c[1], c[0]] for c in f["geometry"]["coordinates"][0]]
+        folium.Polygon(coords, color="#1A4A8A", weight=1.2, fill=True,
+                       fill_color="#4A90D9", fill_opacity=0.06,
+                       tooltip=folium.Tooltip(tip, sticky=True)).add_to(fg)
+    fg.add_to(m)
+    return len(fc["features"])
+
+
+def add_existing_layer(m):
+    """기존 지자기 측정점(EXISTING_USE) 토글 — ⭐ 마커, 기본 꺼짐."""
+    p = DATA / "existing_sites.geojson"
+    if not p.exists():
+        return 0
+    fc = json.load(open(p, encoding="utf-8"))
+    want = {EXISTING_ALIAS.get(n, n) for n in EXISTING_USE}
+    by_name = {f["properties"].get("name"): f for f in fc["features"]}
+    fg = folium.FeatureGroup(name=f"⭐ 기존 측정점 ({len(EXISTING_USE)})", show=False)
+    n = 0
+    for name in EXISTING_USE:
+        gname = EXISTING_ALIAS.get(name, name)
+        f = by_name.get(gname)
+        if not f:
+            print(f"    ! 기존측정점 미매칭: {name}", file=sys.stderr)
+            continue
+        pr = f["properties"]
+        lat, lon = pr["lat"], pr["lon"]
+        vf = lambda x, u="": f"{x:.4f}{u}" if isinstance(x, (int, float)) else "-"
+        pop = (
+            f"<div style='font-family:\"맑은 고딕\",sans-serif;font-size:12.5px;min-width:250px'>"
+            f"<b style='color:#8B4513'>⭐ 기존 측정점: {esc(name)}</b><hr style='margin:4px 0'>"
+            f"<b>위도:</b> {lat:.6f}° N &nbsp; <b>경도:</b> {lon:.6f}° E<br>"
+            f"<b>주소:</b> <span style='font-size:11px'>{esc(pr.get('address','-'))}</span><br>"
+            f"<hr style='margin:4px 0;border-color:#ddd'>"
+            f"<b>최초설치:</b> {pr.get('inst_year') or '-'}년 &nbsp; "
+            f"<b>최신관측:</b> {pr.get('obs_year','-')}년<br>"
+            f"<b>편각:</b> {vf(pr.get('decl'),'°')} &nbsp; <b>복각:</b> {vf(pr.get('incl'),'°')} &nbsp; "
+            f"<b>총자력:</b> {vf(pr.get('total'),' nT')}</div>")
+        folium.Marker(
+            [lat, lon],
+            icon=folium.DivIcon(html="<div style='font-size:22px;line-height:1;"
+                                "text-shadow:1px 1px 2px rgba(0,0,0,.4)'>⭐</div>",
+                                icon_anchor=(11, 11)),
+            tooltip=f"기존 측정점: {name}",
+            popup=folium.Popup(pop, max_width=320)).add_to(fg)
+        n += 1
+    fg.add_to(m)
+    return n
+
+
 def build(records):
     m = folium.Map(location=[36.3, 127.8], zoom_start=7, tiles=None, prefer_canvas=True)
     folium.TileLayer(
@@ -167,6 +242,9 @@ def build(records):
     for g in GRADE:
         groups[g].add_to(m)
 
+    add_topo_layer(m)
+    n_exist = add_existing_layer(m)
+
     folium.LayerControl(collapsed=False).add_to(m)
     total = sum(counts.values())
     m.get_root().html.add_child(folium.Element(legend_html(counts, total)))
@@ -185,11 +263,9 @@ def build(records):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dir", default=str(DEF_DIR))
+    ap.add_argument("--dir", default=None)
     a = ap.parse_args()
-    files = sorted(Path(a.dir).glob("*.xlsx"),
-                   key=lambda p: int(re.match(r"(\d+)", p.name).group(1))
-                   if re.match(r"(\d+)", p.name) else 999)
+    files = survey_files(a.dir)
     PHOTO_DIR.mkdir(parents=True, exist_ok=True)
     recs = []
     for f in files:

@@ -239,7 +239,7 @@ def augment_existing(path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--test", action="store_true")
-    ap.add_argument("--dir", default=str(SRC_DIR))
+    ap.add_argument("--dir", default=None)
     ap.add_argument("--augment", nargs="?", const="auto",
                     help="기존 취합 엑셀에 결과 열·약도만 추가(원본 미접근). "
                          "경로 생략 시 최신 취합_총괄 파일 자동 선택")
@@ -255,9 +255,7 @@ def main():
         augment_existing(target)
         return
 
-    files = sorted(Path(a.dir).glob("*.xlsx"),
-                   key=lambda p: int(re.match(r"(\d+)", p.name).group(1))
-                   if re.match(r"(\d+)", p.name) else 999)
+    files = survey_files(a.dir)
     if a.test:
         files = [f for f in files if re.match(r"(\d+)", f.name)
                  and int(re.match(r"(\d+)", f.name).group(1)) in (1, 2, 11)]
@@ -302,7 +300,7 @@ def main():
     print(f"카드 {total}장 병합 완료")
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    tag = "미리보기" if a.test else f"전체{total}건"
+    tag = "미리보기" if a.test else f"약도포함_전체{total}건"
     dst = OUT_DIR / f"{ts}_현장조사_취합_총괄_{tag}.xlsx"
     dst.parent.mkdir(parents=True, exist_ok=True)
     print("저장 중(대용량, 수 분 소요 가능)...")

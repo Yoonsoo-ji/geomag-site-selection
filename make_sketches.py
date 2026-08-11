@@ -118,13 +118,20 @@ def make_sketch(d, out_path):
                     bbox=dict(boxstyle="round,pad=0.18", fc="white", ec=col, alpha=0.85))
 
     # 위성 배경
+    basemap_ok = False
     for z in (18, 17, 16):
         try:
             ctx.add_basemap(ax, source=ctx.providers.Esri.WorldImagery,
                             crs="EPSG:3857", attribution=False, zoom=z)
+            basemap_ok = True
             break
         except Exception as e:   # noqa: BLE001
             print(f"    ! basemap z{z} 실패 {d['관리번호']}: {e}", file=sys.stderr)
+    if not basemap_ok:
+        # 위성배경 없이 저장하면 '빈 약도'가 남는다 → 저장하지 않고 다음 실행에서 재시도
+        plt.close(fig)
+        print(f"    ! 위성배경 실패로 저장 생략(재시도 대상): {d['관리번호']}", file=sys.stderr)
+        return False
 
     # 북 화살표
     ax.annotate("N", xy=(0.94, 0.93), xytext=(0.94, 0.80),
