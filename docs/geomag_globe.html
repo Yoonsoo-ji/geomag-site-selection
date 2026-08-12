@@ -85,10 +85,13 @@
   <button class="tg on" id="tgContour">등치선</button>
   <button class="tg on" id="tgLines">자기력선</button>
   <button class="tg on" id="tgSpin">자전</button>
+  <button class="tg" id="tgSites" style="border-color:rgba(120,220,150,.5)">선점 후보</button>
+  <button class="tg" id="tgExist" style="border-color:rgba(255,210,74,.5);color:#ffe4a0">기존점</button>
   <button class="tg" id="btnKorea">한국으로 ↦</button>
   <span id="yr">연도 <input id="year" type="range" min="2025" max="2030" step="0.1" value="2026.6"><b id="yearv">2026.6</b></span>
 </div>
 <div id="hint">드래그 회전 · 휠 확대 · 표면 커서 → 값</div>
+<div id="siteinfo" class="card" style="display:none;padding:11px 13px;width:240px;z-index:9;font-size:12px"></div>
 
 <script src="igrf14.js"></script>
 <script type="importmap">
@@ -211,6 +214,58 @@ function addGeo(url,mat,rr,handler){
 addGeo('data/world_coastline.geojson',coastMat,1.002);
 addGeo('data/korea_boundary.geojson',koreaMat,1.005);
 
+// ── 3단계: 선점 후보 103(등급 A/B/C) + 기존점 24 마커 ──
+const GRADE_COL={A:0x35d07f,B:0xffbf47,C:0xff5c5c,'미완료':0x9aa7b5};
+const candGroup=new THREE.Group(), existGroup=new THREE.Group();
+candGroup.visible=false; existGroup.visible=false; earthGroup.add(candGroup); earthGroup.add(existGroup);
+const markMeshes=[];
+function addSites(url,group,kind){
+  fetch(url).then(r=>r.json()).then(d=>{
+    d.features.forEach(f=>{
+      const c=f.geometry.coordinates, P=sph(c[1],c[0], kind==='cand'?1.006:1.007);
+      const geo=kind==='cand'?new THREE.SphereGeometry(0.007,10,10):new THREE.OctahedronGeometry(0.010);
+      const col=kind==='cand'?(GRADE_COL[f.properties.grade]||0xffffff):0xffd24a;
+      const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col}));
+      m.position.copy(P); m.userData={kind,props:f.properties}; group.add(m); markMeshes.push(m);
+    });
+  }).catch(e=>console.warn('sites:',e));
+}
+addSites('data/survey_sites.geojson',candGroup,'cand');
+addSites('data/existing24.geojson',existGroup,'exist');
+
+// 마커 클릭 → 정보 팝업
+const siteinfo=document.getElementById('siteinfo');
+function esc(s){return (s==null?'':String(s)).replace(/</g,'&lt;');}
+function showSite(u,x,y){
+  const p=u.props; let h;
+  if(u.kind==='cand'){const gc='#'+(GRADE_COL[p.grade]||0xffffff).toString(16).padStart(6,'0');
+    h=`<div style="font-weight:700;margin-bottom:5px"><span style="color:${gc}">●</span> ${esc(p.mid)} · ${esc(p.name)}</div>`
+     +`<div style="color:#a6bad2;line-height:1.6">등급 <b style="color:${gc}">${esc(p.grade)}</b> · 판정 ${esc(p.verdict)}<br>`
+     +`방위표지 ${esc(p.bang)} · 교란 ${esc(p.disturb)}<br>`
+     +`<span style="color:#8ea4bd">${esc(p.hq)} · ${esc(p.surveyor)} · ${esc(p.date)}</span></div>`;
+  } else {
+    const vf=v=>v==null?'-':(typeof v==='number'?v.toFixed(v>1000?1:3):v);
+    h=`<div style="font-weight:700;margin-bottom:5px;color:#ffd24a">⬥ 기존 측정점 · ${esc(p.name)}</div>`
+     +`<div style="color:#a6bad2;line-height:1.6">최초설치 ${esc(p.inst_year||'-')} · 최신관측 ${esc(p.obs_year||'-')}<br>`
+     +`편각 ${vf(p.decl)}° · 복각 ${vf(p.incl)}° · F ${vf(p.total)} nT<br>`
+     +`<span style="color:#8ea4bd;font-size:11px">${esc(p.address)}</span></div>`;
+  }
+  siteinfo.innerHTML=h; siteinfo.style.display='block';
+  const w=siteinfo.offsetWidth, hh=siteinfo.offsetHeight;
+  siteinfo.style.left=Math.min(x+12,innerWidth-w-8)+'px';
+  siteinfo.style.top=Math.min(y+12,innerHeight-hh-8)+'px';
+}
+function hideSite(){siteinfo.style.display='none';}
+renderer.domElement.addEventListener('click',ev=>{
+  const mm=markMeshes.filter(m=>m.parent&&m.parent.visible);
+  if(!mm.length){return;}
+  mouse.x=ev.clientX/innerWidth*2-1; mouse.y=-(ev.clientY/innerHeight)*2+1;
+  ray.setFromCamera(mouse,camera);
+  const hits=ray.intersectObjects(mm,false);
+  if(hits.length) showSite(hits[0].object.userData, ev.clientX, ev.clientY);
+  else hideSite();
+});
+
 // ── contour isolines (marching squares on grid) ──
 const contourGroup=new THREE.Group(); earthGroup.add(contourGroup);
 const LEVELS={F:{step:5000,zero:null,col:0xffffff},D:{step:5,zero:0,col:0xd8ecff},I:{step:15,zero:0,col:0xd8ecff}};
@@ -327,10 +382,13 @@ tgL.onclick=()=>{showLines=!showLines;tgL.classList.toggle('on',showLines);
 let spin=true; tgS.onclick=()=>{spin=!spin;tgS.classList.toggle('on',spin);};
 const btnKorea=document.getElementById('btnKorea');
 let camGoal=null;
-btnKorea.onclick=()=>{
-  spin=false;tgS.classList.remove('on');
-  camGoal=koreaCenter.clone().applyEuler(earthGroup.rotation).multiplyScalar(1.7);
-};
+function flyKorea(){camGoal=koreaCenter.clone().applyEuler(earthGroup.rotation).multiplyScalar(1.7);}
+btnKorea.onclick=()=>{spin=false;tgS.classList.remove('on');flyKorea();};
+const tgSites=document.getElementById('tgSites'), tgExist=document.getElementById('tgExist');
+tgSites.onclick=()=>{const on=!candGroup.visible;candGroup.visible=on;tgSites.classList.toggle('on',on);
+  if(on){spin=false;tgS.classList.remove('on');if(camera.position.length()>3)flyKorea();}else hideSite();};
+tgExist.onclick=()=>{const on=!existGroup.visible;existGroup.visible=on;tgExist.classList.toggle('on',on);
+  if(on){spin=false;tgS.classList.remove('on');if(camera.position.length()>3)flyKorea();}else hideSite();};
 const mob=document.getElementById('mob'),title=document.getElementById('title');
 mob.onclick=()=>{title.classList.toggle('min');mob.textContent=title.classList.contains('min')?'+':'−';};
 if(isMobile){title.classList.add('min');mob.textContent='+';}
