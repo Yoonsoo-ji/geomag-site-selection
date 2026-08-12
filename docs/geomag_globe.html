@@ -49,6 +49,22 @@
       border:1px solid var(--edge);background:rgba(6,14,28,.8);color:#cfe0f5;font-size:16px;line-height:26px;padding:0}
     #title.min p,#title.min .bd{display:none}#title.min{width:auto}#title.min h1{font-size:13px;margin:0}
   }
+  /* ── LUI 좌측 패널 (브라우저 계산, 서버 불필요) ── */
+  #lui{left:18px;top:18px;bottom:18px;width:360px;max-width:calc(100vw - 36px);padding:0;display:flex;flex-direction:column;overflow:hidden}
+  #luihead{padding:14px 16px 10px;border-bottom:1px solid var(--edge)}
+  #luihead h1{font-size:16px;margin:4px 0 0}
+  #chat{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px}
+  .msg{font-size:12.5px;line-height:1.6;padding:9px 11px;border-radius:11px;max-width:92%;white-space:pre-wrap;word-break:break-word}
+  .msg.u{align-self:flex-end;background:linear-gradient(180deg,#2a6bd0,#1c4c9c);color:#fff}
+  .msg.a{align-self:flex-start;background:rgba(20,40,72,.55);border:1px solid var(--edge);color:#e7f0fb}
+  .msg.a .t{font-size:10px;color:#8ea4bd;margin-top:5px}
+  #chips{display:flex;flex-wrap:wrap;gap:5px;padding:8px 12px;border-top:1px solid var(--edge)}
+  #chips button{border:1px solid var(--edge);background:rgba(20,40,72,.4);color:#bcd0e8;font-size:11px;padding:5px 9px;border-radius:99px;cursor:pointer}
+  #chips button:hover{background:rgba(79,150,255,.28)}
+  #inputrow{display:flex;gap:7px;padding:10px 12px 12px;border-top:1px solid var(--edge)}
+  #q{flex:1;background:rgba(4,10,22,.7);border:1px solid var(--edge);color:#eaf3ff;border-radius:10px;padding:9px 11px;font-size:12.5px;outline:none}
+  #send{border:0;background:linear-gradient(180deg,#2a6bd0,#1c4c9c);color:#fff;border-radius:10px;width:42px;font-size:15px;cursor:pointer}
+  @media (max-width:820px){#lui{left:8px;right:8px;top:8px;bottom:auto;width:auto;height:44vh}}
 </style>
 </head>
 <body>
@@ -56,10 +72,26 @@
 <div id="busy">자기장 계산 중…</div>
 <button id="mob">−</button>
 
-<div id="title" class="card">
-  <span class="bd">IGRF‑14 · 13차 구면조화 · ppigrf 검증 엔진</span>
-  <h1>세계 자기지도 3D</h1>
-  <p>전 지구 지자기를 표면에 색으로 입히고 등치선·자기력선을 함께 표시합니다. 성분을 바꿔 총자력·편각·복각을 보고, 표면에 커서를 올리면 실시간 값이 나옵니다. 「한국으로 ↦」로 한국을 확대해 볼 수 있습니다.</p>
+<div id="lui" class="card">
+  <div id="luihead">
+    <span class="bd">IGRF‑14 · 브라우저 계산 (서버·키 불필요)</span>
+    <h1>지자기 지구본 · 질의</h1>
+  </div>
+  <div id="chat">
+    <div class="msg a">지자기(편각·복각·총자력)와 선점 후보를 물어보세요. 아래 예시를 눌러도 됩니다.
+IGRF-14 수치는 브라우저에서 바로 계산합니다.</div>
+  </div>
+  <div id="chips">
+    <button data-q="2027년 독도 편각과 복각">독도 편각</button>
+    <button data-q="서울 편각이 2025에서 2030 얼마나 변해?">서울 영년변화</button>
+    <button data-q="강원 A등급 후보지">강원 A등급</button>
+    <button data-q="부적합 후보지">부적합 후보지</button>
+    <button data-q="편각이란?">편각이란?</button>
+  </div>
+  <div id="inputrow">
+    <input id="q" placeholder="질문… 예: 제주 복각은?" autocomplete="off">
+    <button id="send">➤</button>
+  </div>
 </div>
 
 <div id="right" class="card">
@@ -233,7 +265,7 @@ function addSites(url,group,kind){
       const geo=kind==='cand'?new THREE.SphereGeometry(0.007,10,10):new THREE.OctahedronGeometry(0.010);
       const col=kind==='cand'?(GRADE_COL[f.properties.grade]||0xffffff):0xffd24a;
       const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col}));
-      m.position.copy(P); m.userData={kind,props:f.properties}; group.add(m); markMeshes.push(m);
+      m.position.copy(P); m.userData={kind,props:{...f.properties,lat:c[1],lon:c[0]}}; group.add(m); markMeshes.push(m);
     });
   }).catch(e=>console.warn('sites:',e));
 }
@@ -409,9 +441,8 @@ function closeDetail(){ if(!detailOpen)return; detailOpen=false;
   camGoal=koreaCenter.clone().applyEuler(earthGroup.rotation).multiplyScalar(2.9); }  // 재트리거 방지
 document.getElementById('detailClose').onclick=closeDetail;
 document.getElementById('btnDetail').onclick=()=>{ if(camera.position.length()>3)flyKorea(); openDetail(); };
-const mob=document.getElementById('mob'),title=document.getElementById('title');
-mob.onclick=()=>{title.classList.toggle('min');mob.textContent=title.classList.contains('min')?'+':'−';};
-if(isMobile){title.classList.add('min');mob.textContent='+';}
+const mob=document.getElementById('mob'), lui=document.getElementById('lui');
+if(mob) mob.onclick=()=>{lui.style.display=lui.style.display==='none'?'flex':'none';mob.textContent=lui.style.display==='none'?'+':'−';};
 
 // hover
 const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
@@ -438,12 +469,87 @@ function animate(t){requestAnimationFrame(animate);const dt=Math.min(.05,(t-last
     if(camera.position.distanceTo(camGoal)<0.02) camGoal=null;}
   for(const p of particles){p.userData.phase=(p.userData.phase+dt*p.userData.speed)%1;p.position.copy(p.userData.curve.getPointAt(p.userData.phase));}
   // 마커는 카메라 거리에 비례해 스케일 → 화면상 일정 크기(확대해도 안 커짐)
-  if(markMeshes.length){const ms=camera.position.length()*0.5; for(const m of markMeshes) m.scale.setScalar(ms);}
+  if(markMeshes.length){const ms=camera.position.length()*0.5; for(const m of markMeshes) m.scale.setScalar(ms*(m.userData.hi?1.9:1));}
   // 깊이 확대하면 한국 상세 위성지도(survey_review) 드릴다운
   if(!detailOpen && (candGroup.visible||existGroup.visible) && camera.position.length()<1.48) openDetail();
   controls.update();comp.render();}
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);comp.setSize(innerWidth,innerHeight);});
+
+// ── LUI 브라우저 계산 어시스턴트 (서버·LLM·키 불필요) ──
+const chatEl=document.getElementById('chat'), qEl=document.getElementById('q'), sendEl=document.getElementById('send');
+const GAZ={서울:[37.5665,126.978],부산:[35.1796,129.0756],인천:[37.4563,126.7052],대구:[35.8714,128.6014],
+ 대전:[36.3504,127.3845],광주:[35.1595,126.8526],울산:[35.5384,129.3114],제주:[33.4996,126.5312],
+ 독도:[37.2429,131.8664],울릉도:[37.4845,130.9057],백령도:[37.966,124.61],마라도:[33.1216,126.2683],
+ 강릉:[37.7519,128.8761],춘천:[37.8813,127.73],원주:[37.3422,127.9202],포항:[36.019,129.3435],
+ 여수:[34.7604,127.6622],순천:[34.9506,127.4872],목포:[34.8118,126.3922],군산:[35.9676,126.7369],
+ 전주:[35.8242,127.148],청주:[36.6424,127.489],천안:[36.8151,127.1139],충주:[36.9910,127.9259],
+ 창원:[35.2280,128.6811],진주:[35.1800,128.1076],거제:[34.8806,128.6211],통영:[34.8544,128.4331],
+ 경주:[35.8562,129.2247],안동:[36.5684,128.7294],속초:[38.207,128.5918],대관령:[37.6873,128.7593],
+ 남대서양:[-25,-45]};
+const HQK=["강원","경남","대구경북","경북","충북","대전세종충남","충남","전북","광주전남","전남","제주","부산울산","부산","울산","서울경기북부","인천경기남부","경기","인천"];
+const FAQ=[
+ [/편각|declination/i,"편각(D)은 진북과 자침이 가리키는 자북 사이의 각도입니다. 지점·시점마다 IGRF로 계산되며 국가기본도 자침편차 표기에 쓰입니다. 서쪽 −, 동쪽 +."],
+ [/복각|inclination/i,"복각(I)은 자기장 벡터가 수평면과 이루는 기울기입니다. 자기적도 0°, 자북극 +90°. 한국은 약 +53~55°."],
+ [/총자력|전자력|세기/i,"총자력(F)은 지자기장의 총 세기(nT)입니다. 한국은 약 49,000~51,500 nT, 지각 자기이상으로 국지 변동이 있습니다."],
+ [/영년변화|장기변화|왜.*반복/i,"영년변화는 지구 외핵 유동으로 자기장이 해마다 변하는 현상입니다. 한국 편각은 연 수 분(′) 변해, 반복측정으로 기준년을 갱신해야 정확한 자편각을 유지합니다."],
+ [/등급|판정 기준/i,"선점 검토 등급 — A: 선점 가능(자기구배 조사) / B: 조건부(현장 재확인) / C: 부적합(대체 후보지 검토). 자기교란 항목·방위표지 가능 여부로 판정합니다."],
+ [/방위표지/i,"방위표지는 지자기점의 진북 기준 방위를 잡는 표지입니다. 설치 불가 시 지자기점 성립이 어려워 등급 C로 분류합니다."],
+ [/lmm|지역 자기장|한국 모델/i,"LMM(한반도 지역 자기장 모델)=IGRF+지역보정+지각이상. External(외부장) 미적용 등 미완성이라 이 지구본엔 반영 보류 중입니다."]];
+function igrfAt(la,lo,y){return window.IGRF.igrfElements(la,lo,0,y);}
+function dms(d){const s=d<0?'-':'',a=Math.abs(d),g=a|0,mn=((a-g)*60)|0,sc=(((a-g)*60-mn)*60);return s+g+'°'+mn+"'"+sc.toFixed(0)+'"';}
+function allPlaces(){const ns=Object.keys(GAZ);for(const m of markMeshes){const n=m.userData.props.name;if(n&&!ns.includes(n))ns.push(n);}return ns;}
+function coordOf(nm){if(GAZ[nm])return GAZ[nm];const m=markMeshes.find(x=>x.userData.props.name===nm);return m?[m.userData.props.lat,m.userData.props.lon]:null;}
+function findPlaces(msg){return allPlaces().sort((a,b)=>b.length-a.length).filter(n=>msg.includes(n))
+  .filter((n,i,a)=>!a.some(o=>o!==n&&o.includes(n))).slice(0,3);}
+function findYears(msg){return (msg.match(/20\d{2}/g)||[]).map(Number).filter(y=>y>=2015&&y<=2030);}
+function querySites(msg){
+  const grades=['A','B','C'].filter(g=>new RegExp('등급\\s*'+g+'|'+g+'\\s*등급|\\b'+g+'\\s*급').test(msg));
+  if(/부적합/.test(msg)&&!grades.length)grades.push('C');
+  const hq=HQK.find(h=>msg.includes(h)); const res=[];
+  for(const mk of markMeshes){if(mk.userData.kind!=='cand')continue;const p=mk.userData.props;
+    if(grades.length&&!grades.includes(p.grade))continue; if(hq&&!(p.hq||'').includes(hq))continue; res.push(p);}
+  return {res,grades,hq};
+}
+function clientAnswer(msg){
+  msg=(msg||'').trim();
+  const siteSignal=/후보|선점|부적합|방위표지|본부|대체/.test(msg)||['A','B','C'].some(g=>new RegExp('등급\\s*'+g+'|'+g+'\\s*등급|\\b'+g+'급').test(msg));
+  const places=findPlaces(msg);
+  if(!places.length && !siteSignal){for(const[re,ans]of FAQ)if(re.test(msg))return{answer:ans,actions:[]};}
+  const actions=[], out=[], years=findYears(msg), yr=years[0]||2026.6;
+  if(siteSignal){
+    const{res,grades,hq}=querySites(msg); const gc={A:0,B:0,C:0}; res.forEach(r=>gc[r.grade]++);
+    out.push(`🔎 선점 검색 — ${grades.length?'등급 '+grades.join('/'):'전체'}${hq?' · '+hq:''} → ${res.length}곳 (A${gc.A}·B${gc.B}·C${gc.C})`);
+    res.slice(0,10).forEach(r=>out.push(`• ${r.mid} ${r.name} (${r.hq||''}) · ${r.grade}·${r.verdict}·방위표지 ${r.bang||'-'}`));
+    if(res.length>10)out.push(`  …외 ${res.length-10}곳`);
+    if(res.length){actions.push({type:'highlight',mids:res.map(r=>r.mid)});actions.push({type:'focus_korea'});}
+  }
+  if(places.length && !siteSignal){
+    places.forEach(nm=>{const c=coordOf(nm);if(!c)return;const e=igrfAt(c[0],c[1],yr);
+      out.push(`📍 ${nm} (${c[0].toFixed(3)}°N, ${c[1].toFixed(3)}°E) · ${(+yr).toFixed(0)}년\n   편각 D ${e.D.toFixed(2)}° (${dms(e.D)}) · 복각 I ${e.I.toFixed(2)}° · 총자력 F ${Math.round(e.F).toLocaleString()} nT · 수평 H ${Math.round(e.H).toLocaleString()} nT`);
+      actions.push({type:'focus',lat:c[0],lon:c[1]});
+      if(years.length>=2){const e2=igrfAt(c[0],c[1],years[1]);const dD=(e2.D-e.D)*60;
+        out.push(`   ↳ ${years[0]}→${years[1]} 영년변화: 편각 ΔD ${dD>=0?'+':''}${dD.toFixed(1)}′ (${(dD/60).toFixed(3)}°) · ΔF ${e2.F-e.F>=0?'+':''}${Math.round(e2.F-e.F)} nT`);}
+    });
+  }
+  if(!out.length)return{answer:"지명(예: 독도·서울·거제)이나 등급/본부(예: 강원 A등급)를 넣어 물어보세요. '편각이란?' 같은 개념 질문도 됩니다.",actions:[]};
+  return{answer:out.join('\n'),actions};
+}
+function addMsg(text,cls,tag){const d=document.createElement('div');d.className='msg '+cls;d.textContent=text;
+  if(tag){const t=document.createElement('div');t.className='t';t.textContent=tag;d.appendChild(t);}
+  chatEl.appendChild(d);chatEl.scrollTop=chatEl.scrollHeight;return d;}
+function highlightMids(mids){const set=new Set(mids||[]);if(set.size){candGroup.visible=true;tgSites.classList.add('on');}
+  for(const m of markMeshes){if(m.userData.kind!=='cand')continue;const on=set.has(m.userData.props.mid);
+    m.userData.hi=on;m.material.transparent=!on;m.material.opacity=on?1:0.32;}}
+function applyActions(actions){(actions||[]).forEach(a=>{
+  if(a.type==='focus'){spin=false;tgS.classList.remove('on');camGoal=sph(a.lat,a.lon,1).applyEuler(earthGroup.rotation).multiplyScalar(1.7);}
+  else if(a.type==='focus_korea'){flyKorea();spin=false;tgS.classList.remove('on');}
+  else if(a.type==='highlight'){highlightMids(a.mids);}});}
+function ask(q){q=(q||'').trim();if(!q)return;addMsg(q,'u');qEl.value='';
+  const r=clientAnswer(q);addMsg(r.answer,'a','🧮 브라우저 계산');applyActions(r.actions);qEl.focus();}
+sendEl.onclick=()=>ask(qEl.value);
+qEl.addEventListener('keydown',e=>{if(e.key==='Enter')ask(qEl.value);});
+document.querySelectorAll('#chips button').forEach(b=>b.onclick=()=>ask(b.dataset.q));
 </script>
 </body>
 </html>
