@@ -814,12 +814,21 @@ CYG 로 제거 가능한 일변동은 편각 6.7′ 인데 미설명 잔차가 3
 ⚠️ 사용자 제공 예시(degree-1 쌍극자·파란 구+선)를 **그대로 답습하지 말 것** — 표면 색지도
 중심의 다른 디자인. (3단계 선점/기존점 레이어 예정.)
 
-**2단계 — 한국 LMM 조밀화**: `lmm_model.json` 의 crustal 격자(154×198, 2.8km, nT
-지각이상)를 fetch → 한국 영역(125.75~129.575°E, 33.2~38.125°N) 위에 DataTexture 패치
-(shell mesh r=1.008)로 오버레이. IGRF 매끈한 표면 위에 crustal 미세구조가 나타난다.
-`「한국으로 ↦」` 버튼(카메라 트윈 + 패치 자동 on) · `「한국 LMM」` 토글(IGRF↔LMM 비교).
-crustal 인덱싱은 lmm.html 과 동일: `values[j*nlon+i]`, i=경도(서→동, i0=lon0), j=위도
-(남→북, j0=lat0). null(자료공백)은 alpha 0 으로 IGRF 하부 노출. 색범위 ±(2~98분위수 절대값).
+**2단계 — 한국 LMM 조밀화**: 한국 위에 **LMM(F/D/I)** 패치를 성분 선택과 연동해 오버레이.
+`lmm.html` 의 `lmm()` 결합식을 그대로 복제 — **D=IGRF_D+reg_D, I=IGRF_I+reg_I,
+F=IGRF_F+crustal(F만)+reg_F**, External=null(**미적용, 잠정 모델**). regional 은 degree-1
+다항식(u=lat−36, v=lon−127.5, 계수 `lmm_model.json.regional.{D,I,F}`). crustal 은 154×198
+2.8km 격자(`values[j*nlon+i]`, i=경도 서→동 i0=lon0, j=위도 남→북 j0=lat0). 색은 전역 지도와
+**동일 색범위**(`colorAt(MODE)`)로 칠해 F 모드는 지각 미세구조, D/I 모드는 지역보정 offset 이
+보인다. 성분 전환 시 `setKoreaTexture(MODE)`, 연도 변경 시 `computeKoreaLMM(year)` 재계산.
+`「한국으로 ↦」`(카메라 이징 camGoal + 패치 자동 on) · `「한국 LMM」` 토글(IGRF↔LMM 비교) ·
+하단에 External 미적용 잠정 모델 안내.
+
+| 유의점 | 내용 |
+|---|---|
+| **패치 DoubleSide** | 패치 메시가 `FrontSide` 면 winding 에 따라 뒷면 컬링으로 안 보임 → `DoubleSide` 필수 |
+| **카메라 이징** | `camGoal` 을 두고 animate 에서 `camera.position.lerp(camGoal, 1-0.0025^dt)`; OrbitControls 직접 set+`update()` 는 damping 간섭 없이 유지됨(검증). `minDistance` 를 1.25 로 낮춰야 확대됨 |
+| **LMM 검증** | 서울 F 51,372→51,222(지각 −149), 가야 −144nT — CLAUDE.md §13 문서값과 일치 |
 
 ```
 docs/igrf14.js               # IGRF-14 구면조화 엔진(재사용 모듈) — window.IGRF
