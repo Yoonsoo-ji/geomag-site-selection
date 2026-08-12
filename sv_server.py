@@ -159,6 +159,32 @@ class Handler(SimpleHTTPRequestHandler):
             return self._api_minute()
         return super().do_GET()
 
+    def do_POST(self):
+        if self.path.startswith("/api/chat"):
+            return self._api_chat()
+        self.send_error(404)
+
+    def do_OPTIONS(self):   # CORS preflight
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def _api_chat(self):
+        try:
+            n = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(n).decode("utf-8")) if n else {}
+        except Exception as e:            # noqa: BLE001
+            return self._send_json({"answer": f"요청 파싱 오류: {e}", "actions": [],
+                                    "tier": "data-only"}, 400)
+        try:
+            import globe_agent
+            out = globe_agent.answer(body.get("message", ""))
+        except Exception as e:            # noqa: BLE001
+            out = {"answer": f"에이전트 오류: {e}", "actions": [], "tier": "data-only"}
+        return self._send_json(out)
+
     def _send_json(self, obj, code=200):
         body = json.dumps(obj, separators=(",", ":")).encode("utf-8")
         self.send_response(code)

@@ -834,6 +834,21 @@ CYG 로 제거 가능한 일변동은 편각 6.7′ 인데 미설명 잔차가 3
 `openDetail`/`closeDetail`)로 띄운다. 「◂ 지구본으로」로 닫으면 카메라가 물러나(×2.9) 재트리거
 방지. iframe src 는 최초 열 때만 설정(지연 로드).
 
+**LLM 질의판 (로컬 서버 전용)** — `docs/geomag_globe_llm.html` (globe 복사 + 좌측 LUI 패널).
+`sv_server.py` 의 `POST /api/chat` → `globe_agent.answer()` 가 처리. 2026_ex_simul LUI 패턴을
+따라 **소형 로컬 모델의 tool-calling 을 피하고**, 서버가 데이터·수치를 계산해 컨텍스트로 주입
+→ LLM 은 서술만. ① IGRF 계산(ppigrf, 지명 게이지티어+영년변화) ③ 선점 검색(survey_sites/
+existing24). 반환 `{answer, actions, tier}`, actions=focus/highlight/focus_korea 로 지구본 조종.
+LM Studio(`localhost:1234/v1`, exaone-3.5-2.4b, `openai` SDK, 키 불필요) 미실행이면 서버 계산
+결과만(tier=data-only, `max_retries=0` 로 즉시 폴백). 실행: `python sv_server.py` + LM Studio.
+⚠ **Pages 배포엔 부적합**(/api/chat 서버 필요) — Pages 판은 `geomag_globe.html`(LLM 없음).
+
+```
+① LM Studio 실행(모델 로드) → localhost:1234
+② python sv_server.py            # docs 서빙 + /api/chat
+③ http://127.0.0.1:8899/geomag_globe_llm.html
+```
+
 **해상도 주의(3단계 대비)** — 전역 F/D/I 격자는 2°(91×181≈16k igrf 호출/재계산). 올리면
 계산량이 **해상도²** 로 증가(1°≈4×·0.5°≈16×, 연도 변경마다 재계산). 표면은 `LinearFilter`
 쌍선형 보간이라 2°도 매끈하고, **선점/기존점 마커는 실좌표 `sph()` 배치라 지도 해상도와
