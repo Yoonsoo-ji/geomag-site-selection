@@ -88,10 +88,17 @@
   <button class="tg" id="tgSites" style="border-color:rgba(120,220,150,.5)">선점 후보</button>
   <button class="tg" id="tgExist" style="border-color:rgba(255,210,74,.5);color:#ffe4a0">기존점</button>
   <button class="tg" id="btnKorea">한국으로 ↦</button>
+  <button class="tg" id="btnDetail" title="한국 상세 위성지도(선점 검토)">🛰 상세</button>
   <span id="yr">연도 <input id="year" type="range" min="2025" max="2030" step="0.1" value="2026.6"><b id="yearv">2026.6</b></span>
 </div>
 <div id="hint">드래그 회전 · 휠 확대 · 표면 커서 → 값</div>
 <div id="siteinfo" class="card" style="display:none;padding:11px 13px;width:240px;z-index:9;font-size:12px"></div>
+<div id="detailwrap" style="display:none;opacity:0;transition:opacity .45s;position:fixed;inset:0;z-index:20;background:#00030a">
+  <iframe id="detail" title="한국 상세 위성지도" style="width:100%;height:100%;border:0;display:block"></iframe>
+  <button id="detailClose" style="position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:21;
+    border:1px solid rgba(120,175,255,.4);background:rgba(9,17,33,.9);color:#eaf3ff;font-size:13px;
+    padding:9px 16px;border-radius:11px;cursor:pointer;backdrop-filter:blur(8px)">◂ 지구본으로 돌아가기</button>
+</div>
 
 <script src="igrf14.js"></script>
 <script type="importmap">
@@ -389,6 +396,19 @@ tgSites.onclick=()=>{const on=!candGroup.visible;candGroup.visible=on;tgSites.cl
   if(on){spin=false;tgS.classList.remove('on');if(camera.position.length()>3)flyKorea();}else hideSite();};
 tgExist.onclick=()=>{const on=!existGroup.visible;existGroup.visible=on;tgExist.classList.toggle('on',on);
   if(on){spin=false;tgS.classList.remove('on');if(camera.position.length()>3)flyKorea();}else hideSite();};
+
+// ── 한국 상세 위성지도(survey_review.html) 드릴다운 ──
+const detailwrap=document.getElementById('detailwrap'), detailFrame=document.getElementById('detail');
+let detailOpen=false;
+function openDetail(){ if(detailOpen)return; detailOpen=true; hideSite();
+  if(!detailFrame.getAttribute('src')) detailFrame.setAttribute('src','survey_review.html');
+  detailwrap.style.display='block'; setTimeout(()=>detailwrap.style.opacity=1,20); }
+function closeDetail(){ if(!detailOpen)return; detailOpen=false;
+  detailwrap.style.opacity=0; setTimeout(()=>detailwrap.style.display='none',460);
+  spin=false; tgS.classList.remove('on');
+  camGoal=koreaCenter.clone().applyEuler(earthGroup.rotation).multiplyScalar(2.9); }  // 재트리거 방지
+document.getElementById('detailClose').onclick=closeDetail;
+document.getElementById('btnDetail').onclick=()=>{ if(camera.position.length()>3)flyKorea(); openDetail(); };
 const mob=document.getElementById('mob'),title=document.getElementById('title');
 mob.onclick=()=>{title.classList.toggle('min');mob.textContent=title.classList.contains('min')?'+':'−';};
 if(isMobile){title.classList.add('min');mob.textContent='+';}
@@ -417,6 +437,10 @@ function animate(t){requestAnimationFrame(animate);const dt=Math.min(.05,(t-last
   if(camGoal){camera.position.lerp(camGoal, 1-Math.pow(0.0025,dt)); controls.target.set(0,0,0);
     if(camera.position.distanceTo(camGoal)<0.02) camGoal=null;}
   for(const p of particles){p.userData.phase=(p.userData.phase+dt*p.userData.speed)%1;p.position.copy(p.userData.curve.getPointAt(p.userData.phase));}
+  // 마커는 카메라 거리에 비례해 스케일 → 화면상 일정 크기(확대해도 안 커짐)
+  if(markMeshes.length){const ms=camera.position.length()*0.5; for(const m of markMeshes) m.scale.setScalar(ms);}
+  // 깊이 확대하면 한국 상세 위성지도(survey_review) 드릴다운
+  if(!detailOpen && (candGroup.visible||existGroup.visible) && camera.position.length()<1.48) openDetail();
   controls.update();comp.render();}
 requestAnimationFrame(animate);
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);comp.setSize(innerWidth,innerHeight);});
