@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>세계 자기지도 3D — IGRF-14 + 한국 LMM</title>
+<title>세계 자기지도 3D — IGRF-14</title>
 <style>
   :root{--ink:#eaf3ff;--pan:rgba(9,17,33,.82);--edge:rgba(120,175,255,.18);--acc:#ffb454}
   html,body{margin:0;height:100%;overflow:hidden;background:#00030a;color:var(--ink);
@@ -59,7 +59,7 @@
 <div id="title" class="card">
   <span class="bd">IGRF‑14 · 13차 구면조화 · ppigrf 검증 엔진</span>
   <h1>세계 자기지도 3D</h1>
-  <p>전 지구 지자기를 표면에 색으로 입히고 등치선·자기력선을 함께 표시합니다. 성분을 바꿔 총자력·편각·복각을 보고, 표면에 커서를 올리면 실시간 값이 나옵니다. <b style="color:#ffd7a0">「한국으로 ↦」 → 「한국 LMM」 켜면 IGRF보다 조밀한 2.8km 지각이상이 나타납니다.</b></p>
+  <p>전 지구 지자기를 표면에 색으로 입히고 등치선·자기력선을 함께 표시합니다. 성분을 바꿔 총자력·편각·복각을 보고, 표면에 커서를 올리면 실시간 값이 나옵니다. 「한국으로 ↦」로 한국을 확대해 볼 수 있습니다.</p>
 </div>
 
 <div id="right" class="card">
@@ -85,15 +85,10 @@
   <button class="tg on" id="tgContour">등치선</button>
   <button class="tg on" id="tgLines">자기력선</button>
   <button class="tg on" id="tgSpin">자전</button>
-  <button class="tg" id="tgLMM" style="border-color:rgba(255,180,84,.5);color:#ffd7a0">한국 LMM</button>
   <button class="tg" id="btnKorea">한국으로 ↦</button>
   <span id="yr">연도 <input id="year" type="range" min="2025" max="2030" step="0.1" value="2026.6"><b id="yearv">2026.6</b></span>
 </div>
 <div id="hint">드래그 회전 · 휠 확대 · 표면 커서 → 값</div>
-<div id="lmmnote" style="display:none;position:absolute;left:50%;bottom:64px;transform:translateX(-50%);z-index:6;
-  font-size:10.5px;color:#ffd7a0;background:rgba(38,25,6,.72);border:1px solid rgba(255,180,84,.4);
-  padding:5px 12px;border-radius:99px;white-space:nowrap;backdrop-filter:blur(6px)">
-  한국 LMM = IGRF + 지역보정 + 지각이상(F) · ⚠ External(외부장) 미적용 — 잠정 모델</div>
 
 <script src="igrf14.js"></script>
 <script type="importmap">
@@ -287,47 +282,8 @@ function buildLines(year){
   }
 }
 
-// ── 한국 LMM 패치 (LMM = IGRF + Regional + Crustal, 성분 F/D/I 연동) ──
-// ⚠ External(외부장) 미적용 — 잠정 모델. lmm.html 의 lmm() 결합식과 동일:
-//   D=IGRF_D+reg_D, I=IGRF_I+reg_I, F=IGRF_F+crustal(F만)+reg_F.
-let koreaPatch=null, koreaCenter=null, LMMC=null, LMMR=null, kF=null, kD=null, kI=null;
-function regional(lat,lon,comp){const u=lat-LMMR.lat0, v=lon-LMMR.lon0; const c=LMMR[comp]; return c[0]+c[1]*u+c[2]*v;}
-function computeKoreaLMM(year){
-  const C=LMMC, n=C.nlon*C.nlat;
-  if(!kF){kF=new Float32Array(n);kD=new Float32Array(n);kI=new Float32Array(n);}
-  for(let j=0;j<C.nlat;j++){const lat=C.lat0+j*C.dlat;
-    for(let i=0;i<C.nlon;i++){const lon=C.lon0+i*C.dlon, k=j*C.nlon+i;
-      const b=IGRF.igrfElements(lat,lon,0,year), cr=C.values[k];
-      kD[k]=b.D+regional(lat,lon,'D');
-      kI[k]=b.I+regional(lat,lon,'I');
-      kF[k]=b.F+(cr===null?0:cr)+regional(lat,lon,'F');   // 지각은 F 에만 기여
-    }}
-}
-function setKoreaTexture(mode){
-  if(!koreaPatch||!kF) return;
-  const C=LMMC, grid=mode==='F'?kF:mode==='D'?kD:kI, N=C.nlon*C.nlat, data=new Uint8Array(N*4);
-  for(let k=0;k<N;k++){const c=colorAt(mode,grid[k]);data[k*4]=c[0];data[k*4+1]=c[1];data[k*4+2]=c[2];data[k*4+3]=246;}
-  const tex=new THREE.DataTexture(data,C.nlon,C.nlat,THREE.RGBAFormat);
-  tex.flipY=false;tex.minFilter=THREE.LinearFilter;tex.magFilter=THREE.LinearFilter;tex.colorSpace=THREE.SRGBColorSpace;tex.needsUpdate=true;
-  if(koreaPatch.material.map)koreaPatch.material.map.dispose();
-  koreaPatch.material.map=tex; koreaPatch.material.needsUpdate=true;
-}
-function buildKoreaLMM(json){
-  LMMC=json.crustal; LMMR=json.regional;
-  const C=LMMC, lonW=C.lon0, lonE=C.lon0+(C.nlon-1)*C.dlon, latS=C.lat0, latN=C.lat0+(C.nlat-1)*C.dlat;
-  const cols=80, rows=104, rr=1.008, pos=[], uv=[], idx=[];
-  for(let r=0;r<rows;r++)for(let cc=0;cc<cols;cc++){const u=cc/(cols-1), vv=r/(rows-1);
-    const P=sph(latS+(latN-latS)*vv, lonW+(lonE-lonW)*u, rr); pos.push(P.x,P.y,P.z); uv.push(u,vv);}
-  for(let r=0;r<rows-1;r++)for(let cc=0;cc<cols-1;cc++){const a=r*cols+cc,b=a+1,d=a+cols,e=d+1;idx.push(a,d,b,b,d,e);}
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); geo.setIndex(idx);
-  koreaPatch=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide}));
-  koreaPatch.visible=false; koreaPatch.renderOrder=2; earthGroup.add(koreaPatch);
-  koreaCenter=sph((latS+latN)/2,(lonW+lonE)/2,1);
-  computeKoreaLMM(+document.getElementById('year').value); setKoreaTexture(MODE);
-}
-fetch('data/lmm_model.json').then(r=>r.json()).then(buildKoreaLMM).catch(e=>console.warn('LMM:',e));
+// ── 한국 중심(카메라 이동용) — 한국 LMM 조밀 패치는 2단계 보류(모델 미완성) ──
+const koreaCenter=sph(36.2,127.8,1);
 
 // ── legend ──
 const legc=document.getElementById('legcanvas'), lg=legc.getContext('2d');
@@ -347,12 +303,11 @@ function applyMode(){
   mapMat.uniforms.map.value=buildTexture(MODE);
   buildContours(MODE); contourGroup.visible=showContour;
   drawLegend(MODE);
-  setKoreaTexture(MODE);   // 한국 LMM 패치도 성분 연동
 }
 function fullRebuild(year){
   busy.style.opacity=1;
   setTimeout(()=>{   // setTimeout 은 탭이 숨겨져도 실행 (rAF 는 멈춤)
-    computeGrid(year); if(koreaPatch) computeKoreaLMM(year); applyMode();
+    computeGrid(year); applyMode();
     if(showLines) buildLines(year); else {lineGroup.clear();partGroup.clear();particles=[];}
     busy.style.opacity=0;
   },15);
@@ -370,15 +325,11 @@ tgC.onclick=()=>{showContour=!showContour;tgC.classList.toggle('on',showContour)
 tgL.onclick=()=>{showLines=!showLines;tgL.classList.toggle('on',showLines);
   if(showLines)buildLines(+yearEl.value);else{lineGroup.clear();partGroup.clear();particles=[];}};
 let spin=true; tgS.onclick=()=>{spin=!spin;tgS.classList.toggle('on',spin);};
-const tgLMM=document.getElementById('tgLMM'), btnKorea=document.getElementById('btnKorea');
+const btnKorea=document.getElementById('btnKorea');
 let camGoal=null;
-const lmmnote=document.getElementById('lmmnote'), hint=document.getElementById('hint');
-function updLmmNote(on){lmmnote.style.display=on?'block':'none'; hint.style.display=on?'none':'';}
-tgLMM.onclick=()=>{if(!koreaPatch)return;const on=!koreaPatch.visible;koreaPatch.visible=on;tgLMM.classList.toggle('on',on);updLmmNote(on);};
 btnKorea.onclick=()=>{
-  if(koreaPatch){koreaPatch.visible=true;tgLMM.classList.add('on');updLmmNote(true);}
   spin=false;tgS.classList.remove('on');
-  camGoal=(koreaCenter||sph(36,127.7,1)).clone().applyEuler(earthGroup.rotation).multiplyScalar(1.7);
+  camGoal=koreaCenter.clone().applyEuler(earthGroup.rotation).multiplyScalar(1.7);
 };
 const mob=document.getElementById('mob'),title=document.getElementById('title');
 mob.onclick=()=>{title.classList.toggle('min');mob.textContent=title.classList.contains('min')?'+':'−';};

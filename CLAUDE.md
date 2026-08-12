@@ -808,27 +808,27 @@ CYG 로 제거 가능한 일변동은 편각 6.7′ 인데 미설명 잔차가 3
 
 ## 15. 3D 지구 자기장 (IGRF-14) — `docs/geomag_globe.html`
 
-전 지구 자기장을 3D 지구본에 표출. **1·2단계 완료**: 자기장을 지구 표면에 색으로 입힌
+전 지구 자기장을 3D 지구본에 표출. **1단계 완료**: 자기장을 지구 표면에 색으로 입힌
 "세계 자기지도" — 성분(F·D·I) 전환 + 등치선(등자력·등편각·등복각, agonic·dip-equator
-강조) + 세계 해안선 + 한국 경계 + 자기력선 + 범례 + 호버 D·I·F **+ 한국 LMM 조밀 패치**.
+강조) + 세계 해안선 + 한국 경계 + 자기력선 + 범례 + 호버 D·I·F + 「한국으로」 카메라 이동.
 ⚠️ 사용자 제공 예시(degree-1 쌍극자·파란 구+선)를 **그대로 답습하지 말 것** — 표면 색지도
-중심의 다른 디자인. (3단계 선점/기존점 레이어 예정.)
+중심의 다른 디자인.
 
-**2단계 — 한국 LMM 조밀화**: 한국 위에 **LMM(F/D/I)** 패치를 성분 선택과 연동해 오버레이.
-`lmm.html` 의 `lmm()` 결합식을 그대로 복제 — **D=IGRF_D+reg_D, I=IGRF_I+reg_I,
-F=IGRF_F+crustal(F만)+reg_F**, External=null(**미적용, 잠정 모델**). regional 은 degree-1
-다항식(u=lat−36, v=lon−127.5, 계수 `lmm_model.json.regional.{D,I,F}`). crustal 은 154×198
-2.8km 격자(`values[j*nlon+i]`, i=경도 서→동 i0=lon0, j=위도 남→북 j0=lat0). 색은 전역 지도와
-**동일 색범위**(`colorAt(MODE)`)로 칠해 F 모드는 지각 미세구조, D/I 모드는 지역보정 offset 이
-보인다. 성분 전환 시 `setKoreaTexture(MODE)`, 연도 변경 시 `computeKoreaLMM(year)` 재계산.
-`「한국으로 ↦」`(카메라 이징 camGoal + 패치 자동 on) · `「한국 LMM」` 토글(IGRF↔LMM 비교) ·
-하단에 External 미적용 잠정 모델 안내.
+⚠️ **2단계 한국 LMM 조밀화는 보류** — LMM 지도가 아직 미완성(External 미적용 등)이라
+대충 얹으면 오히려 역효과. 완성 후 국지 고해상 패치로 추가한다. 관련 코드는 커밋
+`3e15959`(성분연동 LMM 패치)에 있으나 되돌렸다(`koreaCenter` 상수만 카메라용으로 유지).
+(3단계 선점/기존점 레이어 예정.)
 
-| 유의점 | 내용 |
-|---|---|
-| **패치 DoubleSide** | 패치 메시가 `FrontSide` 면 winding 에 따라 뒷면 컬링으로 안 보임 → `DoubleSide` 필수 |
-| **카메라 이징** | `camGoal` 을 두고 animate 에서 `camera.position.lerp(camGoal, 1-0.0025^dt)`; OrbitControls 직접 set+`update()` 는 damping 간섭 없이 유지됨(검증). `minDistance` 를 1.25 로 낮춰야 확대됨 |
-| **LMM 검증** | 서울 F 51,372→51,222(지각 −149), 가야 −144nT — CLAUDE.md §13 문서값과 일치 |
+**해상도 주의(3단계 대비)** — 전역 F/D/I 격자는 2°(91×181≈16k igrf 호출/재계산). 올리면
+계산량이 **해상도²** 로 증가(1°≈4×·0.5°≈16×, 연도 변경마다 재계산). 표면은 `LinearFilter`
+쌍선형 보간이라 2°도 매끈하고, **선점/기존점 마커는 실좌표 `sph()` 배치라 지도 해상도와
+무관하게 정확**하다. 한국만 고해상이 필요하면 전역 격자를 올리지 말고 **국지 패치**로 할 것.
+
+**LMM 재추가 시 참고(보류 중)** — `lmm.html` 의 `lmm()` 결합식: D=IGRF_D+reg_D,
+I=IGRF_I+reg_I, F=IGRF_F+crustal(F만)+reg_F, External=null. regional 은 degree-1 다항식
+(u=lat−36, v=lon−127.5). crustal 154×198 2.8km(`values[j*nlon+i]`, i=경도 서→동, j=위도
+남→북). 패치 메시는 **DoubleSide**(FrontSide 면 뒷면 컬링). 카메라 이동은 `camGoal` +
+animate 의 `camera.position.lerp(camGoal, 1-0.0025^dt)`, `minDistance` 1.25.
 
 ```
 docs/igrf14.js               # IGRF-14 구면조화 엔진(재사용 모듈) — window.IGRF
