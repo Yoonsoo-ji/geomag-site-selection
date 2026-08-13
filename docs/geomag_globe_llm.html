@@ -482,7 +482,7 @@ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updat
 const chatEl=document.getElementById('chat'), qEl=document.getElementById('q'), sendEl=document.getElementById('send');
 function addMsg(text,cls,tier){const d=document.createElement('div');d.className='msg '+cls;d.textContent=text;
   if(tier){const t=document.createElement('div');t.className='t';
-    t.textContent=tier==='local'?'🟢 로컬 LLM(LM Studio)':tier==='openai'?'🔵 OpenAI':tier==='data-only'?'🟡 서버 계산(LLM 오프라인)':tier;d.appendChild(t);}
+    t.textContent=tier==='local'?'🟢 로컬 LLM(LM Studio)':tier==='gemini'?'🟣 Gemini':tier==='openai'?'🔵 OpenAI':tier==='data-only'?'🟡 서버 계산(LLM 오프라인)':tier;d.appendChild(t);}
   chatEl.appendChild(d);chatEl.scrollTop=chatEl.scrollHeight;return d;}
 function highlightMids(mids){const set=new Set(mids||[]);
   if(set.size){candGroup.visible=true;tgSites.classList.add('on');}

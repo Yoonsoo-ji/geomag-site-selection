@@ -49,12 +49,18 @@ TIMEOUT_S = int(os.getenv("LOCAL_LLM_TIMEOUT", "120"))
 NOW_YEAR = 2026.6
 
 # ── LLM 백엔드 선택 ────────────────────────────────────────────────────────────
-#   GLOBE_LLM_BACKEND = auto(기본) | lmstudio | openai
-#   auto: LM Studio 먼저 → 실패하면 OpenAI(키 있을 때) → 그래도 안되면 서버계산.
+#   GLOBE_LLM_BACKEND = auto(기본) | lmstudio | openai | gemini
+#   auto: LM Studio 먼저 → 실패하면 Gemini(키 있을 때) → OpenAI(키 있을 때) → 서버계산.
 BACKEND = os.getenv("GLOBE_LLM_BACKEND", "auto").lower().strip()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").strip()
+# Gemini — OpenAI 호환 엔드포인트(https://ai.google.dev/gemini-api/docs/openai)라
+# 별도 SDK 없이 openai 클라이언트를 base_url 만 바꿔 그대로 재사용한다.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()
+GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL",
+                             "https://generativelanguage.googleapis.com/v1beta/openai/").strip()
 
 # ── 게이지티어(주요 지점 + 우리 측점 좌표는 데이터에서 로드) ──────────────────
 GAZETTEER = {
@@ -239,16 +245,30 @@ def _openai(messages):
     return r.choices[0].message.content or ""
 
 
+def _gemini(messages):
+    """Gemini(OpenAI 호환 엔드포인트). GEMINI_API_KEY 필요. 키는 서버(.env)에만 둔다."""
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY 미설정")
+    from openai import OpenAI
+    client = OpenAI(api_key=GEMINI_API_KEY, base_url=GEMINI_BASE_URL, timeout=60, max_retries=1)
+    r = client.chat.completions.create(model=GEMINI_MODEL, messages=messages,
+                                       temperature=0.3, max_tokens=1024)
+    return r.choices[0].message.content or ""
+
+
 def _tiers():
     """시도 순서 [(tier명, 호출함수)] — 백엔드 설정에 따라."""
     lm = ("local", _lmstudio)
+    ge = ("gemini", _gemini)
     oa = ("openai", _openai)
+    if BACKEND == "gemini":
+        return [ge] if GEMINI_API_KEY else []
     if BACKEND == "openai":
         return [oa] if OPENAI_API_KEY else []
     if BACKEND == "lmstudio":
         return [lm]
-    # auto: 로컬 먼저, 키 있으면 OpenAI 폴백
-    return [lm] + ([oa] if OPENAI_API_KEY else [])
+    # auto: 로컬 먼저, 그다음 Gemini, 그다음 OpenAI(키 있는 것만)
+    return [lm] + ([ge] if GEMINI_API_KEY else []) + ([oa] if OPENAI_API_KEY else [])
 
 
 def answer(message):
@@ -273,7 +293,7 @@ def answer(message):
             last = str(e)
     # 모든 LLM 실패/미설정 → 서버 계산 결과만이라도 반환
     note = ("⚠ LLM 미응답 — 서버 계산 결과만 표시합니다. LM Studio(localhost:1234) 실행 또는 "
-            ".env 에 OPENAI_API_KEY 설정 시 자연어 설명이 붙습니다.\n\n")
+            ".env 에 GEMINI_API_KEY/OPENAI_API_KEY 설정 시 자연어 설명이 붙습니다.\n\n")
     body = ctx if ctx else f"(질의 '{message}' 에 대한 계산 데이터가 없습니다. 지명·등급 등을 포함해 주세요.)"
     return {"answer": note + body, "actions": actions, "tier": "data-only", "err": last}
 

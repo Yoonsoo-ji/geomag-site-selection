@@ -145,7 +145,7 @@ const earthGroup=new THREE.Group(); scene.add(earthGroup);
 const R=1.0;
 
 // ── magnetic surface (shader samples equirect colormap texture) ──
-const NLAT=isMobile?73:91, NLON=isMobile?145:181;      // 2.5°/2° grid
+const NLAT=isMobile?73:121, NLON=isMobile?145:241;      // 2.5°/1.5° grid
 const gridF=new Float32Array(NLAT*NLON), gridD=new Float32Array(NLAT*NLON), gridI=new Float32Array(NLAT*NLON);
 function latOf(r){return 90 - r*(180/(NLAT-1));}       // row0 = north
 function lonOf(c){return -180 + c*(360/(NLON-1));}
@@ -275,7 +275,7 @@ renderer.domElement.addEventListener('click',ev=>{
 
 // ── contour isolines (marching squares on grid) ──
 const contourGroup=new THREE.Group(); earthGroup.add(contourGroup);
-const LEVELS={F:{step:5000,zero:null,col:0xffffff},D:{step:5,zero:0,col:0xd8ecff},I:{step:15,zero:0,col:0xd8ecff}};
+const LEVELS={F:{step:2000,zero:null,col:0xffffff},D:{step:2,zero:0,col:0xd8ecff},I:{step:10,zero:0,col:0xd8ecff}};
 function buildContours(mode){
   contourGroup.clear();
   const grid=mode==='F'?gridF:mode==='D'?gridD:gridI;

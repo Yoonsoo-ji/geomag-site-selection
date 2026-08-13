@@ -842,10 +842,15 @@ existing24). 반환 `{answer, actions, tier}`, actions=focus/highlight/focus_kor
 LM Studio(`localhost:1234/v1`, exaone-3.5-2.4b, `openai` SDK, 키 불필요) 미실행이면 서버 계산
 결과만(tier=data-only, `max_retries=0` 로 즉시 폴백). 실행: `python sv_server.py` + LM Studio.
 
-**LLM 3-티어 폴백** — `GLOBE_LLM_BACKEND=auto`(기본) 면 LM Studio → **OpenAI API**(`.env` 의
-`OPENAI_API_KEY` 있을 때) → 서버계산. `openai`/`lmstudio` 로 고정도 가능. `.env`(루트, `.gitignore`
-제외)를 **python-dotenv 없이 간이 파서**(`_load_env`)로 읽는다(설정 예시 `.env.example`). OpenAI
-키는 **서버(.env)에만** 두고 브라우저엔 노출 안 됨. tier: local🟢 / openai🔵 / data-only🟡.
+**LLM 4-티어 폴백** — `GLOBE_LLM_BACKEND=auto`(기본) 면 LM Studio → **Gemini API**(`.env` 의
+`GEMINI_API_KEY` 있을 때) → **OpenAI API**(`OPENAI_API_KEY` 있을 때) → 서버계산.
+`gemini`/`openai`/`lmstudio` 로 고정도 가능. `.env`(루트, `.gitignore`
+제외)를 **python-dotenv 없이 간이 파서**(`_load_env`)로 읽는다(설정 예시 `.env.example`). Gemini
+는 OpenAI 호환 엔드포인트(`https://generativelanguage.googleapis.com/v1beta/openai/`)를 제공하므로
+`openai` 패키지를 그대로 재사용(`globe_agent._gemini`, base_url 만 교체). 두 키 모두 **서버(.env)에만**
+두고 브라우저엔 노출 안 됨. tier: local🟢 / gemini🟣 / openai🔵 / data-only🟡.
+⚠ **OpenAI 크레딧 소진 시 429 `insufficient_quota`** — `GEMINI_API_KEY` 로 즉시 무료 폴백 가능
+(Gemini 는 무료 티어 제공). `openai` 패키지 예외 메시지에 사유가 그대로 담기므로 `err` 필드로 확인.
 ⚠ **Pages 배포엔 부적합**(/api/chat 서버 필요) — Pages 판 `geomag_globe.html` 은 LUI 없이
 깔끔한 지구본(F/D/I·등치선·자기력선·선점/기존 마커·드릴다운)만 유지. (브라우저 규칙기반 LUI 를
 `geomag_globe.html` 에 붙였으나 사용자 판단으로 되돌림 — 커밋 `0bb40ee` 참고, `geomag_globe_llm.html`
