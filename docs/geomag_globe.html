@@ -275,7 +275,7 @@ renderer.domElement.addEventListener('click',ev=>{
 
 // ── contour isolines (marching squares on grid) ──
 const contourGroup=new THREE.Group(); earthGroup.add(contourGroup);
-const LEVELS={F:{step:2000,zero:null,col:0xffffff},D:{step:2,zero:0,col:0xd8ecff},I:{step:10,zero:0,col:0xd8ecff}};
+const LEVELS={F:{step:1000,zero:null,col:0xffffff},D:{step:2,zero:0,col:0xd8ecff},I:{step:10,zero:0,col:0xd8ecff}};
 function buildContours(mode){
   contourGroup.clear();
   const grid=mode==='F'?gridF:mode==='D'?gridD:gridI;
