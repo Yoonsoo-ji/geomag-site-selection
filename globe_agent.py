@@ -26,10 +26,35 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 DATA = ROOT / "docs" / "data"
 
+# .env(루트) 자동 로드 — python-dotenv 없이 동작하는 간이 파서(KEY=VALUE)
+def _load_env():
+    p = ROOT / ".env"
+    if not p.exists():
+        return
+    for ln in p.read_text(encoding="utf-8", errors="replace").splitlines():
+        ln = ln.strip()
+        if not ln or ln.startswith("#") or "=" not in ln:
+            continue
+        k, v = ln.split("=", 1)
+        k, v = k.strip(), v.strip().strip('"').strip("'")
+        if k and k not in os.environ:      # 이미 설정된 환경변수 우선
+            os.environ[k] = v
+
+
+_load_env()
+
 LM_STUDIO_URL = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1")
 LOCAL_MODEL = os.getenv("LOCAL_LLM_MODEL", "").strip()   # 빈 값 = 로드된 모델
 TIMEOUT_S = int(os.getenv("LOCAL_LLM_TIMEOUT", "120"))
 NOW_YEAR = 2026.6
+
+# ── LLM 백엔드 선택 ────────────────────────────────────────────────────────────
+#   GLOBE_LLM_BACKEND = auto(기본) | lmstudio | openai
+#   auto: LM Studio 먼저 → 실패하면 OpenAI(키 있을 때) → 그래도 안되면 서버계산.
+BACKEND = os.getenv("GLOBE_LLM_BACKEND", "auto").lower().strip()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").strip()
 
 # ── 게이지티어(주요 지점 + 우리 측점 좌표는 데이터에서 로드) ──────────────────
 GAZETTEER = {
@@ -203,6 +228,29 @@ def _lmstudio(messages):
     return r.choices[0].message.content or ""
 
 
+def _openai(messages):
+    """진짜 OpenAI API(또는 호환 base_url). OPENAI_API_KEY 필요. 키는 서버(.env)에만 둔다."""
+    if not OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY 미설정")
+    from openai import OpenAI
+    client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL, timeout=60, max_retries=1)
+    r = client.chat.completions.create(model=OPENAI_MODEL, messages=messages,
+                                       temperature=0.3, max_tokens=1024)
+    return r.choices[0].message.content or ""
+
+
+def _tiers():
+    """시도 순서 [(tier명, 호출함수)] — 백엔드 설정에 따라."""
+    lm = ("local", _lmstudio)
+    oa = ("openai", _openai)
+    if BACKEND == "openai":
+        return [oa] if OPENAI_API_KEY else []
+    if BACKEND == "lmstudio":
+        return [lm]
+    # auto: 로컬 먼저, 키 있으면 OpenAI 폴백
+    return [lm] + ([oa] if OPENAI_API_KEY else [])
+
+
 def answer(message):
     message = (message or "").strip()
     if not message:
@@ -215,15 +263,19 @@ def answer(message):
     user = (f"[데이터]\n{ctx}\n\n[질문]\n{message}\n\n위 데이터를 근거로 답해줘."
             if ctx else f"[질문]\n{message}")
     messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
-    try:
-        ans = _lmstudio(messages)
-        return {"answer": ans, "actions": actions, "tier": "local"}
-    except Exception as e:
-        # LM Studio 미실행 → 서버 계산 결과만이라도 반환
-        note = ("⚠ 로컬 LLM(LM Studio) 미응답 — 서버 계산 결과만 표시합니다. "
-                "LM Studio 를 실행(localhost:1234)하면 자연어 설명이 붙습니다.\n\n")
-        body = ctx if ctx else f"(질의 '{message}' 에 대한 계산 데이터가 없습니다. 지명·등급 등을 포함해 주세요.)"
-        return {"answer": note + body, "actions": actions, "tier": "data-only", "err": str(e)}
+    last = ""
+    for tier, fn in _tiers():
+        try:
+            ans = fn(messages)
+            if ans.strip():
+                return {"answer": ans, "actions": actions, "tier": tier}
+        except Exception as e:            # noqa: BLE001
+            last = str(e)
+    # 모든 LLM 실패/미설정 → 서버 계산 결과만이라도 반환
+    note = ("⚠ LLM 미응답 — 서버 계산 결과만 표시합니다. LM Studio(localhost:1234) 실행 또는 "
+            ".env 에 OPENAI_API_KEY 설정 시 자연어 설명이 붙습니다.\n\n")
+    body = ctx if ctx else f"(질의 '{message}' 에 대한 계산 데이터가 없습니다. 지명·등급 등을 포함해 주세요.)"
+    return {"answer": note + body, "actions": actions, "tier": "data-only", "err": last}
 
 
 if __name__ == "__main__":
