@@ -841,13 +841,10 @@ CYG 로 제거 가능한 일변동은 편각 6.7′ 인데 미설명 잔차가 3
 existing24). 반환 `{answer, actions, tier}`, actions=focus/highlight/focus_korea 로 지구본 조종.
 LM Studio(`localhost:1234/v1`, exaone-3.5-2.4b, `openai` SDK, 키 불필요) 미실행이면 서버 계산
 결과만(tier=data-only, `max_retries=0` 로 즉시 폴백). 실행: `python sv_server.py` + LM Studio.
-⚠ **Pages 배포엔 부적합**(/api/chat 서버 필요).
-
-**Pages 질의판 (서버·키 불필요)** — `geomag_globe.html` 에도 동일 LUI 패널을 넣되, LLM 대신
-**브라우저 클라이언트 규칙기반**(`clientAnswer`)으로 답한다. `window.IGRF` 로 즉시 계산(게이지티어
-GAZ ~30지점 + 로드된 선점/기존점 이름, 영년변화), 선점 검색(markMeshes props), 개념 FAQ(정규식
-매칭). 액션(focus/highlight/focus_korea)은 로컬판과 동일. LLM 서술은 없지만 수치·검색·조종은
-전부 오프라인 동작 → GitHub Pages 에서 그대로 작동. 마커 props 에 lat/lon 저장(지명 계산용).
+⚠ **Pages 배포엔 부적합**(/api/chat 서버 필요) — Pages 판 `geomag_globe.html` 은 LUI 없이
+깔끔한 지구본(F/D/I·등치선·자기력선·선점/기존 마커·드릴다운)만 유지. (브라우저 규칙기반 LUI 를
+`geomag_globe.html` 에 붙였으나 사용자 판단으로 되돌림 — 커밋 `0bb40ee` 참고, `geomag_globe_llm.html`
+로컬판만 LUI 유지.)
 
 ```
 ① LM Studio 실행(모델 로드) → localhost:1234
