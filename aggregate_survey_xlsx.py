@@ -56,7 +56,9 @@ JUDGMENT_OVERRIDE = {
     "DS-002": ("부적합", _SHADOW),
     "DS-041": ("부적합", _SHADOW),
     "DS-061": ("부적합", _SHADOW),
-    "DS-011": ("부적합", "현장 이설·좌표 불일치 → 부적합"),
+    # DS-011 은 후보지↔기준점 2,049m 이격만이 사유였는데, 이격은 도상 후보지로
+    # **진입이 어려워 옮긴 것**일 뿐 부적합 사유가 아니다(성과 기준은 현장 기준점).
+    # 카드 원판정 조건부 적합 → 등급 C 로 되돌린다.
     "DS-087": ("부적합", "상공장애로 취득 불가 → 부적합"),
 }
 
@@ -216,6 +218,7 @@ def parse_card(ws):
     az1 = detail.get("표지1", {}).get("방위각", "")
     d["방위표지좌표"] = "입력" if az1 and az1 != "-" else "미입력"
     fix_sheet(d)      # 도엽을 후보지 좌표로 재판정(카드 기재값은 별도 보존)
+    fix_azimuth(d)    # 방위각 역방위·오기입 정정 + 거리 좌표 계산
     return d
 
 
@@ -321,6 +324,124 @@ def fix_sheet(d):
     if (d["도엽번호기재"] or "").strip() != code or (d["도엽명기재"] or "").strip() != name:
         d["도엽정정"] = f"{d['도엽명기재'] or '-'}({d['도엽번호기재'] or '-'}) → {name}({code})"
     d["도엽번호"], d["도엽명"] = code, name
+    return d
+
+
+# ── 방위각·거리 정정 ──────────────────────────────────────────────────────────
+# 카드 기재 방위각 196쌍 중 29쌍이 좌표와 5° 넘게 어긋나고 그중 16쌍이 정확히
+# ±180°(역방위 — 표지→기준점 방향을 적음)다. 좌표 맞바꿈이 아님은 확인됐다
+# (맞바꿈이면 표지 좌표가 후보지 자리에 와야 하나 최소 22m, DS-004 는 기준점이
+# 후보지와 0m 로 일치). 즉 **좌표는 옳고 카드 숫자만 뒤집혔다**.
+#
+# 거리도 카드값이 100~117m 에 몰려 있어(좌표상 실제 18~75m) 측정값이 아니라
+# 이격 기준 100m 충족을 뜻해 적은 것으로 보인다. 현장 성과의 거리는 **기준점과
+# 방위표지 사이**를 재는 것이므로 좌표 계산 측지거리가 정답이다.
+#
+# 원본 카드는 불변. 취합·검토·총괄·웹에만 반영하고 기재값은 '*기재' 로 보존한다.
+AZ_TOL_DEG = 5.0        # 이 이내면 카드 방위각을 그대로 둔다(측정값이 GPS 좌표보다 정밀)
+DIST_TOL_M = 5.0        # 거리 정정 문턱 — 절대 5m 이고
+DIST_TOL_RATIO = 0.10   # 동시에 상대 10% 를 넘을 때만 정정(반올림 차이 무시)
+
+
+def az_from_ll(a, b):
+    """a→b 진북기준 방위각(도). **북=0°, 시계방향** (§19 진북 기준).
+
+    a, b = (경도, 위도). 좌표 없으면 None.
+    """
+    if not a or not b:
+        return None
+    lon1, lat1 = a
+    lon2, lat2 = b
+    la = math.radians((lat1 + lat2) / 2)
+    m_lat = 111132.92 - 559.82 * math.cos(2 * la) + 1.175 * math.cos(4 * la)
+    m_lon = 111412.84 * math.cos(la) - 93.5 * math.cos(3 * la)
+    return math.degrees(math.atan2((lon2 - lon1) * m_lon,
+                                   (lat2 - lat1) * m_lat)) % 360
+
+
+def az_deg(v):
+    """카드 방위각 문자열('ddd°mm′ss″' 등) → 도(십진). 실패 시 None."""
+    nums = re.findall(r"\d+\.?\d*", str(v or ""))
+    if not nums:
+        return None
+    out = float(nums[0])
+    if len(nums) >= 2:
+        out += float(nums[1]) / 60
+    if len(nums) >= 3:
+        out += float(nums[2]) / 3600
+    return out % 360
+
+
+def fmt_dms(deg):
+    """도(십진) → 'ddd°mm′ss″' (카드 표기 형식)."""
+    if deg is None:
+        return ""
+    deg %= 360
+    d = int(deg)
+    m = int((deg - d) * 60)
+    sec = (deg - d - m / 60) * 3600
+    if round(sec) >= 60:      # 초 반올림이 60 이 되면 자리올림
+        sec, m = 0.0, m + 1
+    if m >= 60:
+        m, d = 0, (d + 1) % 360
+    return f"{d}°{m}′{sec:.0f}″"
+
+
+def fix_azimuth(d):
+    """카드 1건의 방위표지 방위각·거리를 좌표 기준으로 정정(제자리 수정).
+
+    방위각 — 차이 5° 이내면 카드값 유지(측정 방위각이 휴대GPS 좌표보다 정밀),
+    ±180°(±5°) 면 **카드값 +180°** 로 뒤집어 측정 정밀도를 살리고, 그 밖의
+    불일치는 복원할 원값이 없으므로 **좌표 방위각**으로 대체한다.
+    거리 — 항상 기준점↔표지 좌표 측지거리를 쓴다(문턱 초과 시 정정 표시).
+    """
+    det = d.get("방위표지상세") or {}
+    base = d.get("기준점ll")
+    notes = []
+    for llk, tag in (("표지1ll", "표지1"), ("표지2ll", "표지2")):
+        c = det.get(tag)
+        if not c:
+            continue
+        c.setdefault("방위각기재", c.get("방위각", ""))
+        c.setdefault("거리기재", c.get("거리", ""))
+        c["방위각정정"] = c["거리정정"] = ""
+        mll = d.get(llk)
+        geo = az_from_ll(base, mll)
+        if geo is None:
+            continue
+        card = az_deg(c["방위각기재"])
+        if card is None:
+            c["방위각"], c["방위각정정"] = fmt_dms(geo), "좌표 산출(카드 미기재)"
+        else:
+            diff = abs((geo - card + 180) % 360 - 180)
+            if abs(diff - 180) <= AZ_TOL_DEG:
+                c["방위각"] = fmt_dms(card + 180)
+                c["방위각정정"] = "역방위 +180°"
+            elif diff > AZ_TOL_DEG:
+                c["방위각"] = fmt_dms(geo)
+                c["방위각정정"] = f"좌표 재계산(카드와 {diff:.0f}° 차)"
+        if c["방위각정정"]:
+            notes.append(f"{tag} 방위각 {c['방위각기재'] or '-'} → {c['방위각']}"
+                         f" ({c['방위각정정']})")
+        # 거리 — 기준점↔표지 좌표 측지거리
+        geo_m = _geo_dist(base, mll)
+        if geo_m is not None:
+            card_m = _card_dist(det, tag)
+            c["거리"] = f"{geo_m:.0f}"
+            if (card_m is not None and abs(card_m - geo_m) > DIST_TOL_M
+                    and abs(card_m - geo_m) > geo_m * DIST_TOL_RATIO):
+                c["거리정정"] = f"카드 {card_m:.0f}m → 좌표 {geo_m:.0f}m"
+                notes.append(f"{tag} 거리 {c['거리정정']}")
+    d["방위정정"] = " · ".join(notes)
+
+    # 후보지(도상) ↔ 현장 기준점 이격 — 오류가 아니라 **접근성 지표**다.
+    # 후보지는 현장조사 전 도상에서 고른 점이고, 성과의 기준은 현장 기준점이다.
+    # 이격이 크다는 것은 도상 후보지로 진입이 어려워 옮겼다는 뜻이다.
+    try:
+        cand = (float(d["경도"]), float(d["위도"]))
+    except (TypeError, ValueError):
+        cand = None
+    d["후보지이격"] = _geo_dist(base, cand) if (base and cand) else None
     return d
 
 
@@ -517,6 +638,7 @@ def dcell(item):
 
 # ── 시트 1: 현장조사 취합 ────────────────────────────────────────────────────
 FULL_COLS = ["관할 본부", "관리번호", "후보지명", "도엽번호", "도엽명", "도엽 정정",
+             "방위 정정", "후보지↔기준점(m)",
              "지번 주소",
              "위도", "경도", "표고(m)", "유형", "연계 기존점", "소유권",
              "조사일", "조사자", "기상",
@@ -538,6 +660,8 @@ def sheet_full(wb, recs):
         dist = d["자기교란"]
         row = [d["관할본부"], d["관리번호"], d["후보지명"], d["도엽번호"], d["도엽명"],
                d["도엽정정"],
+               d["방위정정"],
+               (round(d["후보지이격"]) if d["후보지이격"] is not None else ""),
                d["지번주소"], d["위도"], d["경도"], d["표고"], d["유형"], d["연계기존점"],
                d["소유권"], d["조사일"], d["조사자"], d["기상"],
                dcell(dist.get("차량영향")), dcell(dist.get("전력시설")), dcell(dist.get("통신시설")),
@@ -550,8 +674,8 @@ def sheet_full(wb, recs):
             c.font = F_VAL
             c.border = BORDER
             c.alignment = AL_L if FULL_COLS[j - 1] in (
-                "지번 주소", "도엽 정정", "판정 의견", "접근 경로", "유의사항",
-                "도상 간섭요인") else AL_C
+                "지번 주소", "도엽 정정", "방위 정정", "판정 의견", "접근 경로",
+                "유의사항", "도상 간섭요인") else AL_C
             if ds <= j <= de and isinstance(v, str) and v.startswith("있음"):
                 c.fill = FILL_BAD
             if j == bcol and v == "불가":
@@ -559,7 +683,7 @@ def sheet_full(wb, recs):
             if j == jcol:
                 c.fill = {"적합": FILL_OK, "조건부 적합": FILL_COND,
                           "부적합": FILL_BAD}.get(v, FILL_GRAY)
-    widths = [14, 8, 13, 11, 8, 22, 24, 9, 9, 7, 8, 9, 8, 11, 12, 6,
+    widths = [14, 8, 13, 11, 8, 22, 34, 12, 24, 9, 9, 7, 8, 9, 8, 11, 12, 6,
               9, 8, 8, 8, 8, 8, 8, 8, 9, 8, 10, 30, 24, 18, 30, 16]
     for j, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(j)].width = w
@@ -776,7 +900,10 @@ FLAT_COLS = ["관할 본부", "관리번호", "후보지명", "도엽번호", "�
              "자연환경 존재", "자연환경 이격", "방위표지 가능",
              "부적합 건수", "종합 판정", "판정 의견", "향후 조치",
              "방위1 경도", "방위1 위도", "방위1 방위각", "방위1 거리(m)",
+             "방위1 방위각(카드)", "방위1 거리(카드)",
              "방위2 경도", "방위2 위도", "방위2 방위각", "방위2 거리(m)",
+             "방위2 방위각(카드)", "방위2 거리(카드)",
+             "방위 정정", "후보지↔기준점(m)",
              "접근 경로", "차량 진입", "유의사항", "도상 간섭요인", "회신 파일"]
 
 
@@ -803,19 +930,23 @@ def build_flat_workbook(recs, out_path):
                *g("매설물"), *g("건축물"), *g("자연환경"), d["방위표지"],
                d["부적합수"], d["종합판정"], d["판정의견"].replace("\n", " "), _action(d["종합판정"]),
                b1.get("경도", ""), b1.get("위도", ""), b1.get("방위각", ""), b1.get("거리", ""),
+               b1.get("방위각기재", ""), b1.get("거리기재", ""),
                b2.get("경도", ""), b2.get("위도", ""), b2.get("방위각", ""), b2.get("거리", ""),
+               b2.get("방위각기재", ""), b2.get("거리기재", ""),
+               d["방위정정"], (round(d["후보지이격"]) if d["후보지이격"] is not None else ""),
                d["접근경로"], d["차량진입"], d["유의사항"], d["도상간섭"], d["_src"]]
         for j, v in enumerate(row, 1):
             c = ws.cell(ri, j, v)
             c.font = F_VAL
             c.border = BORDER
             c.alignment = AL_L if FLAT_COLS[j - 1] in (
-                "지번 주소", "도로명 주소", "도엽 정정", "판정 의견", "접근 경로",
-                "유의사항", "도상 간섭요인") else AL_C
+                "지번 주소", "도로명 주소", "도엽 정정", "방위 정정", "판정 의견",
+                "접근 경로", "유의사항", "도상 간섭요인") else AL_C
     ws.freeze_panes = "C3"
     ws.auto_filter.ref = f"A2:{get_column_letter(n)}{len(recs) + 2}"
     for j, col in enumerate(FLAT_COLS, 1):
         w = 30 if col in ("판정 의견", "도상 간섭요인") else \
+            34 if col == "방위 정정" else \
             24 if col in ("지번 주소", "접근 경로") else \
             22 if col == "도엽 정정" else \
             18 if col == "유의사항" else \

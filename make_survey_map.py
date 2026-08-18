@@ -89,17 +89,28 @@ def esc(s):
 
 
 def az_text(d):
-    """방위표지 1·2 방위각·거리 요약."""
+    """방위표지 1·2 방위각·거리 요약.
+
+    값은 `fix_azimuth()` 가 좌표 기준으로 정정한 것이다. 정정된 항목은 ✔ 를 달고
+    카드 기재값을 회색으로 병기해 현장 재확인이 가능하게 둔다.
+    """
     det = d.get("방위표지상세", {})
     out = []
     for i, k in enumerate(("표지1", "표지2"), 1):
         c = det.get(k, {})
         az, dist = c.get("방위각", ""), c.get("거리", "")
-        if az and az != "-":
-            seg = f"표지{i} 방위각 {esc(az)}"
-            if dist and dist != "-":
-                seg += f" · {esc(dist)}m"
-            out.append(seg)
+        if not (az and az != "-"):
+            continue
+        seg = f"표지{i} 방위각 {esc(az)}"
+        if c.get("방위각정정"):
+            seg += (f"<span style='color:#B8860B'> ✔</span>"
+                    f"<span style='color:#999'>(카드 {esc(c.get('방위각기재') or '-')})</span>")
+        if dist and dist != "-":
+            seg += f" · {esc(dist)}m"
+            if c.get("거리정정"):
+                seg += (f"<span style='color:#B8860B'> ✔</span>"
+                        f"<span style='color:#999'>(카드 {esc(c.get('거리기재') or '-')}m)</span>")
+        out.append(seg)
     return " / ".join(out)
 
 
@@ -225,10 +236,24 @@ def popup_html(d, grade, concl, note, rank=None):
                    + (f" <span style='color:#888'>({rk}/{n}위)</span>" if n > 1 else ""))
         rows.append(("도엽 구분",
                      txt + f" <span style='color:#888'>· 방위표지 최장 {md:.0f}m</span>"))
+    if d.get("방위정정"):
+        rows.append(("방위 정정",
+                     f"<span style='color:#B8860B'>✔ 좌표 기준으로 정정</span>"
+                     f"<div style='color:#777;font-size:11px;margin-top:2px'>"
+                     f"{esc(d['방위정정'])}</div>"))
+    gap = d.get("후보지이격")
+    if gap is not None and gap >= 50:
+        # 후보지는 도상에서 고른 점이고 성과 기준은 현장 기준점이다.
+        # 이격이 크다는 것은 도상 후보지로 **진입이 어려워 옮겼다**는 뜻(접근성 지표).
+        rows.append(("도상 후보지 이격",
+                     f"{gap:,.0f} m <span style='color:#888'>— 도상 후보지 진입이 어려워 "
+                     f"현장에서 이동{' (1km 초과 · 사실상 별개 지점)' if gap >= 1000 else ''}"
+                     f"</span>"))
     rows += [
         ("조사자 의견", esc(note)),
         ("조사", f"{esc(d['조사일'])} · {esc(d['조사자'])}"),
-        ("좌표", f"{esc(d['위도'])}, {esc(d['경도'])} (표고 {esc(d['표고'])} m)"),
+        ("도상 후보지 좌표", f"{esc(d['위도'])}, {esc(d['경도'])} "
+         f"(표고 {esc(d['표고'])} m)"),
         ("연계 기존점", esc(d["연계기존점"])),
     ]
     body = "".join(
@@ -276,6 +301,10 @@ def legend_html(counts, total, n_tgt=0, n_oth=0):
         "font-size:13px;text-align:center'>⭐</span>"
         f"<span style='font-size:12px;color:#666'>기존점 — 기타 <b>{n_oth}</b> "
         "<span style='color:#999'>(저수지·제방 등)</span></span></div>"
+        "<div style='border-top:1px solid #ddd;margin:7px 0 5px'></div>"
+        "<div style='font-size:11px;color:#777;max-width:210px;line-height:1.45'>"
+        "<b style='color:#B8860B'>✔</b> 방위각·거리는 기준점·방위표지 좌표로 "
+        "재계산한 값. 카드 기재값은 팝업에 병기.</div>"
         "</div>")
 
 

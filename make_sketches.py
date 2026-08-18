@@ -27,8 +27,7 @@ matplotlib.use("Agg")
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 
-from aggregate_survey_xlsx import (parse_workbook, survey_files,
-                                   _geo_dist, _card_dist)
+from aggregate_survey_xlsx import parse_workbook, survey_files, _geo_dist
 
 ROOT = Path(__file__).parent
 OUT = ROOT / "docs" / "output" / "_sketches"
@@ -97,7 +96,9 @@ def az_label(base, mark_ll, det, tag):
 
     반환 (라벨문자열, 사유) — 사유는 "" / "역방위" / "불일치".
     """
-    card_s = det.get(tag, {}).get("방위각", "")
+    # det 의 방위각은 fix_azimuth() 가 정정한 값이므로, 카드 원기재는 별도 키에서 읽는다.
+    c = det.get(tag, {})
+    card_s = c.get("방위각기재", c.get("방위각", ""))
     card = az_deg(card_s)
     geo = az_from_ll(base, mark_ll)
     if card is None:
@@ -111,6 +112,12 @@ def az_label(base, mark_ll, det, tag):
     return f"{fmt_az(card_s)} (카드)\n{geo:.1f}° (좌표·{why})", why
 
 
+def _parse_m(v):
+    """거리 문자열 → m. 실패 시 None."""
+    nums = re.findall(r"\d+\.?\d*", str(v or ""))
+    return float(nums[0]) if nums else None
+
+
 def dist_label(base, mark_ll, det, tag):
     """거리 라벨 — **좌표 계산 측지거리**를 쓴다.
 
@@ -122,7 +129,8 @@ def dist_label(base, mark_ll, det, tag):
     반환 (라벨문자열, 카드값과 불일치 여부).
     """
     geo = _geo_dist(base, mark_ll)
-    card = _card_dist(det, tag)
+    c = det.get(tag, {})
+    card = _parse_m(c.get("거리기재", c.get("거리")))
     if geo is None:                       # 좌표 없음 → 카드값 폴백
         return (f"{card:.0f} m (카드)" if card is not None else "- m"), False
     lab = f"{geo:.0f} m"
