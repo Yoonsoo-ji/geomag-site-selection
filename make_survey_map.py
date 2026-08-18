@@ -42,6 +42,13 @@ EXISTING_USE = [
 ]
 EXISTING_ALIAS = {}   # 확정 이름이 existing_sites.geojson 과 직접 일치
 
+# 기존 24점 중 **선점 대상 11점** — 저수지·제방에 설치된 점을 제외한 나머지.
+# (저수지·제방은 지반 거동·수위 변동으로 표석 지속성이 확보되지 않아 선점에서 뺀다.)
+EXISTING_TARGET = [
+    "상주", "미원", "부안", "강화", "남지", "거제",
+    "포천", "성산", "여주", "화천", "제천",
+]
+
 GRADE = {   # 등급 → (색, 라벨) — 4단계
     "A": ("#2E8B57", "A · 선점 가능 (자기구배 조사)"),
     "B": ("#2E86C1", "B · 조건부 선점 가능 (방위표지 거리 확보 필요)"),
@@ -240,7 +247,7 @@ def popup_html(d, grade, concl, note, rank=None):
         f"</div>")
 
 
-def legend_html(counts, total):
+def legend_html(counts, total, n_tgt=0, n_oth=0):
     items = "".join(
         f"<div style='display:flex;align-items:center;margin:3px 0"
         f"{';padding-left:12px' if k == 'B예비' else ''}'>"
@@ -256,7 +263,20 @@ def legend_html(counts, total):
         "box-shadow:0 1px 6px rgba(0,0,0,.3);font-family:\"맑은 고딕\",sans-serif'>"
         "<div style='font-weight:bold;font-size:13px;margin-bottom:6px'>"
         f"선점 검토 등급 <span style='color:#888;font-weight:normal'>(총 {total}점)</span></div>"
-        f"{items}</div>")
+        f"{items}"
+        "<div style='border-top:1px solid #ddd;margin:7px 0 5px'></div>"
+        "<div style='display:flex;align-items:center;margin:3px 0'>"
+        "<span style='width:15px;height:15px;border-radius:50%;background:#D7A400;"
+        "border:2px solid #fff;box-shadow:0 0 0 1px #8B6A00;color:#fff;"
+        "font:bold 10px/13px sans-serif;text-align:center;display:inline-block;"
+        "margin-right:5px'>★</span>"
+        f"<span style='font-size:12px'>기존점 — 선점 대상 <b>{n_tgt}</b></span></div>"
+        "<div style='display:flex;align-items:center;margin:3px 0;padding-left:12px'>"
+        "<span style='display:inline-block;width:15px;margin-right:5px;"
+        "font-size:13px;text-align:center'>⭐</span>"
+        f"<span style='font-size:12px;color:#666'>기존점 — 기타 <b>{n_oth}</b> "
+        "<span style='color:#999'>(저수지·제방 등)</span></span></div>"
+        "</div>")
 
 
 def add_topo_layer(m):
@@ -280,45 +300,85 @@ def add_topo_layer(m):
     return len(fc["features"])
 
 
+def _existing_popup(name, pr, target):
+    """기존 측정점 팝업."""
+    vf = lambda x, u="": f"{x:.4f}{u}" if isinstance(x, (int, float)) else "-"
+    head = ("🎯 선점 대상 기존점" if target else "⭐ 기존 측정점")
+    col = "#B8860B" if target else "#8B4513"
+    tail = ("<div style='margin-top:5px;padding:4px 6px;background:#FFF6DC;"
+            "border-left:3px solid #D7A400;font-size:11px;color:#6B5200'>"
+            "저수지·제방 설치점을 제외한 <b>선점 대상 11점</b> 중 하나 — "
+            "표석 지속성이 확보되어 재설치 없이 선점 가능.</div>") if target else ""
+    return (
+        f"<div style='font-family:\"맑은 고딕\",sans-serif;font-size:12.5px;min-width:250px'>"
+        f"<b style='color:{col}'>{head}: {esc(name)}</b><hr style='margin:4px 0'>"
+        f"<b>위도:</b> {pr['lat']:.6f}° N &nbsp; <b>경도:</b> {pr['lon']:.6f}° E<br>"
+        f"<b>주소:</b> <span style='font-size:11px'>{esc(pr.get('address','-'))}</span><br>"
+        f"<hr style='margin:4px 0;border-color:#ddd'>"
+        f"<b>최초설치:</b> {pr.get('inst_year') or '-'}년 &nbsp; "
+        f"<b>최신관측:</b> {pr.get('obs_year','-')}년<br>"
+        f"<b>편각:</b> {vf(pr.get('decl'),'°')} &nbsp; <b>복각:</b> {vf(pr.get('incl'),'°')} &nbsp; "
+        f"<b>총자력:</b> {vf(pr.get('total'),' nT')}"
+        f"{tail}</div>")
+
+
 def add_existing_layer(m):
-    """기존 지자기 측정점(EXISTING_USE) 토글 — ⭐ 마커, 기본 꺼짐."""
+    """기존 지자기 측정점(EXISTING_USE 24) 토글 — 두 레이어로 분리.
+
+      · 🎯 선점 대상 (11) — 저수지·제방 설치점을 제외한 점. 강조 마커, 기본 켬.
+      · ⭐ 기타 기존점 (13) — 나머지. 종전 ⭐ 마커, 기본 끔.
+
+    반환 (선점대상 수, 기타 수).
+    """
     p = DATA / "existing_sites.geojson"
     if not p.exists():
-        return 0
+        return 0, 0
     fc = json.load(open(p, encoding="utf-8"))
-    want = {EXISTING_ALIAS.get(n, n) for n in EXISTING_USE}
     by_name = {f["properties"].get("name"): f for f in fc["features"]}
-    fg = folium.FeatureGroup(name=f"⭐ 기존 측정점 ({len(EXISTING_USE)})", show=False)
-    n = 0
-    for name in EXISTING_USE:
+    tgt = {EXISTING_ALIAS.get(n, n) for n in EXISTING_TARGET}
+    rest = [n for n in EXISTING_USE if EXISTING_ALIAS.get(n, n) not in tgt]
+
+    for n in EXISTING_TARGET:                     # 목록 자체의 오타·누락 방어
+        if EXISTING_ALIAS.get(n, n) not in by_name:
+            print(f"    ! 선점 대상 미매칭: {n}", file=sys.stderr)
+
+    fg_t = folium.FeatureGroup(
+        name=f"🎯 기존 측정점 — 선점 대상 ({len(EXISTING_TARGET)})", show=True)
+    fg_o = folium.FeatureGroup(
+        name=f"⭐ 기존 측정점 — 기타 ({len(rest)})", show=False)
+
+    def put(name, fg, target):
         gname = EXISTING_ALIAS.get(name, name)
         f = by_name.get(gname)
         if not f:
             print(f"    ! 기존측정점 미매칭: {name}", file=sys.stderr)
-            continue
+            return 0
         pr = f["properties"]
-        lat, lon = pr["lat"], pr["lon"]
-        vf = lambda x, u="": f"{x:.4f}{u}" if isinstance(x, (int, float)) else "-"
-        pop = (
-            f"<div style='font-family:\"맑은 고딕\",sans-serif;font-size:12.5px;min-width:250px'>"
-            f"<b style='color:#8B4513'>⭐ 기존 측정점: {esc(name)}</b><hr style='margin:4px 0'>"
-            f"<b>위도:</b> {lat:.6f}° N &nbsp; <b>경도:</b> {lon:.6f}° E<br>"
-            f"<b>주소:</b> <span style='font-size:11px'>{esc(pr.get('address','-'))}</span><br>"
-            f"<hr style='margin:4px 0;border-color:#ddd'>"
-            f"<b>최초설치:</b> {pr.get('inst_year') or '-'}년 &nbsp; "
-            f"<b>최신관측:</b> {pr.get('obs_year','-')}년<br>"
-            f"<b>편각:</b> {vf(pr.get('decl'),'°')} &nbsp; <b>복각:</b> {vf(pr.get('incl'),'°')} &nbsp; "
-            f"<b>총자력:</b> {vf(pr.get('total'),' nT')}</div>")
-        folium.Marker(
-            [lat, lon],
-            icon=folium.DivIcon(html="<div style='font-size:22px;line-height:1;"
-                                "text-shadow:1px 1px 2px rgba(0,0,0,.4)'>⭐</div>",
-                                icon_anchor=(11, 11)),
-            tooltip=f"기존 측정점: {name}",
-            popup=folium.Popup(pop, max_width=320)).add_to(fg)
-        n += 1
-    fg.add_to(m)
-    return n
+        if target:
+            # 선점 대상: 금색 원판 + ★ — ⭐ 이모지보다 눈에 띄고 등급 마커와도 구분된다.
+            icon = folium.DivIcon(html=(
+                "<div style='width:26px;height:26px;border-radius:50%;"
+                "background:#D7A400;border:2.5px solid #fff;color:#fff;"
+                "font:bold 15px/22px sans-serif;text-align:center;"
+                "box-shadow:0 0 0 1.5px #8B6A00,0 1px 4px rgba(0,0,0,.5)'>★</div>"),
+                icon_anchor=(13, 13))
+            tip = f"🎯 선점 대상 기존점: {name}"
+        else:
+            icon = folium.DivIcon(html=("<div style='font-size:22px;line-height:1;"
+                                        "text-shadow:1px 1px 2px rgba(0,0,0,.4)'>⭐</div>"),
+                                  icon_anchor=(11, 11))
+            tip = f"기존 측정점: {name}"
+        folium.Marker([pr["lat"], pr["lon"]], icon=icon, tooltip=tip,
+                      popup=folium.Popup(_existing_popup(name, pr, target),
+                                         max_width=320)).add_to(fg)
+        return 1
+
+    nt = sum(put(n, fg_t, True) for n in EXISTING_TARGET)
+    no = sum(put(n, fg_o, False) for n in rest)
+    fg_t.add_to(m)
+    fg_o.add_to(m)
+    return nt, no
+
 
 
 def build(records):
@@ -366,11 +426,11 @@ def build(records):
         groups[k].add_to(m)
 
     add_topo_layer(m)
-    n_exist = add_existing_layer(m)
+    n_tgt, n_oth = add_existing_layer(m)
 
     folium.LayerControl(collapsed=False).add_to(m)
     total = sum(counts.values())
-    m.get_root().html.add_child(folium.Element(legend_html(counts, total)))
+    m.get_root().html.add_child(folium.Element(legend_html(counts, total, n_tgt, n_oth)))
     m.get_root().html.add_child(folium.Element(bangwi_script(bangwi)))
 
     title = (

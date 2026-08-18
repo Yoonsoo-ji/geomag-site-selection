@@ -215,6 +215,7 @@ def parse_card(ws):
     d["방위표지상세"] = detail
     az1 = detail.get("표지1", {}).get("방위각", "")
     d["방위표지좌표"] = "입력" if az1 and az1 != "-" else "미입력"
+    fix_sheet(d)      # 도엽을 후보지 좌표로 재판정(카드 기재값은 별도 보존)
     return d
 
 
@@ -263,6 +264,64 @@ def extract_photos(ws, code, outdir, maxpx=300, quality=75):
         img.save(outdir / fname, "JPEG", quality=quality, optimize=True)
         got[slot] = fname
     return got
+
+
+# ── 도엽(1:50,000) 좌표 판정 ──────────────────────────────────────────────────
+# ⚠ 배포된 카드의 도엽번호·도엽명은 **연계 기존점의 도엽**이 찍혀 있다
+#   (make_survey_card_v2.py 가 sheet_of() 에 기존점 좌표를 넘긴 버그. 2026-08 정정).
+#   회신본은 이미 그 값으로 굳었으므로, 취합 단계에서 **후보지 자신의 좌표**로
+#   다시 판정해 덮어쓴다. 원본 카드는 불변이고 기재값은 '도엽번호기재'로 보존한다.
+#   도엽 폴리곤은 전부 경위선 직교 직사각형(15'×15')이라 bbox 판정으로 충분하다.
+TOPO_GEOJSON = ROOT / "docs" / "data" / "topo_sheets.geojson"
+_TOPO_CELLS = None
+
+
+def _topo_cells():
+    """[(w, s, e, n, sheet_code, sheet_name, mapidcd)] — 최초 1회 로드."""
+    global _TOPO_CELLS
+    if _TOPO_CELLS is None:
+        cells = []
+        if TOPO_GEOJSON.exists():
+            import json
+            fc = json.load(open(TOPO_GEOJSON, encoding="utf-8"))
+            for ft in fc["features"]:
+                ring = ft["geometry"]["coordinates"][0]
+                xs = [c[0] for c in ring]
+                ys = [c[1] for c in ring]
+                p = ft["properties"]
+                cells.append((min(xs), min(ys), max(xs), max(ys),
+                              str(p.get("sheet_code") or ""),
+                              str(p.get("sheet_name") or ""),
+                              str(p.get("sheet_mapidcd") or "")))
+        _TOPO_CELLS = cells
+    return _TOPO_CELLS
+
+
+def sheet_at(lat, lon):
+    """좌표가 들어있는 1:50,000 도엽 → (도엽번호, 도엽명, NGII번호). 없으면 None."""
+    try:
+        lat, lon = float(lat), float(lon)
+    except (TypeError, ValueError):
+        return None
+    for w, s_, e, n, code, name, mid in _topo_cells():
+        if w <= lon <= e and s_ <= lat <= n:
+            return code, name, mid
+    return None
+
+
+def fix_sheet(d):
+    """카드 1건의 도엽 기재값을 좌표 판정 결과로 정정(제자리 수정)."""
+    d["도엽번호기재"] = d.get("도엽번호", "")
+    d["도엽명기재"] = d.get("도엽명", "")
+    d["도엽정정"] = ""
+    hit = sheet_at(d.get("위도"), d.get("경도"))
+    if not hit:
+        return d
+    code, name, _mid = hit
+    if (d["도엽번호기재"] or "").strip() != code or (d["도엽명기재"] or "").strip() != name:
+        d["도엽정정"] = f"{d['도엽명기재'] or '-'}({d['도엽번호기재'] or '-'}) → {name}({code})"
+    d["도엽번호"], d["도엽명"] = code, name
+    return d
 
 
 def parse_workbook(path, photo_dir=None):
@@ -457,7 +516,8 @@ def dcell(item):
 
 
 # ── 시트 1: 현장조사 취합 ────────────────────────────────────────────────────
-FULL_COLS = ["관할 본부", "관리번호", "후보지명", "도엽번호", "도엽명", "지번 주소",
+FULL_COLS = ["관할 본부", "관리번호", "후보지명", "도엽번호", "도엽명", "도엽 정정",
+             "지번 주소",
              "위도", "경도", "표고(m)", "유형", "연계 기존점", "소유권",
              "조사일", "조사자", "기상",
              "차량영향", "전력시설", "통신시설", "금속류", "매설물", "건축물", "자연환경",
@@ -477,6 +537,7 @@ def sheet_full(wb, recs):
     for ri, d in enumerate(recs, 3):
         dist = d["자기교란"]
         row = [d["관할본부"], d["관리번호"], d["후보지명"], d["도엽번호"], d["도엽명"],
+               d["도엽정정"],
                d["지번주소"], d["위도"], d["경도"], d["표고"], d["유형"], d["연계기존점"],
                d["소유권"], d["조사일"], d["조사자"], d["기상"],
                dcell(dist.get("차량영향")), dcell(dist.get("전력시설")), dcell(dist.get("통신시설")),
@@ -488,7 +549,9 @@ def sheet_full(wb, recs):
             c = ws.cell(ri, j, v)
             c.font = F_VAL
             c.border = BORDER
-            c.alignment = AL_L if j in (6, 27, 28, 29, 30) else AL_C
+            c.alignment = AL_L if FULL_COLS[j - 1] in (
+                "지번 주소", "도엽 정정", "판정 의견", "접근 경로", "유의사항",
+                "도상 간섭요인") else AL_C
             if ds <= j <= de and isinstance(v, str) and v.startswith("있음"):
                 c.fill = FILL_BAD
             if j == bcol and v == "불가":
@@ -496,7 +559,7 @@ def sheet_full(wb, recs):
             if j == jcol:
                 c.fill = {"적합": FILL_OK, "조건부 적합": FILL_COND,
                           "부적합": FILL_BAD}.get(v, FILL_GRAY)
-    widths = [14, 8, 13, 11, 8, 24, 9, 9, 7, 8, 9, 8, 11, 12, 6,
+    widths = [14, 8, 13, 11, 8, 22, 24, 9, 9, 7, 8, 9, 8, 11, 12, 6,
               9, 8, 8, 8, 8, 8, 8, 8, 9, 8, 10, 30, 24, 18, 30, 16]
     for j, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(j)].width = w
@@ -703,7 +766,8 @@ def _action(v):
             "부적합": "대체 후보지 검토"}.get(v, "② 조사 완료 후")
 
 
-FLAT_COLS = ["관할 본부", "관리번호", "후보지명", "도엽번호", "도엽명", "위도", "경도",
+FLAT_COLS = ["관할 본부", "관리번호", "후보지명", "도엽번호", "도엽명", "도엽 정정",
+             "위도", "경도",
              "표고(m)", "유형", "지번 주소", "도로명 주소", "연계 기존점",
              "소유권", "조사대상", "조사일", "조사자", "기상",
              "차량영향 존재", "차량영향 이격", "전력시설 존재", "전력시설 이격",
@@ -732,6 +796,7 @@ def build_flat_workbook(recs, out_path):
         b1 = d.get("방위표지상세", {}).get("표지1", {})
         b2 = d.get("방위표지상세", {}).get("표지2", {})
         row = [d["관할본부"], d["관리번호"], d["후보지명"], d["도엽번호"], d["도엽명"],
+               d["도엽정정"],
                d["위도"], d["경도"], d["표고"], d["유형"], d["지번주소"], d["도로명주소"],
                d["연계기존점"], d["소유권"], d["조사대상"], d["조사일"], d["조사자"], d["기상"],
                *g("차량영향"), *g("전력시설"), *g("통신시설"), *g("금속류"),
@@ -745,12 +810,14 @@ def build_flat_workbook(recs, out_path):
             c.font = F_VAL
             c.border = BORDER
             c.alignment = AL_L if FLAT_COLS[j - 1] in (
-                "지번 주소", "도로명 주소", "판정 의견", "접근 경로", "유의사항", "도상 간섭요인") else AL_C
+                "지번 주소", "도로명 주소", "도엽 정정", "판정 의견", "접근 경로",
+                "유의사항", "도상 간섭요인") else AL_C
     ws.freeze_panes = "C3"
     ws.auto_filter.ref = f"A2:{get_column_letter(n)}{len(recs) + 2}"
     for j, col in enumerate(FLAT_COLS, 1):
         w = 30 if col in ("판정 의견", "도상 간섭요인") else \
             24 if col in ("지번 주소", "접근 경로") else \
+            22 if col == "도엽 정정" else \
             18 if col == "유의사항" else \
             13 if "방위" in col or col in ("조사일", "조사자", "관할 본부", "후보지명") else 9
         ws.column_dimensions[get_column_letter(j)].width = w

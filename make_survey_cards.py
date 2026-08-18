@@ -5,10 +5,11 @@
 - 구성: 마스터 목록 시트 + 후보지별 카드(지도 4종 포함)
 - 섹션: ① 선점 정보 / ② 주변 간섭요인(자동계산) / ③ 도상 판정 / ④ 현장조사 결과(공란)
 """
-import json, re, math
+import json, re, math, os, time
 from datetime import datetime
 from pathlib import Path
 import xml.etree.ElementTree as ET
+import requests
 from PIL import Image, ImageDraw, ImageFont
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -24,11 +25,39 @@ KML_PATH = ROOT / "docs/output/20260617_kang_site_v4.kml"
 EXISTING = ROOT / "docs/data/existing_sites.geojson"
 TOPO     = ROOT / "docs/data/topo_sheets.geojson"
 OUT_DIR  = ROOT / "docs/output"
-N_CARDS  = 96
+N_CARDS  = 103
 EMBED_PX = 300
 FONT_KR  = "C:/Windows/Fonts/malgun.ttf"
+KAKAO_KEY = os.environ.get("KAKAO_REST_KEY", "")   # 역지오코딩 키 (환경변수)
 
 NS = {'k': 'http://www.opengis.net/kml/2.2'}
+
+
+# ── Kakao 역지오코딩 (좌표 → 지번/도로명 주소) ──────────────────────────────
+_geo_cache = {}
+
+def reverse_geocode(lat, lon):
+    """returns (지번주소, 도로명주소). 키 없거나 실패 시 ('',''))"""
+    if not KAKAO_KEY:
+        return "", ""
+    key = (round(lon, 6), round(lat, 6))
+    if key in _geo_cache:
+        return _geo_cache[key]
+    jibun = road = ""
+    try:
+        r = requests.get("https://dapi.kakao.com/v2/local/geo/coord2address.json",
+                         params={"x": lon, "y": lat},
+                         headers={"Authorization": f"KakaoAK {KAKAO_KEY}"}, timeout=10)
+        docs = r.json().get("documents", [])
+        if docs:
+            jibun = (docs[0].get("address") or {}).get("address_name", "") or ""
+            rd = docs[0].get("road_address")
+            road = (rd or {}).get("address_name", "") if rd else ""
+    except Exception as e:
+        print("  [geocode 실패]", lat, lon, e)
+    _geo_cache[key] = (jibun, road)
+    time.sleep(0.04)
+    return jibun, road
 
 # ── 스타일 ──────────────────────────────────────────────────────────────────
 F_TITLE  = Font(name='맑은 고딕', size=14, bold=True, color='FFFFFF')
@@ -209,7 +238,7 @@ def build_card(wb, idx, p, exi, dist, sh, inf, imgs):
     t.font = F_TITLE; t.fill = FILL_TITLE; t.alignment = AL_L
     ws.row_dimensions[1].height = 30
 
-    # ② 선점 정보
+    # ① 선점 정보
     sec(ws, 2, "① 선점 정보")
     merge_val(ws, 3, "관리번호", "A", ("B", "C"), sid)
     lbl(ws, "D3", "후보지명"); ws.merge_cells("E3:G3"); val(ws, "E3", p['name'])
@@ -222,75 +251,77 @@ def build_card(wb, idx, p, exi, dist, sh, inf, imgs):
     merge_val(ws, 7, "표고", "A", ("B", "C"),
               f"{p['elev']:.0f} m" if p['elev'] is not None else "-")
     lbl(ws, "D7", "후보지 유형"); ws.merge_cells("E7:G7"); val(ws, "E7", cat)
-    merge_val(ws, 8, "연계 기존점", "A", ("B", "G"),
+    merge_val(ws, 8, "지번 주소", "A", ("B", "G"), p.get('jibun') or "-")
+    merge_val(ws, 9, "도로명 주소", "A", ("B", "G"), p.get('road') or "-")
+    merge_val(ws, 10, "연계 기존점", "A", ("B", "G"),
               f"{exi['name']} (직선거리 약 {dist:.1f} km)")
-    merge_val(ws, 9, "접근 경로", "A", ("B", "G"), p['desc'] or "현장확인")
-    ws.row_dimensions[9].height = 58
-    merge_val(ws, 10, "차량 진입", "A", ("B", "C"), vehicle_access(p['desc']))
-    lbl(ws, "D10", "주차→도보"); ws.merge_cells("E10:G10"); val(ws, "E10", "현장확인")
-    merge_val(ws, 11, "유의사항", "A", ("B", "G"), cautions(p['desc']))
+    merge_val(ws, 11, "접근 경로", "A", ("B", "G"), p['desc'] or "현장확인")
+    ws.row_dimensions[11].height = 58
+    merge_val(ws, 12, "차량 진입", "A", ("B", "C"), vehicle_access(p['desc']))
+    lbl(ws, "D12", "주차→도보"); ws.merge_cells("E12:G12"); val(ws, "E12", "현장확인")
+    merge_val(ws, 13, "유의사항", "A", ("B", "G"), cautions(p['desc']))
     # 내비 링크
-    lbl(ws, "A12", "내비 바로가기")
+    lbl(ws, "A14", "내비 바로가기")
     kakao = f"https://map.kakao.com/link/map/{p['name']},{p['lat']:.6f},{p['lon']:.6f}"
     naver = f"https://map.naver.com/v5/search/{p['lat']:.6f},{p['lon']:.6f}"
     google = f"https://www.google.com/maps/search/?api=1&query={p['lat']:.6f},{p['lon']:.6f}"
     for ref, span, txt, url in [("B", "C", "카카오맵", kakao),
                                  ("D", "E", "네이버지도", naver),
                                  ("F", "G", "구글지도", google)]:
-        ws.merge_cells(f"{ref}12:{chr(ord(ref)+1)}12")
-        c = ws[f"{ref}12"]; c.value = txt; c.hyperlink = url
+        ws.merge_cells(f"{ref}14:{chr(ord(ref)+1)}14")
+        c = ws[f"{ref}14"]; c.value = txt; c.hyperlink = url
         c.font = Font(name='맑은 고딕', size=10, color='1A73E8', underline='single')
         c.alignment = AL_C; c.border = BORDER
 
-    # ③ 주변 간섭요인
-    sec(ws, 13, "② 주변 간섭요인 (자동 계산)")
+    # ② 주변 간섭요인
+    sec(ws, 15, "② 주변 간섭요인 (자동 계산)")
     ok = lambda b: "✓ 충족" if b else "✗ 미달"
-    merge_val(ws, 14, "최근접 송전탑", "A", ("B", "C"), f"{inf['tower']*1000:.0f} m")
-    lbl(ws, "D14", "기준 1km"); ws.merge_cells("E14:G14"); val(ws, "E14", ok(inf['tower'] >= 1.0))
-    merge_val(ws, 15, "최근접 철도", "A", ("B", "C"), f"{inf['rail']:.1f} km")
-    lbl(ws, "D15", "기준 5km"); ws.merge_cells("E15:G15"); val(ws, "E15", ok(inf['rail'] >= 5.0))
-    merge_val(ws, 16, "최근접 통신탑", "A", ("B", "C"), f"{inf['comm']:.1f} km")
-    lbl(ws, "D16", "최근접 주거지"); ws.merge_cells("E16:G16"); val(ws, "E16", f"{inf['resid']:.2f} km")
+    merge_val(ws, 16, "최근접 송전탑", "A", ("B", "C"), f"{inf['tower']*1000:.0f} m")
+    lbl(ws, "D16", "기준 1km"); ws.merge_cells("E16:G16"); val(ws, "E16", ok(inf['tower'] >= 1.0))
+    merge_val(ws, 17, "최근접 철도", "A", ("B", "C"), f"{inf['rail']:.1f} km")
+    lbl(ws, "D17", "기준 5km"); ws.merge_cells("E17:G17"); val(ws, "E17", ok(inf['rail'] >= 5.0))
+    merge_val(ws, 18, "최근접 통신탑", "A", ("B", "C"), f"{inf['comm']:.1f} km")
+    lbl(ws, "D18", "최근접 주거지"); ws.merge_cells("E18:G18"); val(ws, "E18", f"{inf['resid']:.2f} km")
 
-    # ④ 도상 판정
-    sec(ws, 17, "③ 도상 판정")
+    # ③ 도상 판정
+    sec(ws, 19, "③ 도상 판정")
     mark = {"적합": "■ 적합  □ 조건부 적합  □ 부적합",
             "조건부 적합": "□ 적합  ■ 조건부 적합  □ 부적합"}.get(jd)
-    merge_val(ws, 18, "종합판정", "A", ("B", "G"), mark)
-    merge_val(ws, 19, "종합의견", "A", ("B", "G"), jr +
+    merge_val(ws, 20, "종합판정", "A", ("B", "G"), mark)
+    merge_val(ws, 21, "종합의견", "A", ("B", "G"), jr +
               " 현장답사를 통해 접근성·평탄성·방위각 측정 가능 여부 확인 권장.")
-    ws.row_dimensions[19].height = 56
+    ws.row_dimensions[21].height = 56
 
-    # ⑤ 현장조사 결과 (작업자 기입)
-    sec(ws, 20, "④ 현장조사 결과 (현장 작업자 기입)")
-    merge_val(ws, 21, "방문일", "A", ("B", "C"), "", field=True)
-    lbl(ws, "D21", "조사자"); ws.merge_cells("E21:G21"); val(ws, "E21", "", field=True)
-    merge_val(ws, 22, "실측 GPS", "A", ("B", "G"), "", field=True)
-    merge_val(ws, 23, "실제 접근성", "A", ("B", "C"), "", field=True)
-    lbl(ws, "D23", "장비설치 가능"); ws.merge_cells("E23:G23"); val(ws, "E23", "", field=True)
-    merge_val(ws, 24, "측정 적합성", "A", ("B", "C"), "", field=True)
-    lbl(ws, "D24", "사진번호"); ws.merge_cells("E24:G24"); val(ws, "E24", "", field=True)
-    merge_val(ws, 25, "최종판정", "A", ("B", "C"), "", field=True)
-    lbl(ws, "D25", "비고"); ws.merge_cells("E25:G25"); val(ws, "E25", "", field=True)
+    # ④ 현장조사 결과 (작업자 기입)
+    sec(ws, 22, "④ 현장조사 결과 (현장 작업자 기입)")
+    merge_val(ws, 23, "방문일", "A", ("B", "C"), "", field=True)
+    lbl(ws, "D23", "조사자"); ws.merge_cells("E23:G23"); val(ws, "E23", "", field=True)
+    merge_val(ws, 24, "실측 GPS", "A", ("B", "G"), "", field=True)
+    merge_val(ws, 25, "실제 접근성", "A", ("B", "C"), "", field=True)
+    lbl(ws, "D25", "장비설치 가능"); ws.merge_cells("E25:G25"); val(ws, "E25", "", field=True)
+    merge_val(ws, 26, "측정 적합성", "A", ("B", "C"), "", field=True)
+    lbl(ws, "D26", "사진번호"); ws.merge_cells("E26:G26"); val(ws, "E26", "", field=True)
+    merge_val(ws, 27, "최종판정", "A", ("B", "C"), "", field=True)
+    lbl(ws, "D27", "비고"); ws.merge_cells("E27:G27"); val(ws, "E27", "", field=True)
 
     # 지도 (우측 2x2)
     embed_map(ws, imgs['sat'],  'H2',  "위성 근접 (현장 지형·임도)")
     embed_map(ws, imgs['sur'],  'J2',  "주변 (도로·마을)")
-    embed_map(ws, imgs['int'],  'H15', "간섭요인 (송전탑·철도 버퍼)")
-    embed_map(ws, imgs['wide'], 'J15', "광역 위치")
+    embed_map(ws, imgs['int'],  'H17', "간섭요인 (송전탑·철도 버퍼)")
+    embed_map(ws, imgs['wide'], 'J17', "광역 위치")
 
     return ws, sid, cat, jd
 
 
 # ── 마스터 목록 ─────────────────────────────────────────────────────────────
-MASTER_COLS = ["관리번호", "후보지명", "도엽번호", "도엽명", "위도", "경도", "표고(m)",
+MASTER_COLS = ["관리번호", "후보지명", "지번 주소", "도엽번호", "도엽명", "위도", "경도", "표고(m)",
                "유형", "연계 기존점", "기존점거리(km)", "최근접송전탑(m)", "송전탑(1km)",
                "최근접철도(km)", "철도(5km)", "최근접주거지(km)", "도상판정", "진행상태", "카드"]
 
 
 def build_master(wb, rows):
     ws = wb.create_sheet("전체 목록", 0)
-    widths = [9, 14, 11, 9, 10, 10, 8, 11, 12, 12, 13, 10, 12, 9, 13, 12, 10, 8]
+    widths = [9, 14, 24, 11, 9, 10, 10, 8, 11, 12, 12, 13, 10, 12, 9, 13, 12, 10, 8]
     for i, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.merge_cells(f"A1:{get_column_letter(len(MASTER_COLS))}1")
@@ -326,12 +357,16 @@ def main():
     master_rows = []
     for i, p in enumerate(pts, 1):
         exi, dist = nearest_existing(p['lat'], p['lon'], ex)
-        sh = sheet_of(exi['lon'], exi['lat'], polys)
+        # 도엽은 **후보지 자신의 좌표**로 판정한다. 기존점(exi) 좌표를 쓰면
+        # 연계 기존점의 도엽이 찍혀 실제 도엽과 어긋난다(2026-08 정정).
+        sh = sheet_of(p['lon'], p['lat'], polys)
         inf = inf_calc.all(p['lat'], p['lon'])
+        p['jibun'], p['road'] = reverse_geocode(p['lat'], p['lon'])
         imgs = cap.capture_card(f"{i:02d}", p['lat'], p['lon'])
         ws, sid, cat, jd = build_card(wb, i, p, exi, dist, sh, inf, imgs)
         master_rows.append([
-            sid, p['name'], sh.get('sheet_code', '-'), sh.get('sheet_name', '-'),
+            sid, p['name'], p.get('jibun') or "-",
+            sh.get('sheet_code', '-'), sh.get('sheet_name', '-'),
             f"{p['lat']:.5f}", f"{p['lon']:.5f}",
             f"{p['elev']:.0f}" if p['elev'] is not None else "-",
             cat, exi['name'], f"{dist:.1f}",
