@@ -25,7 +25,7 @@ from pathlib import Path
 import folium
 
 from aggregate_survey_xlsx import (parse_workbook, review, key_disturb, survey_files,
-                                   sheet_rank, mark_max_dist)
+                                   sheet_priority, mark_max_dist)
 
 ROOT = Path(__file__).parent
 DATA = ROOT / "docs" / "data"
@@ -49,6 +49,24 @@ GRADE = {   # 등급 → (색, 라벨) — 4단계
     "D": ("#CC3333", "D · 부적합 (대체 후보지 검토)"),
     "미완료": ("#888888", "미완료 · 재조사 필요"),
 }
+
+# 표출 레이어 — 자침편각 표기는 도엽당 1점이면 충분하므로 B 를 대표/예비로 분리.
+LAYERS = [
+    ("A",      "#2E8B57", "A · 선점 가능 (자기구배 조사)"),
+    ("B대표",  "#2E86C1", "B · 조건부 선점 가능 (도엽 대표)"),
+    ("B예비",  "#AFCBE3", "└ B 예비 (도엽 중복·A 확보 도엽)"),
+    ("C",      "#E0A400", "C · 현장 확인 필요 (자기교란 재확인)"),
+    ("D",      "#CC3333", "D · 부적합 (대체 후보지 검토)"),
+    ("미완료", "#888888", "미완료 · 재조사 필요"),
+]
+LAYER_COL = {k: c for k, c, _ in LAYERS}
+
+
+def layer_of(grade, prio):
+    """등급 + 도엽 구분 → 표출 레이어 키."""
+    if grade == "B" and prio:
+        return "B대표" if prio[0] == "대표" else "B예비"
+    return grade
 
 
 def fnum(v):
@@ -188,15 +206,18 @@ def popup_html(d, grade, concl, note, rank=None):
         ("방위표지", esc(bang) + (f" <span style='color:#888'>({az})</span>" if az else "")),
         ("검토 결론", f"<b>{esc(concl)}</b>"),
     ]
-    # 도엽 중복 B 순위 (방위표지 최장거리 기준, 1순위=가장 먼 표지)
-    if rank and grade == "B" and rank[1] >= 2:
-        md = mark_max_dist(d)
-        star = "★ " if rank[0] == 1 else ""
-        color_r = "#2E8B57" if rank[0] == 1 else "#888"
-        rows.append(("도엽 우선순위",
-                     f"<b style='color:{color_r}'>{star}{esc(d['도엽명'])} 도엽 내 "
-                     f"{rank[0]}순위 / {rank[1]}건</b> "
-                     f"<span style='color:#888'>(방위표지 최장 {md:.0f}m)</span>"))
+    # 도엽 대표/예비 (자침편각 표기는 도엽당 1점 → 방위표지 최장거리 1순위가 대표)
+    if rank and grade == "B":
+        kind, rk, n, why = rank
+        md = mark_max_dist(d) or 0
+        if kind == "대표":
+            txt = (f"<b style='color:#2E8B57'>★ {esc(d['도엽명'])} 도엽 대표</b>"
+                   + (f" <span style='color:#888'>({rk}/{n}위)</span>" if n > 1 else ""))
+        else:
+            txt = (f"<b style='color:#888'>예비 — {esc(why)}</b>"
+                   + (f" <span style='color:#888'>({rk}/{n}위)</span>" if n > 1 else ""))
+        rows.append(("도엽 구분",
+                     txt + f" <span style='color:#888'>· 방위표지 최장 {md:.0f}m</span>"))
     rows += [
         ("조사자 의견", esc(note)),
         ("조사", f"{esc(d['조사일'])} · {esc(d['조사자'])}"),
@@ -221,13 +242,14 @@ def popup_html(d, grade, concl, note, rank=None):
 
 def legend_html(counts, total):
     items = "".join(
-        f"<div style='display:flex;align-items:center;margin:3px 0'>"
+        f"<div style='display:flex;align-items:center;margin:3px 0"
+        f"{';padding-left:12px' if k == 'B예비' else ''}'>"
         f"<span style='width:13px;height:13px;border-radius:50%;background:{c};"
         f"display:inline-block;margin-right:7px;border:1px solid #fff;"
         f"box-shadow:0 0 0 1px #999'></span>"
-        f"<span style='font-size:12px'>{lab} "
-        f"<b>{counts.get(g,0)}</b></span></div>"
-        for g, (c, lab) in GRADE.items())
+        f"<span style='font-size:12px{';color:#666' if k == 'B예비' else ''}'>{lab} "
+        f"<b>{counts.get(k,0)}</b></span></div>"
+        for k, c, lab in LAYERS)
     return (
         "<div style='position:fixed;bottom:22px;left:22px;z-index:9999;"
         "background:rgba(255,255,255,.95);padding:11px 14px;border-radius:8px;"
@@ -311,37 +333,37 @@ def build(records):
         attr="Esri World Imagery", name="위성 이미지 (Esri)",
         overlay=False, control=True).add_to(m)
 
-    groups = {g: folium.FeatureGroup(name=f"{lab}", show=True)
-              for g, (c, lab) in GRADE.items()}
+    groups = {k: folium.FeatureGroup(name=lab, show=True) for k, c, lab in LAYERS}
     counts = {}
     bangwi = {}
-    brank = sheet_rank(records, "B")   # 도엽 중복 B 순위(방위표지 최장거리)
+    prio = sheet_priority(records)   # B 도엽 대표/예비
     for d in records:
         lat, lon = fnum(d["위도"]), fnum(d["경도"])
         if lat is None or lon is None:
             continue
         grade, concl, note = review(d)
-        counts[grade] = counts.get(grade, 0) + 1
-        color = GRADE[grade][0]
-        rk = brank.get(d["관리번호"])
+        rk = prio.get(d["관리번호"])
+        key = layer_of(grade, rk)
+        counts[key] = counts.get(key, 0) + 1
+        color = LAYER_COL[key]
         tip = f"[{grade}] {d['관리번호']} {d['후보지명']}"
-        if rk and grade == "B" and rk[1] >= 2:
-            tip += f" · {d['도엽명']}도엽 {rk[0]}순위/{rk[1]}" + (" ★" if rk[0] == 1 else "")
+        if rk and grade == "B":
+            tip += (f" · ★{d['도엽명']}도엽 대표" if rk[0] == "대표"
+                    else f" · {d['도엽명']}도엽 예비({rk[3]})")
         tip += " (클릭: 방위표지 표시)"
-        # 도엽 1순위 B 는 흰 테두리 강조
-        is_top = bool(rk and grade == "B" and rk[1] >= 2 and rk[0] == 1)
+        is_top = bool(rk and grade == "B" and rk[0] == "대표")
         folium.CircleMarker(
             location=[lat, lon], radius=8 if is_top else 7,
             color="#fff" if is_top else "#333", weight=2.5 if is_top else 1.2,
             fill=True, fill_color=color, fill_opacity=0.92,
             tooltip=tip,
             popup=folium.Popup(popup_html(d, grade, concl, note, rk), max_width=360),
-        ).add_to(groups[grade])
+        ).add_to(groups[key])
         be = bangwi_entry(d)
         if be:
             bangwi[f"{lat:.5f},{lon:.5f}"] = be
-    for g in GRADE:
-        groups[g].add_to(m)
+    for k, _c, _lab in LAYERS:
+        groups[k].add_to(m)
 
     add_topo_layer(m)
     n_exist = add_existing_layer(m)
