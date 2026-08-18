@@ -86,7 +86,64 @@ def load_survey_points() -> pd.DataFrame:
     df["date"] = df["year"].apply(lambda y: dt.datetime(int(y), 7, 1))
     df["date_src"] = "연도대체(7/1)"
     df = attach_fieldbook_datetime(df)
+    df = apply_external_correction(df)
     return df.reset_index(drop=True)
+
+
+# ── ④ External 층 — 성과표 값에 외부장 보정 적용 ──────────────────────────────
+#
+# 성과표가 **원시 세션평균**임이 확정됐으므로(audit_survey_table.py, 2026-08-19)
+# 뺄 외부장이 그대로 남아 있다. lmm_external.py 가 세션별 편차를 산출해 두었고,
+# 성과값이 세션 평균이므로 보정도 **세션 평균**으로 걸어야 짝이 맞는다.
+#
+#   "none"          : 미적용 (종전 동작)
+#   "subtract"      : 전 세션 평균 보정량을 뺀다
+#   "subtract_quiet": Kp<=2 세션만으로 평균한 보정량을 뺀다
+#   "drop_storm"    : 보정은 하지 않고, 교란시(Kp>2) 관측 성과를 표본에서 뺀다
+#
+# ⚠ 균일 V 근사의 한계가 남아 있다 — CYG 한 곳의 변동을 전국에 동일 적용한다.
+#   2019 표본에서는 이 근사가 편각을 악화시켰다(LOO D 0.751->0.858). 그래서
+#   기본값은 "none" 이고, 모드별 비교는 compare_external_modes.py 로 판정한다.
+EXTERNAL_MODE = "none"
+EXTERNAL_CSV = BASE / "docs" / "data" / "external_corrections.csv"
+
+
+def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
+    """(측점, 연도) 세션 평균 외부장 편차를 성과값에서 뺀다."""
+    if EXTERNAL_MODE == "none" or not EXTERNAL_CSV.exists():
+        df["ext_src"] = "미적용"
+        return df
+    ec = pd.read_csv(EXTERNAL_CSV, encoding="utf-8-sig")
+    ec = ec[ec["상태"] == "정상"].copy()
+    ec["연도"] = pd.to_datetime(ec["날짜"]).dt.year
+    if EXTERNAL_MODE == "subtract_quiet":
+        ec = ec[ec["Kp"] <= FB2019_MAX_KP]
+    if ec.empty:
+        df["ext_src"] = "미적용(표본없음)"
+        return df
+
+    g = (ec.groupby(["측점", "연도"])
+           .agg(dF=("dF", "mean"), dD=("dD_arcmin", "mean"),
+                kp_max=("Kp", "max"), n=("dF", "size")).reset_index())
+    out = df.merge(g, left_on=["name", "year"], right_on=["측점", "연도"],
+                   how="left")
+    hit = out["dF"].notna()
+
+    if EXTERNAL_MODE == "drop_storm":
+        # 보정하지 않고 교란시 성과를 표본에서 뺀다(값을 만지지 않는 방식)
+        storm = hit & (out["kp_max"] > FB2019_MAX_KP)
+        out["ext_src"] = np.where(storm, "교란배제", "유지")
+        print(f"  [External] drop_storm - 교란시 성과 {int(storm.sum())}행 배제")
+        out = out[~storm]
+    else:
+        out.loc[hit, "F_nT"] = out.loc[hit, "F_nT"] - out.loc[hit, "dF"]
+        out.loc[hit, "D_deg"] = out.loc[hit, "D_deg"] - out.loc[hit, "dD"] / 60.0
+        out["ext_src"] = np.where(hit, EXTERNAL_MODE, "미적용")
+        print(f"  [External] {EXTERNAL_MODE} - {int(hit.sum())}/{len(out)}행 보정 "
+              f"(|dF| 평균 {out.loc[hit, 'dF'].abs().mean():.1f} nT · "
+              f"|dD| 평균 {out.loc[hit, 'dD'].abs().mean():.2f}')")
+    return out.drop(columns=[c for c in ("측점", "연도", "dF", "dD", "kp_max", "n")
+                             if c in out])
 
 
 # 야장에서 복원한 세션표 (lmm_fieldbook.py 산출). 없으면 종전 7/1 대체로 동작한다.
