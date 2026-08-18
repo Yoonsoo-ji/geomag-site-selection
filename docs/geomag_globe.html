@@ -87,6 +87,7 @@
   <button class="tg on" id="tgSpin">자전</button>
   <button class="tg" id="tgSites" style="border-color:rgba(120,220,150,.5)">선점 후보</button>
   <button class="tg" id="tgExist" style="border-color:rgba(255,210,74,.5);color:#ffe4a0">기존점</button>
+  <button class="tg" id="tgLMM" style="border-color:rgba(160,190,255,.55);color:#cfe0ff" title="한국 지역 자기장 모델(LMM) 고해상 패치">🇰🇷 한국 LMM</button>
   <button class="tg" id="btnKorea">한국으로 ↦</button>
   <button class="tg" id="btnDetail" title="한국 상세 위성지도(선점 검토)">🛰 상세</button>
   <span id="yr">연도 <input id="year" type="range" min="2025" max="2030" step="0.1" value="2026.6"><b id="yearv">2026.6</b></span>
@@ -380,8 +381,133 @@ const yearEl=document.getElementById('year'), yearv=document.getElementById('yea
 let ytimer; yearEl.oninput=()=>{yearv.textContent=(+yearEl.value).toFixed(1);clearTimeout(ytimer);ytimer=setTimeout(()=>fullRebuild(+yearEl.value),140);};
 document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
-  MODE=b.dataset.m; applyMode();
+  MODE=b.dataset.m; applyMode(); lmmApply();
 });
+
+// ── 한국 LMM 패치 ───────────────────────────────────────────────────────────
+// 전역 격자(2°)는 IGRF 만 담는다. 한국 구간만 LMM(Core+Regional+Crustal)을
+// 0.05° 로 다시 계산해 지표면 바로 위에 얹는다. 전역 격자를 올리면 계산량이
+// 해상도² 로 늘지만, 국지 패치는 한국 면적만 계산하므로 부담이 없다.
+//
+// 결합식은 lmm.html 과 동일 — D=IGRF_D+reg_D, I=IGRF_I+reg_I,
+// F=IGRF_F+crustal+reg_F. External 은 미적용(정온시 기준값 모형).
+const LMM_BOX={lat0:33.0,lat1:38.7,lon0:125.0,lon1:130.0,step:0.05};
+const _c=new THREE.Color();   // 색공간 변환용 재사용 객체
+let LMMDATA=null, lmmMesh=null, lmmOn=false, lmmLoading=false;
+const lmmGroup=new THREE.Group(); earthGroup.add(lmmGroup);
+
+function regTerm(c,lat,lon,r){ // degree-1 다항식: [1, u, v]
+  const u=lat-r.lat0, v=lon-r.lon0; return c[0]+c[1]*u+c[2]*v; }
+
+function crustalAt(lat,lon,cr){
+  const i=Math.round((lon-cr.lon0)/cr.dlon), j=Math.round((lat-cr.lat0)/cr.dlat);
+  if(i<0||i>=cr.nlon||j<0||j>=cr.nlat) return null;
+  const v=cr.values[j*cr.nlon+i];          // i=경도 서→동, j=위도 남→북
+  return (v===null||v===undefined||!isFinite(v))?null:v;
+}
+
+function lmmAt(lat,lon,year){
+  const e=IGRF.igrfElements(lat,lon,0,year);
+  const r=LMMDATA.regional, cr=LMMDATA.crustal;
+  const c=crustalAt(lat,lon,cr);
+  return {
+    D:e.D+regTerm(r.D,lat,lon,r),
+    I:e.I+regTerm(r.I,lat,lon,r),
+    F:e.F+(c===null?0:c)+regTerm(r.F,lat,lon,r),
+    gap:c===null                                  // 항공자력 자료 공백 여부
+  };
+}
+
+function buildLMM(year){
+  lmmGroup.clear(); lmmMesh=null;
+  if(!LMMDATA) return;
+  const B=LMM_BOX, st=B.step;
+  const nx=Math.round((B.lon1-B.lon0)/st)+1, ny=Math.round((B.lat1-B.lat0)/st)+1;
+  const geo=new THREE.BufferGeometry();
+  const pos=new Float32Array(nx*ny*3), col=new Float32Array(nx*ny*3);
+  const idx=[];
+  for(let j=0;j<ny;j++){
+    const lat=B.lat0+j*st;
+    for(let i=0;i<nx;i++){
+      const lon=B.lon0+i*st, k=j*nx+i;
+      const p=sph(lat,lon,1.004);              // 지표 바로 위 (z-fighting 방지)
+      pos[k*3]=p.x; pos[k*3+1]=p.y; pos[k*3+2]=p.z;
+      const v=lmmAt(lat,lon,year);
+      const c=colorAt(MODE, MODE==='F'?v.F:MODE==='D'?v.D:v.I);
+      // ⚠ 정점색은 **작업 색공간(선형)** 으로 넣어야 한다. colorAt 이 주는 값은
+      //   sRGB(0~255) 라 그대로 넣으면 밝게 떠서 전역 표면과 톤이 어긋난다.
+      _c.setRGB(c[0]/255,c[1]/255,c[2]/255,THREE.SRGBColorSpace);
+      col[k*3]=_c.r; col[k*3+1]=_c.g; col[k*3+2]=_c.b;
+    }
+  }
+  for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){
+    const a=j*nx+i,b=a+1,c=a+nx,d=c+1; idx.push(a,c,b, b,c,d);}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  // DoubleSide — FrontSide 면 카메라 각도에 따라 뒷면이 컬링돼 사라진다
+  lmmMesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial(
+    {vertexColors:true,side:THREE.DoubleSide,transparent:true,opacity:0.96}));
+  lmmGroup.add(lmmMesh);
+  // 패치 경계선 — 어디까지가 LMM 인지 눈에 보이게
+  const ring=[];
+  for(let i=0;i<nx;i++) ring.push(sph(B.lat0,B.lon0+i*st,1.0045));
+  for(let j=0;j<ny;j++) ring.push(sph(B.lat0+j*st,B.lon1,1.0045));
+  for(let i=nx-1;i>=0;i--) ring.push(sph(B.lat1,B.lon0+i*st,1.0045));
+  for(let j=ny-1;j>=0;j--) ring.push(sph(B.lat0+j*st,B.lon0,1.0045));
+  lmmGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ring),
+    new THREE.LineBasicMaterial({color:0x9ec5ff,transparent:true,opacity:.85})));
+  lmmGroup.visible=lmmOn;
+}
+
+function lmmApply(){ if(lmmOn && LMMDATA) buildLMM(+yearEl.value); }
+
+// 모듈 스코프라 콘솔에서 안 보인다 → 상태 점검용 훅 (검증에 쓴다)
+window.__lmm=()=>({on:lmmOn,loaded:!!LMMDATA,vis:lmmGroup.visible,
+  meshes:lmmGroup.children.length,
+  verts:lmmMesh?lmmMesh.geometry.attributes.position.count:0,
+  sample:LMMDATA?lmmAt(36.5,127.5,+yearEl.value):null,
+  camDist:+camera.position.length().toFixed(3)});
+
+const tgLMM=document.getElementById('tgLMM');
+tgLMM.onclick=async()=>{
+  if(lmmLoading) return;
+  lmmOn=!lmmOn; tgLMM.classList.toggle('on',lmmOn);
+  if(!lmmOn){ lmmGroup.visible=false; hideSite(); return; }
+  if(!LMMDATA){
+    lmmLoading=true; busy.style.opacity=1;
+    try{ LMMDATA=await (await fetch('data/lmm_model.json')).json(); }
+    catch(e){ tgLMM.classList.remove('on'); lmmOn=false;
+      alert('LMM 모델을 불러오지 못했습니다: '+e.message); }
+    finally{ lmmLoading=false; busy.style.opacity=0; }
+    if(!LMMDATA) return;
+  }
+  buildLMM(+yearEl.value); lmmGroup.visible=true;
+  spin=false; tgS.classList.remove('on');
+  if(camera.position.length()>3) flyKorea();
+  showLMMInfo();
+};
+
+function showLMMInfo(){
+  const el=document.getElementById('siteinfo');
+  const loo=LMMDATA&&LMMDATA.loo_cv, n=LMMDATA&&LMMDATA.sites?LMMDATA.sites.length:0;
+  el.innerHTML="<b style='color:#cfe0ff'>🇰🇷 한국 LMM</b>"
+    +"<div style='color:#9fb2c8;font-size:11px;margin:3px 0 7px'>"
+    +"Core(IGRF-14) + Regional + Crustal 결합 · External 미적용</div>"
+    +(loo?("<div>LOO 편각 D <b>"+loo.D.toFixed(3)+"°</b> "
+      +"<span style='color:#ffb27a'>목표 0.1°</span></div>"
+      +"<div>LOO 총자력 F <b>"+loo.F.toFixed(1)+" nT</b> "
+      +"<span>목표 50 nT</span></div>"
+      +"<div>Regional 측점 <b>"+n+"점</b></div>"):"")
+    +"<div style='margin-top:7px;padding:6px 8px;background:rgba(255,180,90,.12);"
+    +"border-radius:6px;font-size:11px;color:#ffcf9a'>"
+    +"⚠ 목표 정확도 미달 — 연구·시범계산용. 지형도 자침편차 등 정식 편각 산출에는 "
+    +"쓰지 않는다.</div>"
+    +"<div style='margin-top:6px;font-size:10.5px;color:#8fa3ba'>"
+    +"지각 자기이상: 한국지질자원연구원 「한국의 자력이상도」(2019)</div>";
+  el.style.display='block'; el.style.left='14px'; el.style.bottom='120px';
+  el.style.top='auto'; el.style.width='250px';
+}
 const tgC=document.getElementById('tgContour'),tgL=document.getElementById('tgLines'),tgS=document.getElementById('tgSpin');
 tgC.onclick=()=>{showContour=!showContour;tgC.classList.toggle('on',showContour);contourGroup.visible=showContour;};
 tgL.onclick=()=>{showLines=!showLines;tgL.classList.toggle('on',showLines);
@@ -420,9 +546,16 @@ renderer.domElement.addEventListener('pointermove',ev=>{
   mouse.x=ev.clientX/innerWidth*2-1;mouse.y=-(ev.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);
   const hit=ray.intersectObject(earth)[0];if(!hit)return;
   const p=earth.worldToLocal(hit.point.clone()).normalize();
-  const lat=Math.asin(p.y)/D2R,lon=Math.atan2(-p.z,p.x)/D2R;const e=IGRF.igrfElements(lat,lon,0,+yearEl.value);
+  const lat=Math.asin(p.y)/D2R,lon=Math.atan2(-p.z,p.x)/D2R;
+  // 한국 LMM 패치를 켠 상태에서 패치 안이면 LMM 값을 읽는다(전역은 IGRF).
+  const inLMM = lmmOn && LMMDATA && lat>=LMM_BOX.lat0 && lat<=LMM_BOX.lat1
+                && lon>=LMM_BOX.lon0 && lon<=LMM_BOX.lon1;
+  const e = inLMM ? lmmAt(lat,lon,+yearEl.value)
+                  : IGRF.igrfElements(lat,lon,0,+yearEl.value);
   oLat.textContent=lat.toFixed(2)+'°';oLon.textContent=lon.toFixed(2)+'°';
-  oF.textContent=Math.round(e.F).toLocaleString()+' nT';oD.textContent=e.D.toFixed(1)+'°';oI.textContent=e.I.toFixed(1)+'°';
+  const tag = inLMM ? ' <span style="color:#9ec5ff;font-size:10px">LMM</span>' : '';
+  oF.innerHTML=Math.round(e.F).toLocaleString()+' nT'+tag;
+  oD.textContent=e.D.toFixed(2)+'°';oI.textContent=e.I.toFixed(2)+'°';
 });
 
 // ── postfx ──
