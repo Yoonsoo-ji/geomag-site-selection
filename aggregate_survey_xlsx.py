@@ -337,11 +337,17 @@ def mark_max_dist(d):
 
 
 def review(d):
-    """(등급, 선점 검토 결론, 검토 의견) — 웹 표출용.
+    """(등급, 선점 검토 결론, 검토 의견) — 웹 표출용. **4단계 분류**.
 
-    종합판정이 '적합'이어도 방위표지 두 개가 모두 100m 미만이면 조건부(B)로 강등한다.
-    (지자기점은 방위표지 이격이 짧으면 진북 방위각 정밀도가 떨어짐 — 하나라도 100m
-    이상이면 그 표지로 방위기준을 세울 수 있으므로 선점 가능 유지.)
+    A 선점 가능        : 자기 청정(적합) + 방위표지 좌표거리 하나라도 ≥100m
+    B 조건부 선점 가능  : 자기 청정(적합)이나 방위표지 최장 <100m
+                       → 자기적으로 양호. 정밀 방위각(천문·자이로·RTK) 또는 ≥100m 표지
+                         확보 시 선점 가능. 새 측점을 찾는 것보다 방위 기준 정밀화가 저비용.
+    C 현장 확인 필요    : 조건부 적합(자기교란 재확인 필요)
+    D 부적합           : 부적합 또는 방위표지 설치 불가(대체 후보지 검토)
+    미완료             : 조사 항목 누락
+
+    거리는 카드 기재값이 아니라 좌표 계산거리(`mark_max_dist`)를 쓴다(카드값 오기입 사례).
     """
     v = d["종합판정"]
     kd = key_disturb(d)
@@ -349,25 +355,19 @@ def review(d):
     if v == "조사 미완료":
         return "미완료", "재조사 필요 — 조사 항목 누락", op or "조사 항목 미입력"
     if d["방위불가"]:
-        grade = "C"
-        concl = "부적합 — 방위표지 설치 불가로 대체 후보지 검토"
-    elif v == "적합":
+        return "D", "부적합 — 방위표지 설치 불가로 대체 후보지 검토", op or "방위표지 설치 불가"
+    if v == "적합":
         md = mark_max_dist(d)
         if md is not None and md < MARK_MIN_DIST:
-            grade = "B"
-            concl = (f"조건부 가능 — 방위표지 근거리(최장 {md:.0f}m<{MARK_MIN_DIST:.0f}m), "
-                     f"방위각 기준 확보 후 결정")
-        else:
-            grade, concl = "A", "선점 가능 — 자기구배 조사 진행"
-    elif v == "조건부 적합":
-        grade, concl = "B", f"조건부 가능 — 현장 재확인 후 결정 ({kd})"
-    else:
-        grade, concl = "C", f"부적합 — 대체 후보지 검토 ({kd})"
-    if grade == "B" and v == "적합":
-        note = op or f"방위표지 최장 이격 {mark_max_dist(d) or 0:.0f}m — 100m 미만"
-    else:
-        note = op if op else ("주변 자기교란 요소 없음" if v == "적합" else kd)
-    return grade, concl, note
+            concl = (f"조건부 선점 가능 — 방위표지 거리 확보 필요"
+                     f" (현 최장 {md:.0f}m<{MARK_MIN_DIST:.0f}m)")
+            note = op or (f"자기교란 없음 · 방위표지 최장 이격 {md:.0f}m — 정밀 방위각"
+                          f"(천문·자이로·RTK) 또는 ≥{MARK_MIN_DIST:.0f}m 표지 확보 시 선점 가능")
+            return "B", concl, note
+        return "A", "선점 가능 — 자기구배 조사 진행", op or "주변 자기교란 요소 없음"
+    if v == "조건부 적합":
+        return "C", f"현장 확인 필요 — 자기교란 재확인 후 결정 ({kd})", op or kd
+    return "D", f"부적합 — 대체 후보지 검토 ({kd})", op or kd
 
 
 # ── 스타일 ────────────────────────────────────────────────────────────────────
@@ -380,8 +380,10 @@ FILL_HDR = PatternFill("solid", fgColor="4472C4")
 FILL_BAD = PatternFill("solid", fgColor="FDE0DC")
 FILL_COND = PatternFill("solid", fgColor="FFF2CC")
 FILL_OK = PatternFill("solid", fgColor="E2EFDA")
+FILL_BLUE = PatternFill("solid", fgColor="DDEBF7")   # B 조건부 선점 가능
 FILL_GRAY = PatternFill("solid", fgColor="EDEDED")
-GRADE_FILL = {"A": FILL_OK, "B": FILL_COND, "C": FILL_BAD, "미완료": FILL_GRAY}
+# 4단계: A 선점가능(녹) · B 조건부 선점가능(청) · C 현장확인(황) · D 부적합(적)
+GRADE_FILL = {"A": FILL_OK, "B": FILL_BLUE, "C": FILL_COND, "D": FILL_BAD, "미완료": FILL_GRAY}
 AL_L = Alignment(horizontal="left", vertical="center", wrap_text=True)
 AL_C = Alignment(horizontal="center", vertical="center", wrap_text=True)
 _thin = Side(style="thin", color="BBBBBB")
@@ -476,12 +478,13 @@ def sheet_web(wb, recs):
     # 등급 범례
     ws.merge_cells(f"A2:{get_column_letter(n)}2")
     lg = ws["A2"]
-    lg.value = ("등급  A = 선점 가능(자기구배 조사)   ·   B = 조건부(현장 재확인)   ·   "
-                "C = 부적합(대체 후보지 검토)   ·   방위표지 '불가'는 C 로 분류")
+    lg.value = ("등급  A = 선점 가능(자기구배 조사)   ·   B = 조건부 선점 가능(방위표지 거리 확보 필요)"
+                "   ·   C = 현장 확인 필요(자기교란 재확인)   ·   D = 부적합(대체 후보지 검토)"
+                "   ·   방위표지 '불가'는 D")
     lg.font = Font(name="맑은 고딕", size=8.5, color="555555")
     lg.alignment = AL_L
     _header(ws, WEB_COLS, row=3)
-    order = {"A": 0, "B": 1, "C": 2, "미완료": 3}
+    order = {"A": 0, "B": 1, "C": 2, "D": 3, "미완료": 4}
     rr = sorted(recs, key=lambda d: (order.get(review(d)[0], 9), d["관할본부"], d["관리번호"]))
     for ri, d in enumerate(rr, 4):
         grade, concl, note = review(d)
@@ -539,8 +542,9 @@ def sheet_summary(wb, recs):
     r += 1
     line("총 조사 후보지", f"{len(recs)} 건", bold=True)
     line("선점 가능 (등급 A)", f"{grades['A']} 건", FILL_OK)
-    line("조건부 (등급 B)", f"{grades['B']} 건", FILL_COND)
-    line("부적합·재검토 (등급 C)", f"{grades['C']} 건", FILL_BAD)
+    line("조건부 선점 가능 (등급 B, 방위표지 거리 확보 필요)", f"{grades['B']} 건", FILL_BLUE)
+    line("현장 확인 필요 (등급 C)", f"{grades['C']} 건", FILL_COND)
+    line("부적합 (등급 D)", f"{grades['D']} 건", FILL_BAD)
     if grades.get("미완료"):
         line("조사 미완료", f"{grades['미완료']} 건", FILL_GRAY)
     r += 1
@@ -562,7 +566,7 @@ def sheet_summary(wb, recs):
     ws.cell(r, 1, "■ 본부별 등급 분포").font = F_BOLD
     r += 1
     hqs = sorted({d["관할본부"] for d in recs})
-    hdr = ["관할 본부", "A", "B", "C", "미완료", "계"]
+    hdr = ["관할 본부", "A", "B", "C", "D", "미완료", "계"]
     for j, h in enumerate(hdr, 1):
         c = ws.cell(r, j, h)
         c.font = F_HDR
@@ -573,14 +577,14 @@ def sheet_summary(wb, recs):
     for hq in hqs:
         sub = [d for d in recs if d["관할본부"] == hq]
         g = Counter(review(d)[0] for d in sub)
-        vals = [hq, g["A"], g["B"], g["C"], g.get("미완료", 0), len(sub)]
+        vals = [hq, g["A"], g["B"], g["C"], g["D"], g.get("미완료", 0), len(sub)]
         for j, v in enumerate(vals, 1):
             c = ws.cell(r, j, v)
             c.font = F_VAL
             c.alignment = AL_L if j == 1 else AL_C
             c.border = BORDER
         r += 1
-    for j, w in enumerate([16, 6, 6, 6, 8, 6], 1):
+    for j, w in enumerate([16, 6, 6, 6, 6, 8, 6], 1):
         ws.column_dimensions[get_column_letter(j)].width = w
 
 
