@@ -291,8 +291,31 @@ def key_disturb(d):
     return ", ".join(parts)
 
 
+MARK_MIN_DIST = 100.0   # 방위표지 최소 이격(m). 둘 중 하나라도 이 이상이면 선점 가능.
+
+
+def mark_max_dist(d):
+    """방위표지 1·2 중 최장 거리(m). 값 없으면 None."""
+    det = d.get("방위표지상세", {})
+    best = None
+    for k in ("표지1", "표지2"):
+        s = det.get(k, {}).get("거리")
+        if not s or s == "-":
+            continue
+        nums = re.findall(r"\d+\.?\d*", str(s))
+        if nums:
+            v = float(nums[0])
+            best = v if best is None else max(best, v)
+    return best
+
+
 def review(d):
-    """(등급, 선점 검토 결론, 검토 의견) — 웹 표출용."""
+    """(등급, 선점 검토 결론, 검토 의견) — 웹 표출용.
+
+    종합판정이 '적합'이어도 방위표지 두 개가 모두 100m 미만이면 조건부(B)로 강등한다.
+    (지자기점은 방위표지 이격이 짧으면 진북 방위각 정밀도가 떨어짐 — 하나라도 100m
+    이상이면 그 표지로 방위기준을 세울 수 있으므로 선점 가능 유지.)
+    """
     v = d["종합판정"]
     kd = key_disturb(d)
     op = d["판정의견"].replace("\n", " ").strip()
@@ -302,12 +325,21 @@ def review(d):
         grade = "C"
         concl = "부적합 — 방위표지 설치 불가로 대체 후보지 검토"
     elif v == "적합":
-        grade, concl = "A", "선점 가능 — 자기구배 조사 진행"
+        md = mark_max_dist(d)
+        if md is not None and md < MARK_MIN_DIST:
+            grade = "B"
+            concl = (f"조건부 가능 — 방위표지 근거리(최장 {md:.0f}m<{MARK_MIN_DIST:.0f}m), "
+                     f"방위각 기준 확보 후 결정")
+        else:
+            grade, concl = "A", "선점 가능 — 자기구배 조사 진행"
     elif v == "조건부 적합":
         grade, concl = "B", f"조건부 가능 — 현장 재확인 후 결정 ({kd})"
     else:
         grade, concl = "C", f"부적합 — 대체 후보지 검토 ({kd})"
-    note = op if op else ("주변 자기교란 요소 없음" if v == "적합" else kd)
+    if grade == "B" and v == "적합":
+        note = op or f"방위표지 최장 이격 {mark_max_dist(d) or 0:.0f}m — 100m 미만"
+    else:
+        note = op if op else ("주변 자기교란 요소 없음" if v == "적합" else kd)
     return grade, concl, note
 
 
