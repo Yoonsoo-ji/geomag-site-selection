@@ -406,15 +406,24 @@ function crustalAt(lat,lon,cr){
   return (v===null||v===undefined||!isFinite(v))?null:v;
 }
 
+// ⚠ 지각층(KIGAM 자력이상)은 「한국지질자원연구원장의 사전승인 없이 무단복제·양도
+//   금지」 조항이 걸려 있다. 사전승인 전까지 **공개 노출을 2026-08-31 로 한정**한다.
+//   이후에는 Core+Regional 만으로 계산하고 화면에 그 사실을 표시한다.
+//   승인이 나면 CRUSTAL_OPEN_UNTIL 을 늘리거나 제거할 것.
+const CRUSTAL_OPEN_UNTIL = '2026-08-31';
+const crustalOpen = () => new Date() <= new Date(CRUSTAL_OPEN_UNTIL + 'T23:59:59');
+
 function lmmAt(lat,lon,year){
   const e=IGRF.igrfElements(lat,lon,0,year);
   const r=LMMDATA.regional, cr=LMMDATA.crustal;
-  const c=crustalAt(lat,lon,cr);
+  const open=crustalOpen();
+  const c=open?crustalAt(lat,lon,cr):null;
   return {
     D:e.D+regTerm(r.D,lat,lon,r),
     I:e.I+regTerm(r.I,lat,lon,r),
     F:e.F+(c===null?0:c)+regTerm(r.F,lat,lon,r),
-    gap:c===null                                  // 항공자력 자료 공백 여부
+    gap:open && c===null,                  // 항공자력 자료 공백 여부
+    noCrustal:!open                        // 공개기한 경과로 지각층 제외
   };
 }
 
@@ -488,6 +497,35 @@ tgLMM.onclick=async()=>{
   showLMMInfo();
 };
 
+// ?lmm=1 로 열면 패치를 자동으로 켠다 — 시연·화면캡처용
+if(new URLSearchParams(location.search).get('lmm')==='1')
+  setTimeout(()=>tgLMM.click(), 600);
+
+// 발표자료용 고해상 캡처 — 브라우저 창 크기와 무관하게 원하는 화소로 한 장 렌더한다.
+// (헤드리스 브라우저는 WebGL 이 막혀 캡처가 안 되므로 여기서 직접 뽑는다)
+// 시연·캡처용 시점 지정 — 자전을 멈추고 지정 좌표 바로 위로 카메라를 옮긴다.
+// (카메라 이동은 animate 의 lerp 라 스크립트에서 기다리기 어렵다 → 즉시 배치)
+window.__view=(lat=36.2,lon=127.8,dist=1.75)=>{
+  spin=false; tgS.classList.remove('on'); camGoal=null;
+  const p=sph(lat,lon,1).applyEuler(earthGroup.rotation).multiplyScalar(dist);
+  camera.position.copy(p); camera.lookAt(0,0,0);
+  controls.target.set(0,0,0); controls.update();
+  return {camDist:+camera.position.length().toFixed(3)};
+};
+
+window.__shot=(w=1600,h=1000)=>{
+  const ow=renderer.domElement.width, oh=renderer.domElement.height;
+  const oa=camera.aspect;
+  renderer.setPixelRatio(1); renderer.setSize(w,h,false);
+  comp.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();
+  comp.render();
+  const url=renderer.domElement.toDataURL('image/png');
+  renderer.setPixelRatio(Math.min(devicePixelRatio,isMobile?1.4:2));
+  renderer.setSize(ow,oh,false); comp.setSize(ow,oh);
+  camera.aspect=oa; camera.updateProjectionMatrix();
+  return url;
+};
+
 function showLMMInfo(){
   const el=document.getElementById('siteinfo');
   const loo=LMMDATA&&LMMDATA.loo_cv, n=LMMDATA&&LMMDATA.sites?LMMDATA.sites.length:0;
@@ -503,8 +541,14 @@ function showLMMInfo(){
     +"border-radius:6px;font-size:11px;color:#ffcf9a'>"
     +"⚠ 목표 정확도 미달 — 연구·시범계산용. 지형도 자침편차 등 정식 편각 산출에는 "
     +"쓰지 않는다.</div>"
-    +"<div style='margin-top:6px;font-size:10.5px;color:#8fa3ba'>"
-    +"지각 자기이상: 한국지질자원연구원 「한국의 자력이상도」(2019)</div>";
+    +(crustalOpen()
+      ?("<div style='margin-top:6px;font-size:10.5px;color:#8fa3ba'>"
+        +"지각 자기이상: 한국지질자원연구원 「한국의 자력이상도」(2019) · "
+        +"공개 "+CRUSTAL_OPEN_UNTIL+"까지</div>")
+      :("<div style='margin-top:6px;padding:6px 8px;background:rgba(140,170,255,.14);"
+        +"border-radius:6px;font-size:10.5px;color:#bcd0ff'>"
+        +"지각층 제외 — KIGAM 자료 공개기한("+CRUSTAL_OPEN_UNTIL+") 경과. "
+        +"현재 Core+Regional 만 계산합니다.</div>"));
   el.style.display='block'; el.style.left='14px'; el.style.bottom='120px';
   el.style.top='auto'; el.style.width='250px';
 }

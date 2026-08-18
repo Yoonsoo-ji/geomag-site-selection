@@ -972,6 +972,125 @@ def sl_lineage(prs, page):
     return s
 
 
+SHOT_DIR = OUT_DIR / "_web_shots"
+
+
+def sl_compliance(prs, page):
+    """설명자료(오석훈, 2026-05) 대비 구현 준수 점검."""
+    s = slide_base(prs, "Ⅲ. 향후 검증·보완",
+                   "설명자료 대비 — 무엇을 지켰고 무엇이 남았는가",
+                   "4층 구조와 검증 절차는 그대로 따랐다. 남은 것은 자료 규모와 "
+                   "External 의 공간투영이다.", page, rule=GREEN)
+    rows = [
+        ["① Core", "IGRF-14 (deg ≤ 13), ppigrf", "동일 구현 · 재현성 검증 통과", "준수"],
+        ["② Regional", "지표 절대측정 30점 이상 · D+I+F", f"{N_SITES}점 · 세션 6회", "미달"],
+        ["③ Crustal", "항공자력 측선 100~250 m", "2.8 km 가공 격자", "미달"],
+        ["④ External", "CYG NOC 분해 → 점 위치 공간투영", "균일 V 근사 (투영 없음)", "미구현"],
+        ["Regional 적합", "다항식 또는 R-SCHA", "1차 다항식", "부분"],
+        ["잔차면", "Residual = 관측 − LMM 을 공간 모델링", "미구현", "미구현"],
+        ["검증", "LOO 자기검증", "LOO 구현 · 3환경 일치", "준수"],
+    ]
+    y = table(s, M, BODY_Y, CW, ["항목", "설명자료 요건", "현재 구현", "판정"], rows,
+              [0.14, 0.36, 0.34, 0.16], row_h=0.44)
+    band(s, M, y + 0.20, CW, 1.12,
+         "설명자료의 「자료가 하나라도 빠지면 구조적 결함」 진단이 그대로 맞았다.\n\n"
+         "· 항공자력이 없으면 F 목표는 영원히 미달 → 원측선 확보가 F 의 유일한 경로\n"
+         "· CYG 가 있어도 공간투영이 없으면 외부장을 못 뗀다 → 이번 재적합으로 실증", GREEN)
+    return s
+
+
+def sl_external_verdict(prs, page):
+    s = slide_base(prs, "Ⅲ. 향후 검증·보완",
+                   "외부장 보정은 시각을 확보해도 지금은 적용할 수 없다",
+                   "2019~2025 전 구간 관측시각을 확보하고 세션별 보정량을 걸어 "
+                   "end-to-end 재적합한 결과다.", page, rule=RED)
+    rows = [
+        ["미적용 (채택)", "17", f"{LOO['D']:.4f}°", f"{LOO['I']:.4f}°",
+         f"{LOO['F']:.2f} nT", "기준선"],
+        ["교란시 성과 배제", "14", "0.7430°", "0.2846°", "63.28 nT", "표본 감소 · I 악화"],
+        ["전 세션 평균 차감", "17", "0.8481°", "0.1787°", "68.99 nT", "악화"],
+        ["정온 세션만 차감", "17", "0.9008°", "0.1787°", "74.85 nT", "더 악화"],
+    ]
+    y = table(s, M, BODY_Y, CW,
+              ["모드", "표본", "LOO D", "LOO I", "LOO F", "판정"], rows,
+              [0.22, 0.09, 0.15, 0.15, 0.16, 0.23], row_h=0.46, head_fill="8C2F2F")
+    stat(s, M, y + 0.28, 3.90, 1.24, "+8.7 nT",
+         "38 nT 를 뺐는데 LOO F 가 오히려 늘었다", PEACH, RED, 22)
+    stat(s, M + 4.05, y + 0.28, 3.90, 1.24, "196세션",
+         "산출한 외부장 보정량 (2019~2025)", LGRAY, BLUE, 22)
+    band(s, M + 8.10, y + 0.28, CW - 8.10, 1.24,
+         "병목이 옮겨갔다\n\n관측시각 부재 → NOC 공간투영 미구현", "23456B")
+    band(s, M, y + 1.62, CW, 0.92,
+         "보정량이 실제 오차와 상관이 없어 독립 잡음처럼 더해진다. CYG 한 곳의 편차를 "
+         "전국에 동일 적용하는\n균일 V 근사가 76~229 km 떨어진 측점에서 성립하지 "
+         "않는다 — 2019 표본의 결과가 7년치에서 재현됐다.", RED)
+    return s
+
+
+def sl_webdemo(prs, page):
+    s = slide_base(prs, "Ⅰ. LMM 중간결과",
+                   "웹에서 바로 확인할 수 있게 만들어 두었다",
+                   "모델·자료 현황·계산기를 각각 한 페이지로 낸다. 모두 정적 파일이라 "
+                   "설치 없이 열린다.", page)
+    shots = [(SHOT_DIR / "globe_lmm.png", "3D 지구본 — 한국 LMM 패치",
+              "geomag_globe.html · 한국만 0.05° 재계산(11,615정점)\n"
+              "커서를 올리면 그 좌표의 LMM D·I·F 가 나온다"),
+             (SHOT_DIR / "inventory.png", "자료 확보 현황",
+              "data_inventory.html · 4개 층 자료를 파일에서 직접 세어 표시\n"
+              "자료가 늘면 재실행만으로 갱신된다")]
+    w = (CW - 0.30) / 2
+    for i, (img, title, cap) in enumerate(shots):
+        x = M + i * (w + 0.30)
+        text(s, x, BODY_Y, w, 0.30, title, 13.5, NAVY, True)
+        if img.exists():
+            from PIL import Image as _Im
+            iw, ih = _Im.open(img).size
+            hh = 2.86                      # 높이 고정 → 캡션·띠와 겹치지 않는다
+            ww = min(w, hh * iw / ih)
+            s.shapes.add_picture(str(img), Inches(x + (w - ww) / 2),
+                                 Inches(BODY_Y + 0.36), height=Inches(hh))
+        else:
+            rect(s, x, BODY_Y + 0.36, w, 2.86, LGRAY)
+            text(s, x, BODY_Y + 1.65, w, 0.3, "(캡처 없음)", 12, GRAY, align="c")
+        text(s, x, BODY_Y + 3.34, w, 0.58, cap, 10, GRAY, space=1.2)
+    band(s, M, BODY_Y + 4.06, CW, 0.52,
+         "시연 순서 — ① 지구본에서 「🇰🇷 한국 LMM」 토글 → ② 커서로 좌표별 값 확인 → "
+         "③ 자료 현황 페이지로 근거 확인")
+    return s
+
+
+def sl_datareq(prs, page):
+    s = slide_base(prs, "Ⅱ. 확인·추가 자료",
+                   "앞으로 필요한 자료와 요구 조건",
+                   "설명자료의 권고 수준과 현재 보유량을 나란히 놓고, 확보 경로까지 "
+                   "적는다.", page, rule=ORANGE)
+    rows = [
+        ["항공자력 원측선", "측선 100~250 m", "2.8 km 격자", "KIGAM 활용신청",
+         "F 목표"],
+        ["지표 절대측정", "30점 이상", f"{N_SITES}점", "2027 캠페인 · 야장 17건 검증",
+         "D·F 목표"],
+        ["관측시각", "세션마다 기록", "2019~2025 확보", "완료", "External 전제"],
+        ["상시관측", "1분 자료 · 다지점", "CYG + KASA 3소", "확보 완료",
+         "NOC 투영 입력"],
+        ["독립 검증점", "적합 제외 측점", "미분리", "신규 캠페인 설계에 반영",
+         "성능 과대평가 방지"],
+        ["관측 조건", "Kp ≤ 2 · RTK ≤ 1 m", "Kp 미제어(정온 123/196)", "작업지침 반영",
+         "표본 품질"],
+    ]
+    y = table(s, M, BODY_Y, CW,
+              ["자료", "설명자료 요건", "현재", "확보 경로", "무엇이 풀리나"], rows,
+              [0.17, 0.20, 0.21, 0.24, 0.18], row_h=0.46, head_fill=ORANGE, size=10)
+    band(s, M, y + 0.28, CW, 1.44,
+         "우선순위\n\n"
+         "① 항공자력 원측선 — F 목표 미달의 유일한 해법. 오픈플랫폼 미공개라 "
+         "활용신청이 필요하다\n"
+         "② NOC 공간투영 구현 — 자료는 이미 있다. 관측소 4곳이라 공간 모드를 "
+         "적합할 수 있다\n"
+         "③ 측점 확대 — 야장에만 있는 17건을 검증해 투입하면 가장 값싸게 늘릴 수 있다",
+         ORANGE)
+    return s
+
+
 def sl_closing(prs, page):
     s = prs.slides.add_slide(prs.slide_layouts[6])
     rect(s, 0, 0, W, H, BAND)
@@ -1033,9 +1152,9 @@ def main():
     prs.slide_height = Inches(H)
 
     builders = [sl_divider, sl_why, sl_structure, sl_nointerp, sl_pipeline,
-                sl_data_status, sl_result, sl_residual, sl_impl,
-                sl_kigam, sl_ngii, sl_match,
-                sl_roadmap, sl_risk,
+                sl_data_status, sl_result, sl_residual, sl_impl, sl_webdemo,
+                sl_kigam, sl_ngii, sl_match, sl_datareq,
+                sl_external_verdict, sl_compliance, sl_roadmap, sl_risk,
                 sl_cmp_concept, sl_cmp_table, sl_cmp_flow, sl_lineage,
                 sl_closing]
     for i, fn in enumerate(builders, 1):
