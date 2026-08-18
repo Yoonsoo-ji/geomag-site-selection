@@ -336,6 +336,31 @@ def mark_max_dist(d):
     return best
 
 
+def sheet_rank(recs, grade="B"):
+    """같은 도엽(1:50,000) 안에 중복된 같은 등급 후보를 **방위표지 최장거리 내림차순**
+    으로 순위. 반환 {관리번호: (순위, 도엽내_동급수)}. 1순위 = 방위표지가 가장 먼 지점
+    (진북 방위각 기준 확보에 가장 유리 → A 승격 1순위).
+
+    도엽 식별은 도엽번호 우선, 없으면 도엽명. 둘 다 없으면 순위 제외.
+    """
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for d in recs:
+        if review(d)[0] != grade:
+            continue
+        key = (d.get("도엽번호") or "").strip() or (d.get("도엽명") or "").strip()
+        if not key:
+            continue
+        groups[key].append(d)
+    rank = {}
+    for key, lst in groups.items():
+        lst.sort(key=lambda d: -(mark_max_dist(d) or 0))
+        n = len(lst)
+        for i, d in enumerate(lst, 1):
+            rank[d["관리번호"]] = (i, n)
+    return rank
+
+
 def review(d):
     """(등급, 선점 검토 결론, 검토 의견) — 웹 표출용. **4단계 분류**.
 
@@ -467,8 +492,17 @@ def sheet_full(wb, recs):
 
 
 # ── 시트 2: 선점 검토 (웹 표출용) ────────────────────────────────────────────
-WEB_COLS = ["등급", "관할 본부", "관리번호", "후보지명", "위도", "경도", "표고(m)",
+WEB_COLS = ["등급", "도엽 순위", "관할 본부", "관리번호", "후보지명", "위도", "경도", "표고(m)",
             "종합 판정", "핵심 교란요인", "방위표지", "선점 검토 결론", "검토 의견", "조사일"]
+
+
+def _rank_str(d, brank):
+    """도엽 중복 B 순위 문자열. 중복 없으면 '-'."""
+    rk = brank.get(d["관리번호"])
+    if not rk or rk[1] < 2:
+        return "-"
+    star = " ★" if rk[0] == 1 else ""
+    return f"{d.get('도엽명') or d.get('도엽번호') or ''} {rk[0]}/{rk[1]}{star}"
 
 
 def sheet_web(wb, recs):
@@ -480,30 +514,41 @@ def sheet_web(wb, recs):
     lg = ws["A2"]
     lg.value = ("등급  A = 선점 가능(자기구배 조사)   ·   B = 조건부 선점 가능(방위표지 거리 확보 필요)"
                 "   ·   C = 현장 확인 필요(자기교란 재확인)   ·   D = 부적합(대체 후보지 검토)"
-                "   ·   방위표지 '불가'는 D")
+                "   ·   방위표지 '불가'는 D   ·   도엽 순위: 같은 도엽 B 중 방위표지 최장거리 1순위(★)")
     lg.font = Font(name="맑은 고딕", size=8.5, color="555555")
     lg.alignment = AL_L
     _header(ws, WEB_COLS, row=3)
     order = {"A": 0, "B": 1, "C": 2, "D": 3, "미완료": 4}
-    rr = sorted(recs, key=lambda d: (order.get(review(d)[0], 9), d["관할본부"], d["관리번호"]))
+    brank = sheet_rank(recs, "B")   # 도엽 중복 B 순위(방위표지 최장거리)
+
+    def skey(d):
+        go = order.get(review(d)[0], 9)
+        rk = brank.get(d["관리번호"])
+        if rk:   # B 는 도엽 → 순위 순
+            sheet = (d.get("도엽번호") or d.get("도엽명") or "")
+            return (go, sheet, rk[0], d["관리번호"])
+        return (go, d["관할본부"] or "", 99, d["관리번호"])
+    rr = sorted(recs, key=skey)
     for ri, d in enumerate(rr, 4):
         grade, concl, note = review(d)
-        row = [grade, d["관할본부"], d["관리번호"], d["후보지명"], d["위도"], d["경도"],
-               d["표고"], d["종합판정"], key_disturb(d) or "-", d["방위표지"],
-               concl, note, d["조사일"]]
+        row = [grade, _rank_str(d, brank), d["관할본부"], d["관리번호"], d["후보지명"],
+               d["위도"], d["경도"], d["표고"], d["종합판정"], key_disturb(d) or "-",
+               d["방위표지"], concl, note, d["조사일"]]
         for j, v in enumerate(row, 1):
             c = ws.cell(ri, j, v)
-            c.font = F_BOLD if j == 1 else F_VAL
+            c.font = F_BOLD if j in (1, 2) else F_VAL
             c.border = BORDER
-            c.alignment = AL_L if j in (9, 11, 12) else AL_C
+            c.alignment = AL_L if j in (10, 12, 13) else AL_C
             if j == 1:
                 c.fill = GRADE_FILL.get(grade, FILL_GRAY)
-            if j == 8:
+            if j == 2 and isinstance(v, str) and v.endswith("★"):
+                c.fill = FILL_OK
+            if j == 9:
                 c.fill = {"적합": FILL_OK, "조건부 적합": FILL_COND,
                           "부적합": FILL_BAD}.get(v, FILL_GRAY)
-            if j == 10 and v == "불가":
+            if j == 11 and v == "불가":
                 c.fill = FILL_BAD
-    widths = [6, 14, 8, 14, 9, 9, 7, 10, 26, 8, 34, 40, 11]
+    widths = [6, 13, 14, 8, 14, 9, 9, 7, 10, 26, 8, 34, 40, 11]
     for j, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(j)].width = w
     ws.freeze_panes = "A4"
@@ -586,6 +631,42 @@ def sheet_summary(wb, recs):
         r += 1
     for j, w in enumerate([16, 6, 6, 6, 6, 8, 6], 1):
         ws.column_dimensions[get_column_letter(j)].width = w
+
+    # ── 도엽 중복 B 우선순위 (방위표지 최장거리 1순위) ──
+    from collections import defaultdict
+    brank = sheet_rank(recs, "B")
+    sheets = defaultdict(list)
+    for d in recs:
+        rk = brank.get(d["관리번호"])
+        if rk and rk[1] >= 2:
+            key = f"{d.get('도엽명') or ''}({d.get('도엽번호') or ''})"
+            sheets[key].append(d)
+    r += 1
+    ws.cell(r, 1, "■ 도엽 중복 B 우선순위 (방위표지 최장거리 순 · ★=1순위)").font = F_BOLD
+    r += 1
+    hdr2 = ["도엽 (1:50,000)", "순위", "관리번호", "후보지명", "방위표지 최장(m)"]
+    for j, h in enumerate(hdr2, 1):
+        c = ws.cell(r, j, h)
+        c.font = F_HDR
+        c.fill = FILL_HDR
+        c.alignment = AL_C
+        c.border = BORDER
+    r += 1
+    for key in sorted(sheets):
+        lst = sorted(sheets[key], key=lambda d: -(mark_max_dist(d) or 0))
+        for i, d in enumerate(lst, 1):
+            md = mark_max_dist(d) or 0
+            top = (i == 1)
+            vals = [key if i == 1 else "", f"{i}순위" + (" ★" if top else ""),
+                    d["관리번호"], d["후보지명"], f"{md:.0f}"]
+            for j, v in enumerate(vals, 1):
+                c = ws.cell(r, j, v)
+                c.font = F_BOLD if top and j in (2, 3) else F_VAL
+                c.alignment = AL_L if j in (1, 4) else AL_C
+                c.border = BORDER
+                if top:
+                    c.fill = FILL_OK
+            r += 1
 
 
 # ── 일괄취합(플랫) 워크북 — 분석·등급 없이 모든 원자료를 한 시트에 ──────────

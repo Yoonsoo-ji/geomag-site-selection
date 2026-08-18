@@ -256,7 +256,7 @@ addGeo('data/world_coastline.geojson',coastMat,1.002);
 addGeo('data/korea_boundary.geojson',koreaMat,1.005);
 
 // ── 3단계: 선점 후보 103(등급 A/B/C) + 기존점 24 마커 ──
-const GRADE_COL={A:0x35d07f,B:0xffbf47,C:0xff5c5c,'미완료':0x9aa7b5};
+const GRADE_COL={A:0x2E8B57,B:0x2E86C1,C:0xE0A400,D:0xCC3333,'미완료':0x9aa7b5};
 const candGroup=new THREE.Group(), existGroup=new THREE.Group();
 candGroup.visible=false; existGroup.visible=false; earthGroup.add(candGroup); earthGroup.add(existGroup);
 const markMeshes=[];

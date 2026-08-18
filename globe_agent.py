@@ -140,13 +140,13 @@ def find_years(msg):
 def query_sites(msg):
     """등급·본부·방위표지·판정 키워드로 선점 후보 검색."""
     grades = []
-    for g in ("A", "B", "C"):
+    for g in ("A", "B", "C", "D"):
         if re.search(rf"(등급\s*{g}|{g}\s*등급|\b{g}급)", msg):
             grades.append(g)
     if "적합" in msg and "부적합" not in msg and "조건부" not in msg and not grades:
         grades.append("A")
     if "부적합" in msg and not grades:
-        grades.append("C")
+        grades.append("D")
     hq = next((h for h in HQ_KEYS if h in msg), None)
     want_bang = "방위표지" in msg
     res = []
@@ -169,7 +169,7 @@ def build_context(msg):
     yr = float(years[0]) if years else NOW_YEAR
 
     # 선점 신호는 명시적 키워드로만(지명·본부명 city 와 혼동 방지)
-    grades_pre = [g for g in ("A", "B", "C")
+    grades_pre = [g for g in ("A", "B", "C", "D")
                   if re.search(rf"(등급\s*{g}|{g}\s*등급|\b{g}\s*급)", msg)]
     site_kw = bool(grades_pre) or any(k in msg for k in
                                       ("후보지", "후보", "선점", "부적합", "방위표지", "대체", "검토 등급")) \
@@ -196,10 +196,11 @@ def build_context(msg):
     # ③ 선점 어드바이저
     if site_kw:
         res, flt = query_sites(msg)
-        gc = {"A": 0, "B": 0, "C": 0}
+        gc = {"A": 0, "B": 0, "C": 0, "D": 0}
         for r in res:
             gc[r["grade"]] = gc.get(r["grade"], 0) + 1
-        head = f"[선점 검색] 조건 {flt} → {len(res)}건 (A{gc['A']}·B{gc['B']}·C{gc['C']})"
+        head = (f"[선점 검색] 조건 {flt} → {len(res)}건 "
+                f"(A{gc['A']}·B{gc['B']}·C{gc['C']}·D{gc['D']})")
         lines = [head]
         for r in res[:12]:
             lines.append(f"  {r['mid']} {r['name']}({r.get('hq','')}) 등급 {r['grade']}·"
@@ -221,7 +222,7 @@ SYSTEM = """당신은 '지자기 3D 지구본'의 분석 보조 AI다. 한국 �
 - [데이터]의 수치는 한 글자도 바꾸지 말고 그대로 인용한다. 데이터에 없으면 추측하지 않는다.
 - 한국어로 간결·정확하게. 표보다 문장 위주. 핵심 결론을 먼저.
 - 편각(D)=진북 대비 자침 편차, 복각(I)=수평면 대비 자기장 기울기, F=총자력. 영년변화는 시간에 따른 변화.
-- 선점 등급: A 선점가능(자기구배 조사) / B 조건부(현장 재확인) / C 부적합(대체 검토).
+- 선점 등급(4단계): A 선점가능(자기 청정+방위표지≥100m) / B 조건부 선점가능(자기 청정이나 방위표지 거리<100m — 정밀 방위각·표지 이설 시 선점가능) / C 현장 확인 필요(자기교란 재확인) / D 부적합(방위표지 불가 포함, 대체 검토).
 - 데이터가 비어 있으면(일반 개념 질문) 프로젝트 지식으로 간결히 설명한다."""
 
 

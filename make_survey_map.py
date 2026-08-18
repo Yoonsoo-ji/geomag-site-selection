@@ -24,7 +24,8 @@ from pathlib import Path
 
 import folium
 
-from aggregate_survey_xlsx import parse_workbook, review, key_disturb, survey_files
+from aggregate_survey_xlsx import (parse_workbook, review, key_disturb, survey_files,
+                                   sheet_rank, mark_max_dist)
 
 ROOT = Path(__file__).parent
 DATA = ROOT / "docs" / "data"
@@ -176,7 +177,7 @@ def bangwi_script(data):
 """.replace("__DATA__", payload)
 
 
-def popup_html(d, grade, concl, note):
+def popup_html(d, grade, concl, note, rank=None):
     color = GRADE[grade][0]
     dist = key_disturb(d) or "없음"
     bang = d["방위표지"] or "-"
@@ -186,6 +187,17 @@ def popup_html(d, grade, concl, note):
         ("핵심 교란요인", esc(dist)),
         ("방위표지", esc(bang) + (f" <span style='color:#888'>({az})</span>" if az else "")),
         ("검토 결론", f"<b>{esc(concl)}</b>"),
+    ]
+    # 도엽 중복 B 순위 (방위표지 최장거리 기준, 1순위=가장 먼 표지)
+    if rank and grade == "B" and rank[1] >= 2:
+        md = mark_max_dist(d)
+        star = "★ " if rank[0] == 1 else ""
+        color_r = "#2E8B57" if rank[0] == 1 else "#888"
+        rows.append(("도엽 우선순위",
+                     f"<b style='color:{color_r}'>{star}{esc(d['도엽명'])} 도엽 내 "
+                     f"{rank[0]}순위 / {rank[1]}건</b> "
+                     f"<span style='color:#888'>(방위표지 최장 {md:.0f}m)</span>"))
+    rows += [
         ("조사자 의견", esc(note)),
         ("조사", f"{esc(d['조사일'])} · {esc(d['조사자'])}"),
         ("좌표", f"{esc(d['위도'])}, {esc(d['경도'])} (표고 {esc(d['표고'])} m)"),
@@ -303,6 +315,7 @@ def build(records):
               for g, (c, lab) in GRADE.items()}
     counts = {}
     bangwi = {}
+    brank = sheet_rank(records, "B")   # 도엽 중복 B 순위(방위표지 최장거리)
     for d in records:
         lat, lon = fnum(d["위도"]), fnum(d["경도"])
         if lat is None or lon is None:
@@ -310,11 +323,19 @@ def build(records):
         grade, concl, note = review(d)
         counts[grade] = counts.get(grade, 0) + 1
         color = GRADE[grade][0]
+        rk = brank.get(d["관리번호"])
+        tip = f"[{grade}] {d['관리번호']} {d['후보지명']}"
+        if rk and grade == "B" and rk[1] >= 2:
+            tip += f" · {d['도엽명']}도엽 {rk[0]}순위/{rk[1]}" + (" ★" if rk[0] == 1 else "")
+        tip += " (클릭: 방위표지 표시)"
+        # 도엽 1순위 B 는 흰 테두리 강조
+        is_top = bool(rk and grade == "B" and rk[1] >= 2 and rk[0] == 1)
         folium.CircleMarker(
-            location=[lat, lon], radius=7, color="#333", weight=1.2,
+            location=[lat, lon], radius=8 if is_top else 7,
+            color="#fff" if is_top else "#333", weight=2.5 if is_top else 1.2,
             fill=True, fill_color=color, fill_opacity=0.92,
-            tooltip=f"[{grade}] {d['관리번호']} {d['후보지명']} (클릭: 방위표지 표시)",
-            popup=folium.Popup(popup_html(d, grade, concl, note), max_width=360),
+            tooltip=tip,
+            popup=folium.Popup(popup_html(d, grade, concl, note, rk), max_width=360),
         ).add_to(groups[grade])
         be = bangwi_entry(d)
         if be:
