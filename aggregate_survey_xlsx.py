@@ -19,6 +19,7 @@
     python aggregate_survey_xlsx.py --dir <폴더> --out <파일.xlsx>
 """
 import argparse
+import math
 import re
 import sys
 from collections import Counter
@@ -294,17 +295,43 @@ def key_disturb(d):
 MARK_MIN_DIST = 100.0   # 방위표지 최소 이격(m). 둘 중 하나라도 이 이상이면 선점 가능.
 
 
+def _geo_dist(a, b):
+    """두 (경도, 위도) 점 사이 측지 거리(m). WGS84 국소 평면 근사(한반도 위도)."""
+    if not a or not b:
+        return None
+    lon1, lat1 = a
+    lon2, lat2 = b
+    la = math.radians((lat1 + lat2) / 2)
+    m_lat = 111132.92 - 559.82 * math.cos(2 * la) + 1.175 * math.cos(4 * la)
+    m_lon = 111412.84 * math.cos(la) - 93.5 * math.cos(3 * la)
+    return math.hypot((lon2 - lon1) * m_lon, (lat2 - lat1) * m_lat)
+
+
+def _card_dist(det, tag):
+    """카드 기재 거리(m) 파싱. 없으면 None."""
+    s = det.get(tag, {}).get("거리")
+    if not s or s == "-":
+        return None
+    nums = re.findall(r"\d+\.?\d*", str(s))
+    return float(nums[0]) if nums else None
+
+
 def mark_max_dist(d):
-    """방위표지 1·2 중 최장 거리(m). 값 없으면 None."""
+    """방위표지 1·2 중 최장 이격(m).
+
+    ⚠ 카드 기재 '거리' 는 오기입 사례가 있어(경남 DS-004·045·084 등 좌표상 실제
+    거리의 4~5배로 적힘) 신뢰도가 낮다. 따라서 **기준점·표지 좌표로 계산한 거리를
+    우선**하고, 좌표가 없는 표지만 카드 기재값으로 폴백한다. 방위각은 좌표·카드가
+    일치하므로 방향은 신뢰 가능, 거리 크기만 좌표를 신뢰한다.
+    """
+    base = d.get("기준점ll")
     det = d.get("방위표지상세", {})
     best = None
-    for k in ("표지1", "표지2"):
-        s = det.get(k, {}).get("거리")
-        if not s or s == "-":
-            continue
-        nums = re.findall(r"\d+\.?\d*", str(s))
-        if nums:
-            v = float(nums[0])
+    for ll_key, tag in (("표지1ll", "표지1"), ("표지2ll", "표지2")):
+        v = _geo_dist(base, d.get(ll_key))     # 좌표 우선
+        if v is None:                           # 좌표 없으면 카드값 폴백
+            v = _card_dist(det, tag)
+        if v is not None:
             best = v if best is None else max(best, v)
     return best
 
