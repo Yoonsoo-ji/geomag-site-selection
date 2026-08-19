@@ -87,7 +87,57 @@ def load_survey_points() -> pd.DataFrame:
     df["date_src"] = "연도대체(7/1)"
     df = attach_fieldbook_datetime(df)
     df = apply_external_correction(df)
+    df = apply_quality_filter(df)
     return df.reset_index(drop=True)
+
+
+# ── Regional 성과 신뢰도 필터 (audit_regional_reliability.py, 2026-08-19) ──────
+#
+# 재방문 잔여(관측 ΔD − IGRF 영년변화)로 방문별 신뢰도를 판정했다. 같은 표석을
+# 다시 재면 0 이어야 하므로, 크게 벗어난 방문은 그 회차의 방위 기준이 틀렸다는 뜻이다.
+#
+#   불일치   연속 구간의 잔여 부호가 뒤집혀 **그 방문이 원인으로 특정**된 것
+#   판별불가 2회 방문뿐이라 둘 중 어느 쪽이 틀렸는지 못 가리는 것
+#
+# 내부 산술(재계산차 0.16″)과 정밀도(세션 산포 1.41′)는 통과했으므로 측정·계산의
+# 문제가 아니다. 방문마다 마크 참방위각이 바뀌는 것과 맞물린 **기준의 문제**다.
+REGIONAL_QUALITY = {
+    ("부안", 2023): "불일치",     # 앞구간 +62.2′ / 뒷구간 −70.6′ 로 부호 반전
+    ("포천", 2023): "불일치",     # −32.2′ / +22.3′ 로 부호 반전
+    ("가야", 2022): "판별불가",   # 2회 방문 · 잔여 −35.5′
+    ("가야", 2024): "판별불가",
+    ("거제", 2022): "판별불가",   # 야장 2019~2024 잔여 −19.7′ (주의)
+    ("거제", 2024): "판별불가",
+}
+#   "none"         : 전건 사용 (종전 동작)
+#   "strict"       : 원인이 특정된 「불일치」만 제외
+#   "conservative" : 「판별불가」까지 제외
+#
+# 채택 = "strict". 감사가 **모델 잔차를 보지 않고** 야장 원시 판독값과 IGRF
+# 영년변화만으로 지목한 2개 방문을 빼면 LOO 편각이 0.7691 -> 0.5675° 로 26%
+# 개선된다(F 60.26 -> 58.41 nT). 순환 논증이 아니라는 점이 중요하다.
+# ⚠ 대가 — 복각이 0.1787 -> 0.2600° 로 악화되고, 부안이 성과표에서 2023 한 건뿐이라
+#   측점이 17 -> 16 으로 줄어 서해안 공간 커버리지를 잃는다.
+REGIONAL_FILTER = "strict"
+
+
+def apply_quality_filter(df: pd.DataFrame) -> pd.DataFrame:
+    if REGIONAL_FILTER == "none":
+        df["quality"] = "미적용"
+        return df
+    drop = {"strict": {"불일치"},
+            "conservative": {"불일치", "판별불가"}}[REGIONAL_FILTER]
+    key = list(zip(df["name"], df["year"].astype(int)))
+    tag = [REGIONAL_QUALITY.get(k, "정상") for k in key]
+    df = df.assign(quality=tag)
+    keep = ~df["quality"].isin(drop)
+    n = int((~keep).sum())
+    if n:
+        rm = df.loc[~keep, ["name", "year", "quality"]]
+        print(f"  [신뢰도] {REGIONAL_FILTER} - {n}행 제외: "
+              + ", ".join(f"{r['name']}{int(r['year'])}({r['quality']})"
+                          for _, r in rm.iterrows()))
+    return df[keep]
 
 
 # ── ④ External 층 — 성과표 값에 외부장 보정 적용 ──────────────────────────────
@@ -298,6 +348,10 @@ def load_fieldbook_2019(exclude=FB2019_EXCLUDE, apply_external=None,
     max_kp = FB2019_MAX_KP if max_kp is None else max_kp
 
     raw = collect_raw()
+    # ⚠ collect_raw() 는 2026-08 부터 지리원 야장 전체(2019~2025)를 훑는다.
+    #   그 확장은 **신뢰도 감사용**이고, 여기서는 이름 그대로 2019 분만 쓴다.
+    #   걸러내지 않으면 성과표와 같은 (측점,연도)가 중복 투입된다.
+    raw = raw[pd.to_datetime(raw["날짜"]).dt.year == 2019]
     raw = raw[~raw["측점"].isin(exclude)]
     raw = raw.dropna(subset=["D_야장", "I_야장", "F_야장"])
 

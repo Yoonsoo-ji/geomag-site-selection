@@ -26,6 +26,7 @@ warnings.filterwarnings("ignore")
 import pandas as pd
 
 MODES = ["none", "drop_storm", "subtract", "subtract_quiet"]
+QUALITY = ["none", "strict", "conservative"]   # Regional 신뢰도 필터
 DEGREE = 1   # 생산 파이프라인이 LOO 로 채택하는 차수
 
 
@@ -42,10 +43,11 @@ def crustal():
     return _CRUSTAL
 
 
-def run(mode):
+def run(mode, quality="none"):
     import lmm_build
     importlib.reload(lmm_build)
     lmm_build.EXTERNAL_MODE = mode
+    lmm_build.REGIONAL_FILTER = quality
     pts = lmm_build.load_all_points(include_2019=lmm_build.INCLUDE_2019)
     # main() 과 같은 순서: IGRF 잔차 -> 측점 집계 -> LOO
     res = lmm_build.igrf_residuals(pts)
@@ -53,7 +55,7 @@ def run(mode):
     # 생산 파이프라인은 LOO 로 차수를 고르며 degree 1 이 채택된다.
     # 모드 비교도 같은 차수로 해야 본 모델 수치와 맞댈 수 있다.
     loo = lmm_build.loo_cv(sites, crustal(), degree=DEGREE)
-    return dict(mode=mode, n_obs=len(pts), n=len(sites),
+    return dict(mode=mode, quality=quality, n_obs=len(pts), n=len(sites),
                 **{k: loo[k] for k in ("D", "I", "F")})
 
 

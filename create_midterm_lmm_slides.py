@@ -975,6 +975,75 @@ def sl_lineage(prs, page):
 SHOT_DIR = OUT_DIR / "_web_shots"
 
 
+def sl_audit(prs, page):
+    """Regional 성과 신뢰도 감사 — 정밀하지만 부정확하다."""
+    s = slide_base(prs, "Ⅰ. LMM 중간결과",
+                   "기존 성과는 정밀하지만 부정확하다",
+                   "야장 원시 판독값 197세션을 세 층위로 검정했다. 측정·계산이 아니라 "
+                   "방문마다 달라지는 방위 기준이 문제였다.", page, rule=RED)
+    for i, (t, v, cap, fill, col) in enumerate([
+            ("① 내부 산술", "0.16″", "편각 재계산차 중앙\n야장 산술은 완전 일치",
+             LGRAY, GREEN),
+            ("② 정밀도", "1.41′", "같은 날 세션 산포 중앙\n목표 6′ 대비 양호",
+             LGRAY, GREEN),
+            ("③ 정확도", "33.7′", "재방문 잔여 RMS\n16구간 중 9구간이 6′ 초과",
+             PEACH, RED)]):
+        x = M + i * (CW / 3 + 0.06)
+        w = CW / 3 - 0.12
+        rect(s, x, BODY_Y, w, 1.34, fill)
+        text(s, x + 0.20, BODY_Y + 0.12, w - 0.40, 0.26, t, 11.5, GRAY, True)
+        text(s, x + 0.20, BODY_Y + 0.42, w - 0.40, 0.42, v, 25.5, col, True)
+        text(s, x + 0.20, BODY_Y + 0.92, w - 0.40, 0.36, cap, 10, GRAY, space=1.2)
+
+    text(s, M, BODY_Y + 1.52, CW, 0.28,
+         "재방문 잔여 = 관측 ΔD − IGRF 영년변화   (같은 표석을 다시 재면 0 이어야 한다)",
+         11.5, NAVY, True)
+    rows = [["정상 (<6′)", "미원 2.0 · 상주 −5.2/2.5 · 성산 −0.6 · 순천 −1.5/0.5 · 함양 −5.8",
+             "7구간"],
+            ["주의 (6~20′)", "거제 −19.7 · 여주 11.0 · 이원 −8.3", "3구간"],
+            ["불일치 (≥20′)", "부안 62.2/−70.6 · 함양 76.9 · 포천 −32.2/22.3 · 가야 −35.5",
+             "6구간"]]
+    y = table(s, M, BODY_Y + 1.84, CW, ["판정", "측점별 잔여 (′)", "건수"], rows,
+              [0.18, 0.68, 0.14], row_h=0.40, head_fill="8C2F2F", size=10)
+    band(s, M, y + 0.18, CW, 1.24,
+         "원인 — 마크 참방위각이 재방문마다 바뀐다 (거제 159.9°→330.6° · 포천 33.2°→192.7° · "
+         "부안 54.4°→169.6°→177.5°)\n"
+         "   마크 교체 자체는 오류가 아니나, 바뀐 마크의 참방위각이 틀리면 그 방문의 편각이 "
+         "통째로 틀어진다.\n\n"
+         "→ 신규 선점에서 방위표지를 고정하고 방위각 결정법을 상향해야 하는 근거 "
+         "(천문·자이로 또는 RTK 장기선)", RED)
+    return s
+
+
+def sl_audit_effect(prs, page):
+    """감사 반영 재적합 결과."""
+    s = slide_base(prs, "Ⅰ. LMM 중간결과",
+                   "불일치 방문 2건을 빼자 편각이 26% 좋아졌다",
+                   "감사가 모델 잔차를 보지 않고 지목한 방문이다. 순환 논증이 아니라는 "
+                   "점이 중요하다.", page, rule=GREEN)
+    rows = [["LOO 편각 D", "0.7691°", f"{LOO['D']:.4f}°", "−26%", "개선"],
+            ["LOO 총자력 F", "60.26 nT", f"{LOO['F']:.2f} nT", "−1.85 nT", "개선"],
+            ["LOO 복각 I", "0.1787°", f"{LOO['I']:.4f}°", "+0.081°", "악화"],
+            ["편각 잔차 RMS", "35.0′", f"{ASY['rD_rms']:.2f}′", "−41%", "개선"],
+            ["D / I 비대칭", "3.69", f"{ASY['ratio']:.2f}",
+             f"자기 원인 예상 {ASY['expected_from_magnetic']:.2f}", "거의 해소"],
+            ["가설 A (지각 벡터)", "r=+0.244 p=0.40",
+             f"r={HYP['A_vector_D']['r']:+.3f} p={HYP['A_vector_D']['p']:.3f}",
+             "기각 → 유의", "반전"]]
+    y = table(s, M, BODY_Y, CW,
+              ["지표", "감사 전 (17측점)", "감사 후 (16측점)", "변화", "판정"], rows,
+              [0.22, 0.20, 0.20, 0.20, 0.18], row_h=0.40, head_fill=GREEN, size=10)
+    band(s, M, y + 0.18, CW, 1.50,
+         "가장 중요한 것은 마지막 두 줄이다.\n\n"
+         "· D/I 비대칭이 3.69 → 1.95 로 떨어져 자기 원인 예상값(1.64)에 근접했다. "
+         "「편각에만 작용하는 초과 오차」의\n  정체가 바로 그 두 방문이었다는 뜻이다.\n"
+         "· 규모 미달로 기각했던 「지각 벡터 성분 누락」 가설이 유의해졌다(p=0.046). "
+         "잡음이 걷히자 실제 신호가 드러났다.\n\n"
+         "⚠ 대가 — 부안이 성과표에 2023 한 건뿐이라 측점이 17→16 으로 줄어 서해안 "
+         "공간 커버리지를 잃는다. 복각도 악화됐다.", GREEN)
+    return s
+
+
 def sl_compliance(prs, page):
     """설명자료(오석훈, 2026-05) 대비 구현 준수 점검."""
     s = slide_base(prs, "Ⅲ. 향후 검증·보완",
@@ -1199,7 +1268,8 @@ def main():
     prs.slide_height = Inches(H)
 
     builders = [sl_divider, sl_why, sl_structure, sl_nointerp, sl_pipeline,
-                sl_data_status, sl_result, sl_residual, sl_impl, sl_webdemo,
+                sl_data_status, sl_result, sl_audit, sl_audit_effect,
+                sl_residual, sl_impl, sl_webdemo,
                 sl_kigam, sl_resolution, sl_ngii, sl_match, sl_datareq,
                 sl_external_verdict, sl_compliance, sl_roadmap, sl_risk,
                 sl_cmp_concept, sl_cmp_table, sl_cmp_flow, sl_lineage,
