@@ -33,6 +33,13 @@ OUT = ROOT / "docs" / "output"
 GRID_STEP = 0.1          # 평가 격자 (약 11 km)
 TOP_N = 20               # 출력할 상위 후보 수
 
+# 배치만 좋고 자기환경이 나쁜 곳을 뽑으면 쓸 수 없다. survey_review.html 의 등급
+# 체계에서 **선점 가능(A)·조건부 선점 가능(B)** 만 후보로 삼는다.
+#   A  적합 + 방위표지 좌표거리 하나라도 ≥100 m
+#   B  적합·자기교란 0 이나 방위표지 최장 <100 m — 방위각 정밀화로 A 승격 가능
+# C(현장 확인 필요)·D(부적합)는 제외한다.
+GRADES = ("A", "B")
+
 
 def geo_km(lat1, lon1, lat2, lon2):
     """WGS84 국소 평면 근사 거리(km). 한반도 규모에서 충분하다."""
@@ -104,6 +111,8 @@ def main():
                          for f in gj["features"]])
     print(f"\n현장조사 후보 {len(cand)}개 "
           f"(등급 {cand['grade'].value_counts().to_dict()})")
+    cand = cand[cand["grade"].isin(GRADES)].reset_index(drop=True)
+    print(f"   → 등급 {'·'.join(GRADES)} 만 사용: {len(cand)}개")
 
     # ── 탐욕적 선택 ──
     cur = base.copy()
@@ -135,11 +144,7 @@ def main():
     print(f"\n   {TOP_N}개 모두 반영 시 최대공백 {base.max():.0f} → {cur.max():.0f} km "
           f"· 평균 {base.mean():.0f} → {cur.mean():.0f} km")
 
-    # 등급 A/B 만으로 제한했을 때
-    ab = cand[cand["grade"].isin(["A", "B"])]
-    print(f"\n   ※ 위 목록 중 등급 A·B 는 "
-          f"{int(res['등급'].isin(['A','B']).sum())}/{TOP_N}개 "
-          f"(전체 후보 중 A·B 는 {len(ab)}/{len(cand)})")
+    print(f"\n   등급 구성: {res['등급'].value_counts().to_dict()}")
 
     OUT.mkdir(parents=True, exist_ok=True)
     ts = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
