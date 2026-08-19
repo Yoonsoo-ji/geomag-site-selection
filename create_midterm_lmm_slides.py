@@ -362,6 +362,102 @@ def fig_asymmetry():
 
 
 # ── 슬라이드 ─────────────────────────────────────────────────────────────────
+def fig_selection():
+    """모델 선택 — 후보별 교차검증. 채택만 색을 준다."""
+    f = FIG_DIR / "selection.png"
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 2.5), dpi=200)
+    left = [("R0\n상수항", 0.4987, True), ("R1\n1차", 0.5236, False),
+            ("R2\n2차", 0.6389, False), ("R1T\n시간항", 0.5459, False)]
+    ax = axes[0]
+    for i, (lab, v, pick) in enumerate(left):
+        ax.bar(i, v, color="#2F6FB2" if pick else "#C9D6E4", width=0.62)
+        ax.text(i, v + 0.012, f"{v:.3f}", ha="center", fontsize=8,
+                color="#182638", fontweight="bold" if pick else "normal")
+    ax.set_xticks(range(len(left)))
+    ax.set_xticklabels([x[0] for x in left], fontsize=8.5)
+    ax.set_ylim(0.40, 0.70)
+    ax.set_ylabel("LOO 편각 (°)", fontsize=9)
+    ax.set_title("Regional 차수", fontsize=10, color="#182638")
+
+    right = [("F0\n미사용", 72.3, False), ("F1\n1:1", 63.0, True),
+             ("Fα\n계수추정", 67.0, False)]
+    ax = axes[1]
+    for i, (lab, v, pick) in enumerate(right):
+        ax.bar(i, v, color="#2E7D5B" if pick else "#C9D6E4", width=0.58)
+        ax.text(i, v + 0.7, f"{v:.1f}", ha="center", fontsize=8,
+                color="#182638", fontweight="bold" if pick else "normal")
+    ax.set_xticks(range(len(right)))
+    ax.set_xticklabels([x[0] for x in right], fontsize=8.5)
+    ax.set_ylim(55, 78)
+    ax.set_ylabel("LOO 총자력 (nT)", fontsize=9)
+    ax.set_title("지각 결합", fontsize=10, color="#182638")
+
+    for ax in axes:
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.tick_params(labelsize=8)
+        ax.grid(axis="y", color="#E6EBF2", lw=0.7)
+        ax.set_axisbelow(True)
+    fig.tight_layout()
+    fig.savefig(f, transparent=True)
+    plt.close(fig)
+    return f
+
+
+def fig_external():
+    """External 모델 — 기준선을 넘는 것은 공간보간뿐."""
+    f = FIG_DIR / "external.png"
+    fig, ax = plt.subplots(figsize=(5.6, 2.6), dpi=200)
+    items = [("미적용", 0.5123, "#8A94A6"), ("E0\n청양단독", 0.5495, "#C9D6E4"),
+             ("E1\n최근접", 0.5504, "#C9D6E4"), ("E2\n4소 보간", 0.4987, "#2F6FB2"),
+             ("E2b\n역거리", 0.5595, "#C9D6E4")]
+    for i, (lab, v, c) in enumerate(items):
+        ax.bar(i, v, color=c, width=0.62)
+        ax.text(i, v + 0.006, f"{v:.4f}", ha="center", fontsize=7.6,
+                color="#182638")
+    ax.axhline(0.5123, color="#C63D3D", lw=1.1, ls="--")
+    ax.text(4.45, 0.5133, "기준선", fontsize=7.5, color="#C63D3D", ha="right")
+    ax.set_xticks(range(len(items)))
+    ax.set_xticklabels([x[0] for x in items], fontsize=8.5)
+    ax.set_ylim(0.46, 0.58)
+    ax.set_ylabel("LOO 편각 (°)", fontsize=9)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.tick_params(labelsize=8)
+    ax.grid(axis="y", color="#E6EBF2", lw=0.7)
+    ax.set_axisbelow(True)
+    fig.tight_layout()
+    fig.savefig(f, transparent=True)
+    plt.close(fig)
+    return f
+
+
+def fig_vector_robust():
+    """지각 벡터 — 채움 방식과 홀드아웃을 바꿔도 편각이 좋아진다."""
+    f = FIG_DIR / "vector_robust.png"
+    fig, ax = plt.subplots(figsize=(5.8, 2.7), dpi=200)
+    items = [("미적용", 0.4987), ("zero", 0.4506), ("mean", 0.4507),
+             ("harmonic", 0.4739), ("경계배제", 0.4638), ("블록\n남중북", 0.4560)]
+    for i, (lab, v) in enumerate(items):
+        c = "#8A94A6" if i == 0 else "#2F6FB2"
+        ax.bar(i, v, color=c, width=0.6)
+        ax.text(i, v + 0.004, f"{v:.4f}", ha="center", fontsize=7.4,
+                color="#182638")
+    ax.axhline(0.4987, color="#C63D3D", lw=1.1, ls="--")
+    ax.set_xticks(range(len(items)))
+    ax.set_xticklabels([x[0] for x in items], fontsize=8)
+    ax.set_ylim(0.42, 0.53)
+    ax.set_ylabel("LOO 편각 (°)", fontsize=9)
+    ax.set_title("지각 벡터 적용 조건별 — 모두 기준선 아래", fontsize=9.5,
+                 color="#182638")
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.tick_params(labelsize=8)
+    ax.grid(axis="y", color="#E6EBF2", lw=0.7)
+    ax.set_axisbelow(True)
+    fig.tight_layout()
+    fig.savefig(f, transparent=True)
+    plt.close(fig)
+    return f
+
+
 def sl_divider(prs, page):
     s = prs.slides.add_slide(prs.slide_layouts[6])
     rect(s, 0, 0, W, H, BAND)

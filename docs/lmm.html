@@ -418,7 +418,7 @@ function run(){
      + (L.crustalD ? `　D ${(L.crustalD*60>=0?'+':'')+(L.crustalD*60).toFixed(2)}′ ·`
                    + ` I ${(L.crustalI*60>=0?'+':'')+(L.crustalI*60).toFixed(2)}′` : '')],
     ['④ External (관측소 4소)',
-     '예측 시점 미적용 — 정온시 기준값 모형 (성과 정리 단계에서 편각에 반영)'],
+     '예측 시점 미적용 — 정온시 기준값 모형 (성과 정리 단계에서 편각·복각에 반영)'],
   ].map(x=>`<tr><td>${x[0]}</td><td class="num">${x[1]}</td></tr>`).join('');
 
   document.getElementById('out').style.display='block';

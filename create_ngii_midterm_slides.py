@@ -382,6 +382,102 @@ def s_axes(slide):
          "파수영역 역산으로 3성분을 복원하여 편각·복각에 반영함")
 
 
+def s_validate(slide):
+    """④ 검증체계와 모델 선택 결과."""
+    clear_notes(slide)
+    set_chip(slide, "모델 검증체계 및 구조 선택 결과")
+
+    y = lead(slide, BODY_Y,
+             "만들고 끝내지 않고, 어떤 형태가 옳은지 자료로 골랐다",
+             "구현 검증 · 구조 선택 · 예측 검증 — 평가 측점은 미리 고정", h=0.66)
+
+    y += 0.18
+    y = table(
+        slide, L, y, CW * 0.56,
+        ["구분", "후보", "교차검증", "판정"],
+        [["Regional 차수", "R0 상수항", "0.4987°", ("채택", GREEN)],
+         ["", "R1 1차 평면", "0.5236°", "기각"],
+         ["", "R1T 시간항 추가", "0.5459°", "기각"],
+         ["지각 결합", "F1 1:1 결합", "63.0 nT", ("채택", GREEN)],
+         ["", "Fα 계수 추정(0.67)", "67.0 nT", "기각"],
+         ["External", "E0 청양 단독", "0.5495°", "기각"],
+         ["", "E1 최근접 관측소", "0.5504°", "기각"],
+         ["", "E2 4소 공간보간", "0.4987°", ("채택(잠정)", GREEN)]],
+        [0.24, 0.34, 0.24, 0.18], row_h=0.36, size=10,
+        aligns=[PP_ALIGN.LEFT, PP_ALIGN.LEFT, PP_ALIGN.CENTER, PP_ALIGN.CENTER])
+
+    x2 = L + CW * 0.58
+    w2 = CW - CW * 0.58
+    rect(slide, x2, BODY_Y + 0.84, w2, 1.50, fill=WHITE, line=NAVY,
+         radius=True, weight=1.0)
+    label(slide, x2 + 0.18, BODY_Y + 0.69, 2.6, "평가 측점 고정")
+    text(slide, x2 + 0.26, BODY_Y + 1.16, w2 - 0.52, 1.10,
+         "여러 후보를 같은 교차검증 값을 보며 고르면 그 값에도 과적합된다. "
+         "기준 설정에서 평가 측점을 한 번만 정해 고정하고(편각 14 · 복각 15 · "
+         "총자력 13), 이후 모든 비교를 그 위에서만 했다.", 10.5, INK, space=1.35)
+
+    rect(slide, x2, BODY_Y + 2.52, w2, 1.34, fill=LGRAY, line=LINE, radius=True)
+    text(slide, x2 + 0.22, BODY_Y + 2.66, w2 - 0.44, 0.26,
+         "선택의 요점", 11.5, NAVY, True)
+    text(slide, x2 + 0.22, BODY_Y + 2.96, w2 - 0.44, 0.84,
+         "· 측점 16개로는 공간 구조를 지지할 수 없다\n"
+         "· 결합계수를 자유롭게 두면 과적합이다\n"
+         "· 단일 관측소 가정은 성립하지 않는다", 10.5, INK, space=1.35)
+
+    note(slide, y + 0.16,
+         "※ 모든 비교는 같은 조건(Grade A 자료 · 동일 차수 · 동일 평가 측점)에서 "
+         "처음부터 다시 적합해 수행함")
+
+
+def s_perf(slide):
+    """⑤ 현재 성능과 편각 원인 진단."""
+    clear_notes(slide)
+    set_chip(slide, "현재 성능 및 편각 정확도 제한요인")
+
+    y = lead(slide, BODY_Y,
+             "총자력은 목표에 근접했고, 편각이 남았다",
+             "적합에 쓰지 않은 측점에서의 예측오차(Station-LOSO)", h=0.66)
+
+    y += 0.18
+    bw = (CW - 0.44) / 3
+    for i, (val, cap, fill, col) in enumerate([
+            (f"{LOO['D']*60:.0f}′", "편각 D  |  목표 6′", PEACH, RED),
+            (f"{LOO['F']:.0f} nT", f"총자력 F  |  목표 {KPI_F:g} nT", PEACH, RED),
+            (f"{LOO['I']*60:.0f}′", "복각 I  |  별도 목표 없음", LGRAY, NAVY)]):
+        x = L + i * (bw + 0.22)
+        rect(slide, x, y, bw, 0.92, fill=fill, radius=True)
+        text(slide, x, y + 0.10, bw, 0.44, val, 24, col, True,
+             PP_ALIGN.CENTER)
+        text(slide, x, y + 0.56, bw, 0.30, cap, 10.5, GRAY, align=PP_ALIGN.CENTER)
+
+    y += 1.14
+    y = table(
+        slide, L, y, CW,
+        ["검정한 가설", "결과", "판정"],
+        [["IGRF 구현 오류", "공식 계산기와 표시 자릿수 내 일치", "배제"],
+         ["Regional 차수 부족", "1차·2차가 상수항보다 나쁨", "배제"],
+         ["지역 영년변화 항 누락", "시간항 추가 시 오히려 악화", "배제"],
+         ["단일 관측소 외부장 보정", "청양 단독·최근접 모두 기준선보다 나쁨", "배제"],
+         ["지각 결합계수 오류", "계수 자유추정은 과적합", "배제"]],
+        [0.26, 0.56, 0.18], row_h=0.32, size=10,
+        aligns=[PP_ALIGN.LEFT, PP_ALIGN.LEFT, PP_ALIGN.CENTER])
+
+    y += 0.18
+    bw2 = (CW - 0.24) / 2
+    rect(slide, L, y, bw2, 0.86, fill=WHITE, line=RED, radius=True, weight=1.0)
+    label(slide, L + 0.18, y - 0.15, 2.2, "남은 요인", fill=RED, size=11)
+    text(slide, L + 0.24, y + 0.24, bw2 - 0.48, 0.58,
+         "① 기존 반복측량의 편각 계통오차(장비·방위표지·측점 이설)\n"
+         "② 지각 벡터 미반영  ③ 측점 16개라는 공간 밀도", 10.5, INK, space=1.35)
+
+    rect(slide, L + bw2 + 0.24, y, bw2, 0.86, fill=LGRAY, line=LINE, radius=True)
+    text(slide, L + bw2 + 0.44, y + 0.14, bw2 - 0.40, 0.26,
+         "이 단계의 결론", 11, NAVY, True)
+    text(slide, L + bw2 + 0.44, y + 0.40, bw2 - 0.40, 0.44,
+         "「미달」이 아니라 「특정」이다 — 무엇을 고치면 무엇이 좋아지는지가 "
+         "정해졌다", 10.5, INK, space=1.3)
+
+
 def s_service(slide):
     """③ 도엽별 자침편차 제공의 정확도 요건 (초안 12면 보완)."""
     clear_notes(slide)
@@ -546,7 +642,7 @@ def main():
 
     s_data(prs.slides[4])          # 5면 — 모델 개발 자료
     s_axes(prs.slides[5])          # 6면 — 4축·항공자력
-    s_cycle(prs.slides[8])         # 9면 — 모델 갱신 주기
+    s_cycle(prs.slides[8])         # 9면 — 모델 갱신 주기 (면 삽입 전에 채운다)
 
     # 자침편차 면은 양식에 없으므로 6면 골격을 복제해 그 뒤에 끼운다
     dup = clone_slide(prs, 5)
@@ -554,20 +650,28 @@ def main():
     move_slide(prs, len(prs.slides) - 1, 6)
     s_service(prs.slides[6])
 
+    # 검증체계·현재성능 두 면 (Ⅱ 연구수행) — 자침편차 면 뒤
+    for fn, at in ((s_validate, 7), (s_perf, 8)):
+        dup = clone_slide(prs, 5)
+        strip_body(dup)
+        move_slide(prs, len(prs.slides) - 1, at)
+        fn(prs.slides[at])
+
     # 추진계획(Ⅲ) 면 — 장 표시가 달라야 하므로 「3장」 레이아웃에 붙인다
     lay3 = [l for l in prs.slide_masters[0].slide_layouts if l.name == "3장"][0]
-    plan = clone_slide(prs, 9, layout=lay3)   # 9면(=갱신주기) 골격 재사용
+    plan = clone_slide(prs, 11, layout=lay3)  # 갱신주기 면 골격 재사용
     strip_body(plan)
-    move_slide(prs, len(prs.slides) - 1, 10)
-    s_plan(prs.slides[10])
+    move_slide(prs, len(prs.slides) - 1, 12)
+    s_plan(prs.slides[12])
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out = OUT_DIR / f"{ts}_중간보고회_지자기모델_작성분_5장.pptx"
+    out = OUT_DIR / f"{ts}_중간보고회_지자기모델_작성분_7장.pptx"
     prs.save(out)
     print(f"저장: {out}")
     print("  · 5면 모델 개발 자료 · 6면 4축/항공자력 · 7면 자침편차 정확도")
-    print("  · 10면 모델 갱신 주기(Ⅱ) · 11면 고도화 방안(Ⅲ 추진계획)")
+    print("  · 8면 검증체계·모델선택 · 9면 현재 성능·원인진단")
+    print("  · 12면 모델 갱신 주기(Ⅱ) · 13면 고도화 방안(Ⅲ 추진계획)")
     return out
 
 
