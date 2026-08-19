@@ -71,6 +71,26 @@ FOOTER = "국가기준점 지자기측량 발전방안 연구 | 중간보고 작
 MODEL = json.load(open(DATA / "lmm_model.json", encoding="utf-8"))
 DIAG = json.load(open(DATA / "lmm_diagnosis.json", encoding="utf-8"))
 
+# External 보정량 현황 — 수치를 하드코딩하지 않고 산출물에서 읽는다.
+def _ext_stats():
+    import csv
+    for name in ("external_corrections_multi.csv", "external_corrections.csv"):
+        f = DATA / name
+        if not f.exists():
+            continue
+        rows = list(csv.DictReader(open(f, encoding="utf-8-sig")))
+        ok = [r for r in rows if r.get("상태") == "정상"]
+        yrs = sorted({r["날짜"][:4] for r in rows if r.get("날짜")})
+        return dict(total=len(rows), ok=len(ok), y0=yrs[0] if yrs else "",
+                    y1=yrs[-1] if yrs else "",
+                    missing=[y for y in range(int(yrs[0]), int(yrs[-1]) + 1)
+                             if str(y) not in yrs] if yrs else [],
+                    multi=name.endswith("multi.csv"))
+    return dict(total=0, ok=0, y0="", y1="", missing=[], multi=False)
+
+
+EXT = _ext_stats()
+
 LOO = MODEL["loo_cv"]
 CRU = MODEL["crustal_diagnostics"]
 DS = DIAG["dataset"]
@@ -498,18 +518,20 @@ def sl_pipeline(prs, page):
 
 def sl_data_status(prs, page):
     s = slide_base(prs, "Ⅰ. LMM 중간결과",
-                   "현재까지 확보한 자료 — 두 개 층이 아직 미완이다",
-                   "Core는 완비, Crustal은 해상도 부족, Regional은 측점 부족, External은 "
-                   "관측시각 부족이 병목이다.", page)
-    ext = "부분 적용"
+                   "현재까지 확보한 자료 — 남은 병목은 측점과 지각층이다",
+                   "Core·External 은 확보됐다. Crustal 은 원측선이 존재하지 않아 현 "
+                   "격자가 상한이고, Regional 은 측점이 모자란다.", page)
     rows = [
         ["Core", "IGRF-14 (13차) 계수", "완비", "재현성 검증 통과 (ppigrf 대조)"],
         ["Regional", f"절대측정 {N_SITES}점 ({MODEL['epoch_label']})", "부족",
          "권고 30점 대비 미달 · 편각 품질 불량점 배제"],
         ["Crustal", f"KIGAM 자력이상 {DIAG['vector_recovery']['grid']['dx_km']:.1f} km 격자",
-         "해상도 부족", f"자료 공백 {DIAG['vector_recovery']['grid']['gap_pct']:.0f}% · 원측선 필요"],
-        ["External", "상시관측 1분 자료", ext,
-         "2019 구간만 Kp 배제 적용 · 2022~25는 관측시각 부재"],
+         "해상도 상한",
+         f"자료 공백 {DIAG['vector_recovery']['grid']['gap_pct']:.0f}% · "
+         "원측선 자료가 존재하지 않는다"],
+        ["External", "상시관측 1분 자료 (관측소 4소)", "편각 적용",
+         f"야장에서 {EXT['y0']}~{EXT['y1']} 관측시각 복원 · "
+         f"보정량 {EXT['ok']}세션 (정온·편각 전용)"],
     ]
     y = table(s, M, BODY_Y, CW, ["층", "보유 자료", "상태", "비고"], rows,
               [0.11, 0.30, 0.13, 0.46], row_h=0.46)
@@ -520,13 +542,18 @@ def sl_data_status(prs, page):
     stat(s, x2, y + 0.24, 2.55, 1.06, f"{N_SITES}점",
          "Regional 입력 측점", LGRAY, BLUE, 22)
     stat(s, x2 + 2.68, y + 0.24, 2.55, 1.06, f"{DS['n_obs']}회",
-         f"총 관측 세션 ({DS['year_min']}~{DS['year_max']})", LGRAY, BLUE, 22)
+         f"Regional 입력 관측 · 방문 ({DS['year_min']}~{DS['year_max']})",
+         LGRAY, BLUE, 22)
     stat(s, x2 + 5.36, y + 0.24, 2.55, 1.06,
          f"{DIAG['only2019']['gap_north_km']:.0f} km",
          "최북단 측점 위 공백", PEACH, RED, 22)
+    miss = ("(" + "·".join(str(m) for m in EXT["missing"]) + "년 야장은 없다)"
+            if EXT["missing"] else "")
     band(s, x2, y + 1.46, w2, 0.86,
-         "관측시각이 남아 있는 구간은 2019년뿐이다. 2022~2025 성과표에는 연도만 있어\n"
-         "외부장 보정을 적용할 자리가 없다 — 이것이 현재 가장 큰 병목이다.")
+         f"성과표에는 연도만 있으나 지리원 야장에서 {EXT['y0']}~{EXT['y1']} 분 단위 "
+         f"관측시각을 복원했다 {miss}.\n"
+         f"관측소 4소 공간보간으로 {EXT['ok']}세션에 보정량을 산출해 편각에 적용 중이다 "
+         "— 병목은 측점 수와 지각층으로 옮겨갔다.")
     return s
 
 
@@ -723,19 +750,19 @@ def sl_kigam(prs, page):
 def sl_ngii(prs, page):
     s = slide_base(prs, "Ⅱ. 확인·추가 자료",
                    "추가할 자료 ② — 국토지리정보원 2021~2025 반복측정",
-                   "Regional 층의 입력 측점을 늘리고, 관측시각을 확보해 External 층의 "
-                   "봉쇄를 푼다.", page, rule=ORANGE)
+                   "관측시각은 이미 야장에서 복원했다. 남은 것은 Regional 층의 "
+                   "입력 측점을 늘리는 일이다.", page, rule=ORANGE)
     stat(s, M, BODY_Y, 2.72, 1.30, f"{N_SITES}점 → 30점 이상",
          "Regional 입력 측점 목표", LBLUE, BLUE, 17)
     stat(s, M + 2.85, BODY_Y, 2.72, 1.30, "2021~2025",
          "추가 대상 반복측정 기간", LBLUE, BLUE, 19)
-    stat(s, M + 5.70, BODY_Y, 2.72, 1.30, "관측시각",
-         "External 층 적용의 전제 조건", PEACH, RED, 19)
+    stat(s, M + 5.70, BODY_Y, 2.72, 1.30, f"{EXT['ok']}세션",
+         "관측시각 복원 완료 · 보정량 산출", LBLUE, GREEN, 19)
     rows = [
         ["측점 밀도", f"현재 {N_SITES}점 · 권고 30점 이상",
          "1차 다항식의 자유도 확보 · 이상치 배제 작동"],
-        ["관측시각", "2022~2025 성과표는 연도만 기재",
-         "야장 확보 시 분 단위 복원 → 외부장 보정 가능"],
+        ["관측시각", f"야장에서 {EXT['y0']}~{EXT['y1']} 분 단위 복원 (완료)",
+         "외부장 보정 적용 중 — 야장에만 있는 측점 17건이 추가 후보"],
         ["독립 검증점", "적합에 쓰지 않는 측점 분리",
          "LOO 외에 독립 표본 검증이 가능해진다"],
         ["시기간 대조", "겹치는 측점의 IGRF 잔차 차",
@@ -745,8 +772,10 @@ def sl_ngii(prs, page):
               [0.18, 0.36, 0.46], row_h=0.44)
     band(s, M, y + 0.22, CW, 1.02,
          "⚠ 두 자료는 서로 다른 목표를 푼다 — 섞어 말하면 안 된다.\n\n"
-         "   · 항공자력(Crustal) → 총자력 F의 지각장 해상도\n"
-         "   · 반복측정 + 관측시각(Regional·External) → 편각 D의 외부장 잡음과 측점 밀도")
+         "   · 항공자력(Crustal) → 총자력 F의 지각장 해상도 — 원측선이 없어 "
+         "현 격자가 상한이다\n"
+         "   · 반복측정(Regional) → 편각 D의 측점 밀도. 관측시각(External)은 이미 "
+         "확보·적용했다")
     return s
 
 
@@ -757,7 +786,7 @@ def sl_match(prs, page):
                    "분명히 한다.", page, rule=ORANGE)
     cols = [
         ("편각 D", f"{LOO['D']:.3f}°", f"목표 {KPI_D:g}°", RED, PEACH,
-         [("외부장 미보정", "관측시각 확보 → 상시관측 보정"),
+         [("외부장 보정", "관측소 4소 적용 완료 — 잔여는 NOC 투영"),
           ("측점 밀도 부족", f"{N_SITES}점 → 30점 이상"),
           ("계통 오차 의심", "성과표 원본 감사 · 방위 기준 재확인")]),
         ("총자력 F", f"{LOO['F']:.1f} nT", f"목표 {KPI_F:g} nT", RED, PEACH,
