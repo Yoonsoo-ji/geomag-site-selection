@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>한국 지자기도 — IGRF vs LMM</title>
+<!--
+  2020년 지구물리측량 연구 보고서의 「그림 4-21/4-22」(IGRF의 복각과 보정된 복각의
+  지자기도)와 같은 형식으로, 왼쪽 IGRF · 오른쪽 LMM 을 나란히 놓는다.
+  등치선 + 색띠 + 컬러바 + 해안선 + 측점 표시.
+
+  · 계산: igrf14.js (검증 엔진) + data/lmm_model.json (Regional·Crustal 계수)
+  · 오프라인 동작 — 외부 타일·라이브러리 없음
+  · 지각층은 KIGAM 이용조건에 따라 CRUSTAL_OPEN_UNTIL 까지만 반영한다
+-->
+<style>
+:root{--bg:#fff;--fg:#182638;--mut:#607184;--line:#E3E9F0;--card:#F7F9FC}
+@media (prefers-color-scheme:dark){:root{--bg:#0F172A;--fg:#E8EEF6;--mut:#94A8BD;
+  --line:#24344A;--card:#16233A}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);padding:22px 18px 50px;
+  font-family:Pretendard,"맑은 고딕","Malgun Gothic",system-ui,sans-serif;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:23px;margin:0 0 4px}
+.lead{color:var(--mut);font-size:13.5px;margin:0 0 16px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.seg{display:flex;gap:3px;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--mut);font-size:13px;
+  padding:7px 14px;border-radius:7px;cursor:pointer;font-family:inherit}
+.seg button.on{background:#2F6FB2;color:#fff}
+label{font-size:13px;color:var(--mut);display:flex;align-items:center;gap:6px}
+input[type=range]{accent-color:#2F6FB2}
+.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px}
+.panel{border:1px solid var(--line);border-radius:12px;padding:12px 12px 8px;
+  background:var(--card)}
+.panel h2{font-size:14.5px;margin:0 0 2px}
+.panel .sub{font-size:11.5px;color:var(--mut);margin:0 0 8px}
+.cv{position:relative}
+canvas{width:100%;height:auto;display:block;border-radius:8px;background:#fff}
+@media (prefers-color-scheme:dark){canvas{background:#0B1220}}
+.cap{font-size:11.5px;color:var(--mut);margin-top:7px;text-align:center}
+.note{background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:11px 14px;margin-top:16px;font-size:12.5px;color:var(--mut)}
+.note b{color:var(--fg)}
+#busy{font-size:13px;color:var(--mut);padding:26px 0}
+.warn{border-left:3px solid #C2410C;padding-left:10px;margin-top:8px}
+</style>
+</head>
+<body><div class="wrap">
+<h1>한국 지자기도 — IGRF vs LMM</h1>
+<p class="lead">같은 좌표·같은 시점에서 전지구 모델(IGRF-14)과 지역 모델(LMM)을 나란히
+그린다. 2020년 연구 보고서의 지자기도와 같은 형식이다.</p>
+
+<div class="bar">
+  <div class="seg" id="modeSeg">
+    <button data-m="F" class="on">총자력 F</button>
+    <button data-m="D">편각 D</button>
+    <button data-m="I">복각 I</button>
+  </div>
+  <label>연도 <input id="year" type="range" min="2020" max="2030" step="0.5" value="2026.5">
+    <b id="yv">2026.5</b></label>
+  <label><input type="checkbox" id="cbSite" checked> 측점 표시</label>
+  <label><input type="checkbox" id="cbLine" checked> 등치선</label>
+</div>
+
+<div id="busy">모델 불러오는 중…</div>
+<div class="panels" id="panels" style="display:none">
+  <div class="panel">
+    <h2>IGRF-14</h2><p class="sub">전지구 기준장 · 구면조화 13차</p>
+    <div class="cv"><canvas id="cA" width="720" height="820"></canvas></div>
+    <p class="cap" id="capA">—</p>
+  </div>
+  <div class="panel">
+    <h2>LMM (지역 모델)</h2><p class="sub" id="subB">Core + Regional + Crustal</p>
+    <div class="cv"><canvas id="cB" width="720" height="820"></canvas></div>
+    <p class="cap" id="capB">—</p>
+  </div>
+  <div class="panel">
+    <h2>차이 (LMM − IGRF)</h2><p class="sub">지역 모델이 더하는 양</p>
+    <div class="cv"><canvas id="cC" width="720" height="820"></canvas></div>
+    <p class="cap" id="capC">—</p>
+  </div>
+</div>
+
+<div class="note" id="foot"></div>
+</div>
+
+<script src="igrf14.js"></script>
+<script>
+// ── 설정 ───────────────────────────────────────────────────────────────────
+const BOX={lat0:33.0,lat1:38.7,lon0:124.6,lon1:130.0};
+const NX=150, NY=190;                 // 계산 격자 (약 0.036° · 3~4 km)
+const CRUSTAL_OPEN_UNTIL='2026-08-31';
+const crustalOpen=()=>new Date()<=new Date(CRUSTAL_OPEN_UNTIL+'T23:59:59');
+
+let MODE='F', MODEL=null, COAST=null, YEAR=2026.5;
+
+// 순차형(값) · 발산형(차이). 값 표시에 발산형을 쓰면 중앙 백색이 자료공백처럼 보인다.
+const CM_SEQ=[[13,27,62],[26,84,160],[20,150,170],[70,190,120],[220,205,80],
+              [240,140,50],[200,40,40]];
+const CM_DIV=[[40,90,200],[120,170,235],[245,247,250],[240,150,120],[200,40,40]];
+function ramp(t,st){t=Math.min(1,Math.max(0,t));const n=st.length-1;
+  const x=t*n,i=Math.min(n-1,Math.floor(x)),f=x-i;
+  return [st[i][0]+(st[i+1][0]-st[i][0])*f,st[i][1]+(st[i+1][1]-st[i][1])*f,
+          st[i][2]+(st[i+1][2]-st[i][2])*f];}
+
+// ── LMM 결합 ───────────────────────────────────────────────────────────────
+function regTerm(c,lat,lon,r){const u=lat-r.lat0,v=lon-r.lon0;
+  return c[0]+c[1]*u+c[2]*v;}
+function crustalAt(lat,lon,cr){
+  const i=Math.round((lon-cr.lon0)/cr.dlon), j=Math.round((lat-cr.lat0)/cr.dlat);
+  if(i<0||i>=cr.nlon||j<0||j>=cr.nlat) return null;
+  const v=cr.values[j*cr.nlon+i];
+  return (v===null||v===undefined||!isFinite(v))?null:v;
+}
+function calc(lat,lon,year){
+  const e=IGRF.igrfElements(lat,lon,0,year);
+  const r=MODEL.regional, c=crustalOpen()?crustalAt(lat,lon,MODEL.crustal):null;
+  return {igrf:e,
+    lmm:{D:e.D+regTerm(r.D,lat,lon,r), I:e.I+regTerm(r.I,lat,lon,r),
+         F:e.F+(c===null?0:c)+regTerm(r.F,lat,lon,r)},
+    gap:c===null};
+}
+
+// ── 격자 계산 ──────────────────────────────────────────────────────────────
+function gridAll(year){
+  const A=new Float64Array(NX*NY), B=new Float64Array(NX*NY);
+  const G=new Uint8Array(NX*NY);
+  for(let j=0;j<NY;j++){
+    const lat=BOX.lat0+(BOX.lat1-BOX.lat0)*j/(NY-1);
+    for(let i=0;i<NX;i++){
+      const lon=BOX.lon0+(BOX.lon1-BOX.lon0)*i/(NX-1), k=j*NX+i;
+      const v=calc(lat,lon,year);
+      A[k]=v.igrf[MODE]; B[k]=v.lmm[MODE]; G[k]=v.gap?1:0;
+    }
+  }
+  return {A,B,G};
+}
+
+// ── 그리기 ─────────────────────────────────────────────────────────────────
+const PAD={l:44,r:74,t:12,b:34};
+function px(cv,lat,lon){
+  const w=cv.width-PAD.l-PAD.r, h=cv.height-PAD.t-PAD.b;
+  return [PAD.l+w*(lon-BOX.lon0)/(BOX.lon1-BOX.lon0),
+          PAD.t+h*(1-(lat-BOX.lat0)/(BOX.lat1-BOX.lat0))];
+}
+function unit(){return MODE==='F'?' nT':'°';}
+function fmt(v){return MODE==='F'?Math.round(v).toLocaleString():v.toFixed(2);}
+
+function draw(cv,val,gap,lo,hi,cm,levels){
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const w=cv.width-PAD.l-PAD.r, h=cv.height-PAD.t-PAD.b;
+  const img=ctx.createImageData(w,h);
+  const bandOf=new Int16Array(w*h);
+  for(let y=0;y<h;y++){
+    const fy=(1-y/(h-1))*(NY-1);
+    const j0=Math.min(NY-2,Math.floor(fy)), fj=fy-j0;
+    for(let x=0;x<w;x++){
+      const fx=x/(w-1)*(NX-1);
+      const i0=Math.min(NX-2,Math.floor(fx)), fi=fx-i0;
+      const v=(val[j0*NX+i0]*(1-fi)+val[j0*NX+i0+1]*fi)*(1-fj)
+             +(val[(j0+1)*NX+i0]*(1-fi)+val[(j0+1)*NX+i0+1]*fi)*fj;
+      // 보고서 지자기도처럼 **등간격 색띠**로 계단화한다(연속 그라디언트 아님)
+      const t=(v-lo)/(hi-lo);
+      const band=Math.min(levels-1,Math.max(0,Math.floor(t*levels)));
+      bandOf[y*w+x]=band;
+      const c=ramp((band+0.5)/levels,cm);
+      const p=(y*w+x)*4;
+      img.data[p]=c[0];img.data[p+1]=c[1];img.data[p+2]=c[2];img.data[p+3]=255;
+    }
+  }
+  // 등치선 — **색띠 경계 화소를 어둡게** 한다.
+  // 마칭스퀘어로 선분을 그리면 이 해상도에서 끊긴 십자 점으로 찍혀 지저분하다.
+  // 띠 경계를 그대로 쓰면 채색과 정확히 일치하는 1px 등치선이 나온다.
+  if(document.getElementById('cbLine').checked){
+    for(let y=1;y<h;y++)for(let x=1;x<w;x++){
+      const k=y*w+x;
+      if(bandOf[k]!==bandOf[k-1] || bandOf[k]!==bandOf[k-w]){
+        const p=k*4;
+        img.data[p]*=0.45; img.data[p+1]*=0.45; img.data[p+2]*=0.45;
+      }
+    }
+  }
+  ctx.putImageData(img,PAD.l,PAD.t);
+
+  // 해안선
+  if(COAST){
+    ctx.strokeStyle='rgba(25,35,45,.75)'; ctx.lineWidth=1.0;
+    for(const line of COAST){
+      ctx.beginPath();
+      line.forEach((c,idx)=>{const p=px(cv,c[1],c[0]);
+        idx?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);});
+      ctx.stroke();
+    }
+  }
+
+  // 측점
+  if(document.getElementById('cbSite').checked && MODEL.sites){
+    ctx.fillStyle='#111';
+    for(const s of MODEL.sites){
+      if(s.lat<BOX.lat0||s.lat>BOX.lat1||s.lon<BOX.lon0||s.lon>BOX.lon1) continue;
+      const p=px(cv,s.lat,s.lon);
+      ctx.beginPath(); ctx.arc(p[0],p[1],2.4,0,7); ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=0.9; ctx.stroke();
+    }
+  }
+
+  // 축
+  ctx.strokeStyle='#5a6b7d'; ctx.lineWidth=1; ctx.strokeRect(PAD.l,PAD.t,w,h);
+  ctx.fillStyle='#5a6b7d'; ctx.font='11px sans-serif';
+  ctx.textAlign='center';
+  for(let lon=125;lon<=130;lon++){const p=px(cv,BOX.lat0,lon);
+    ctx.fillText(lon+'E',p[0],cv.height-PAD.b+15);}
+  ctx.textAlign='right';
+  for(let lat=33;lat<=38;lat++){const p=px(cv,lat,BOX.lon0);
+    ctx.fillText(lat+'N',PAD.l-6,p[1]+4);}
+
+  // 컬러바
+  const bx=cv.width-PAD.r+14, by=PAD.t+10, bw=16, bh=h-40;
+  for(let y=0;y<bh;y++){
+    const band=Math.min(levels-1,Math.floor((1-y/bh)*levels));
+    const c=ramp((band+0.5)/levels,cm);
+    ctx.fillStyle=`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+    ctx.fillRect(bx,by+y,bw,1);
+  }
+  ctx.strokeStyle='#5a6b7d'; ctx.strokeRect(bx,by,bw,bh);
+  ctx.fillStyle='#5a6b7d'; ctx.textAlign='left'; ctx.font='10px sans-serif';
+  for(let b=0;b<=levels;b+=Math.max(1,Math.round(levels/8))){
+    const y=by+bh*(1-b/levels);
+    ctx.fillText(fmt(lo+(hi-lo)*b/levels),bx+bw+4,y+3.5);
+  }
+}
+
+function rangeOf(v){
+  const s=Array.from(v).sort((a,b)=>a-b);
+  const q=(p)=>{const i=(s.length-1)*p,l=Math.floor(i),h=Math.ceil(i);
+    return s[l]+(s[h]-s[l])*(i-l);};
+  return [q(0.01),q(0.99)];
+}
+
+function render(){
+  if(!MODEL) return;
+  const {A,B,G}=gridAll(YEAR);
+  // 두 지도는 **같은 색범위**를 써야 비교가 성립한다(보고서 그림과 같은 원칙)
+  const lo=Math.min(rangeOf(A)[0],rangeOf(B)[0]);
+  const hi=Math.max(rangeOf(A)[1],rangeOf(B)[1]);
+  const L=14;
+  draw(document.getElementById('cA'),A,G,lo,hi,CM_SEQ,L);
+  draw(document.getElementById('cB'),B,G,lo,hi,CM_SEQ,L);
+  const Dif=new Float64Array(A.length);
+  for(let k=0;k<A.length;k++) Dif[k]=(B[k]-A[k])*(MODE==='F'?1:60);
+  const dr=rangeOf(Dif), m=Math.max(Math.abs(dr[0]),Math.abs(dr[1]))||1;
+  draw(document.getElementById('cC'),Dif,G,-m,m,CM_DIV,L);
+
+  const u=unit();
+  document.getElementById('capA').textContent=`${fmt(lo)} ~ ${fmt(hi)}${u}`;
+  document.getElementById('capB').textContent=`${fmt(lo)} ~ ${fmt(hi)}${u} (좌측과 동일 척도)`;
+  document.getElementById('capC').textContent=
+    `±${MODE==='F'?Math.round(m)+' nT':m.toFixed(1)+'′'} · 0 중심 발산형`;
+  document.getElementById('subB').textContent=
+    'Core + Regional' + (crustalOpen()?' + Crustal':' (Crustal 제외 — 공개기한 경과)');
+}
+
+// ── 로드 ───────────────────────────────────────────────────────────────────
+(async()=>{
+  try{
+    MODEL=await (await fetch('data/lmm_model.json')).json();
+    try{
+      const g=await (await fetch('data/korea_boundary.geojson')).json();
+      COAST=[];
+      for(const f of g.features){
+        const gm=f.geometry, ps=gm.type==='Polygon'?[gm.coordinates]:gm.coordinates;
+        for(const poly of ps) COAST.push(poly[0]);
+      }
+    }catch(e){ COAST=null; }
+  }catch(e){
+    document.getElementById('busy').textContent='모델을 불러오지 못했습니다: '+e.message;
+    return;
+  }
+  document.getElementById('busy').style.display='none';
+  document.getElementById('panels').style.display='';
+  const loo=MODEL.loo_cv;
+  document.getElementById('foot').innerHTML=
+    `<b>읽는 법</b> — 왼쪽 두 지도는 같은 색범위다. LMM 은 IGRF 에 한반도 지역장과 `
+    +`지각 자기이상을 더한 것이라, 세 번째 지도가 그 «더해진 양»이다.<br>`
+    +`<b>현재 성능</b> — LOO 편각 D ${loo.D.toFixed(3)}° (목표 0.1°) · `
+    +`총자력 F ${loo.F.toFixed(1)} nT (목표 50 nT) · Regional 측점 `
+    +`${(MODEL.sites||[]).length}점. External 층 미적용(정온시 기준값 모형).`
+    +`<div class="warn">목표 정확도 미달 — <b>연구·시범계산용</b>이며 지형도 자침편차 등 `
+    +`정식 편각 산출에는 쓰지 않는다.</div>`
+    +`<div style="margin-top:8px;font-size:11.5px">지각 자기이상: 한국지질자원연구원 `
+    +`「한국의 자력이상도」(2019) · 박영수 외, 지구물리와 물리탐사 22(1), 29–36. `
+    +`공개 ${CRUSTAL_OPEN_UNTIL}까지</div>`;
+  render();
+})();
+
+document.querySelectorAll('#modeSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); MODE=b.dataset.m; render();});
+const yr=document.getElementById('year');
+let t; yr.oninput=()=>{document.getElementById('yv').textContent=(+yr.value).toFixed(1);
+  YEAR=+yr.value; clearTimeout(t); t=setTimeout(render,160);};
+document.getElementById('cbSite').onchange=render;
+document.getElementById('cbLine').onchange=render;
+</script>
+</body>
+</html>

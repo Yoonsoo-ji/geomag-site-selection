@@ -483,7 +483,10 @@ function buildLMM(year){
   if(LMMVIEW==='diff'){const m=Math.max(Math.abs(lo),Math.abs(hi))||1; lo=-m; hi=m;}
   if(hi-lo<1e-9) hi=lo+1;
   lmmRange=[lo,hi];
-  const ramp2=(t)=>ramp(t, LMMVIEW==='diff'?CM_DIV:(MODE==='F'?CM_F:CM_DIV));
+  // ⚠ 값 표시에는 **순차형**을 써야 한다. 발산형(CM_DIV)은 중앙이 백색이라
+  //   한국 편각처럼 부호가 안 바뀌는 구간(-9.4°~-7.8°)에서는 중간값이 흰 띠로
+  //   나와 「자료 없음」처럼 보인다. 발산형은 0 이 의미를 갖는 차이 표시에만.
+  const ramp2=(t)=>ramp(t, LMMVIEW==='diff'?CM_DIV:CM_F);
   // 2차: 색
   for(let k=0;k<nx*ny;k++){
     const c=ramp2((val[k]-lo)/(hi-lo));
