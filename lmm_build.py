@@ -150,11 +150,17 @@ def apply_quality_filter(df: pd.DataFrame) -> pd.DataFrame:
 #   "subtract"      : 전 세션 평균 보정량을 뺀다
 #   "subtract_quiet": Kp<=2 세션만으로 평균한 보정량을 뺀다
 #   "drop_storm"    : 보정은 하지 않고, 교란시(Kp>2) 관측 성과를 표본에서 뺀다
+#   "subtract_D"    : **편각만** 보정한다 (총자력은 손대지 않는다)
 #
 # ⚠ 균일 V 근사의 한계가 남아 있다 — CYG 한 곳의 변동을 전국에 동일 적용한다.
-#   2019 표본에서는 이 근사가 편각을 악화시켰다(LOO D 0.751->0.858). 그래서
-#   기본값은 "none" 이고, 모드별 비교는 compare_external_modes.py 로 판정한다.
-EXTERNAL_MODE = "none"
+#
+# 채택 = "subtract_D" (2026-08-19). 신뢰도 감사로 편각 잔차가 35→20.7′ 로 줄자
+# **성분별로 결과가 갈렸다** — 같은 보정을 걸어도 편각은 개선되고 총자력은 악화된다.
+#   D : 보정량 5.4′ / 잔차 20.7′ → 비중이 커서 이득 (LOO 0.5675 -> 0.5403°)
+#   F : 보정량 38 nT / 잔차 약 190 nT → 지각장 불일치가 지배해 잡음만 더해짐 (+8.3)
+# 그래서 **편각에만** 적용한다. 감사 전 표본에서는 D 도 악화됐었다(+0.079) —
+# 방위 기준 오류가 외부장 신호를 덮고 있었기 때문이다.
+EXTERNAL_MODE = "subtract_D"
 EXTERNAL_CSV = BASE / "docs" / "data" / "external_corrections.csv"
 
 
@@ -186,7 +192,12 @@ def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
         print(f"  [External] drop_storm - 교란시 성과 {int(storm.sum())}행 배제")
         out = out[~storm]
     else:
-        out.loc[hit, "F_nT"] = out.loc[hit, "F_nT"] - out.loc[hit, "dF"]
+        # ⚠ 성분별로 결과가 갈린다. 감사 후 표본에서 편각은 개선되지만
+        #   총자력은 악화된다 — F 잔차는 외부장(38 nT)이 아니라 **지각장 불일치**
+        #   (약 190 nT)가 지배하므로, 균일한 시간 보정을 빼면 잡음만 더해진다.
+        #   편각 잔차는 20.7′ 이고 보정량이 5.4′ 라 비중이 커서 이득이 난다.
+        if EXTERNAL_MODE != "subtract_D":
+            out.loc[hit, "F_nT"] = out.loc[hit, "F_nT"] - out.loc[hit, "dF"]
         out.loc[hit, "D_deg"] = out.loc[hit, "D_deg"] - out.loc[hit, "dD"] / 60.0
         out["ext_src"] = np.where(hit, EXTERNAL_MODE, "미적용")
         print(f"  [External] {EXTERNAL_MODE} - {int(hit.sum())}/{len(out)}행 보정 "
