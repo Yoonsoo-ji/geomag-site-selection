@@ -1032,30 +1032,76 @@ def sl_webdemo(prs, page):
                    "웹에서 바로 확인할 수 있게 만들어 두었다",
                    "모델·자료 현황·계산기를 각각 한 페이지로 낸다. 모두 정적 파일이라 "
                    "설치 없이 열린다.", page)
-    shots = [(SHOT_DIR / "globe_lmm.png", "3D 지구본 — 한국 LMM 패치",
-              "geomag_globe.html · 한국만 0.05° 재계산(11,615정점)\n"
-              "커서를 올리면 그 좌표의 LMM D·I·F 가 나온다"),
+    # 2020 보고서 「그림 4-21/4-22」와 같은 형식의 3면 지자기도를 주 그림으로 쓴다.
+    big = SHOT_DIR / "lmm_map.png"
+    text(s, M, BODY_Y, CW, 0.28,
+         "한국 지자기도 — IGRF · LMM · 차이   (lmm_map.html)", 13, NAVY, True)
+    if big.exists():
+        from PIL import Image as _Im
+        iw, ih = _Im.open(big).size
+        hh = 2.28
+        ww = min(CW, hh * iw / ih)
+        s.shapes.add_picture(str(big), Inches(M + (CW - ww) / 2),
+                             Inches(BODY_Y + 0.32), height=Inches(hh))
+    text(s, M, BODY_Y + 2.68, CW, 0.26,
+         "IGRF 와 LMM 은 같은 색범위 · 오른쪽이 LMM 이 더하는 양(지각 자기이상 구조)",
+         10.5, GRAY)
+
+    shots = [(SHOT_DIR / "globe_lmm_diff.png", "3D 지구본 — 한국 LMM 패치",
+              "geomag_globe.html · 커서를 올리면 그 좌표의 LMM D·I·F"),
              (SHOT_DIR / "inventory.png", "자료 확보 현황",
-              "data_inventory.html · 4개 층 자료를 파일에서 직접 세어 표시\n"
-              "자료가 늘면 재실행만으로 갱신된다")]
+              "data_inventory.html · 4개 층을 파일에서 직접 세어 표시")]
     w = (CW - 0.30) / 2
     for i, (img, title, cap) in enumerate(shots):
         x = M + i * (w + 0.30)
-        text(s, x, BODY_Y, w, 0.30, title, 13.5, NAVY, True)
+        text(s, x, BODY_Y + 2.98, w, 0.26, title, 11.5, NAVY, True)
         if img.exists():
             from PIL import Image as _Im
             iw, ih = _Im.open(img).size
-            hh = 2.86                      # 높이 고정 → 캡션·띠와 겹치지 않는다
+            hh = 0.94                      # 보조 캡처는 작게
             ww = min(w, hh * iw / ih)
             s.shapes.add_picture(str(img), Inches(x + (w - ww) / 2),
-                                 Inches(BODY_Y + 0.36), height=Inches(hh))
+                                 Inches(BODY_Y + 3.26), height=Inches(hh))
         else:
-            rect(s, x, BODY_Y + 0.36, w, 2.86, LGRAY)
-            text(s, x, BODY_Y + 1.65, w, 0.3, "(캡처 없음)", 12, GRAY, align="c")
-        text(s, x, BODY_Y + 3.34, w, 0.58, cap, 10, GRAY, space=1.2)
-    band(s, M, BODY_Y + 4.06, CW, 0.52,
-         "시연 순서 — ① 지구본에서 「🇰🇷 한국 LMM」 토글 → ② 커서로 좌표별 값 확인 → "
-         "③ 자료 현황 페이지로 근거 확인")
+            rect(s, x, BODY_Y + 3.26, w, 0.94, LGRAY)
+            text(s, x, BODY_Y + 3.58, w, 0.3, "(캡처 없음)", 11, GRAY, align="c")
+        text(s, x, BODY_Y + 4.26, w, 0.26, cap, 9.5, GRAY, space=1.2)
+    band(s, M, BODY_Y + 4.56, CW, 0.42,
+         "시연 — ① 지자기도 3면 비교 → ② 지구본에서 위치·규모 확인 → ③ 자료 현황으로 근거")
+    return s
+
+
+def sl_resolution(prs, page):
+    """전국 격자 해상도 한계와 기준 재설정."""
+    s = slide_base(prs, "Ⅱ. 확인·추가 자료",
+                   "전국 자료로는 총자력 목표가 원리적으로 닿지 않는다",
+                   "설명자료의 사례연구는 250 m 측선 자료였다. 전국 공개본은 2.5 km "
+                   "격자뿐이고, 그 차이가 목표 달성 여부를 가른다.", page, rule=RED)
+    stat(s, M, BODY_Y, 2.95, 1.30, "250 m",
+         "사례연구(경상분지 동해안)\n측선 간격 · 8,600 km²", LBLUE, BLUE, 22)
+    stat(s, M + 3.08, BODY_Y, 2.95, 1.30, "2.3 × 2.8 km",
+         "전국 공개본 격자 간격\n1.5분 등격자", PEACH, RED, 19)
+    stat(s, M + 6.16, BODY_Y, 2.95, 1.30, "86.4 nT",
+         "격자 자체 내삽오차 RMS\n목표 50 nT 초과", PEACH, RED, 22)
+    stat(s, M + 9.24, BODY_Y, CW - 9.24, 1.30, "25.9%",
+         "오차가 50 nT 를 넘는 격자 비율", PEACH, RED, 22)
+
+    rows = [["표현 가능 최소 파장", "약 0.5 km", "4.5 ~ 5.5 km (나이퀴스트)",
+             "0.05~5 km 대역이 통째로 빠진다"],
+            ["격자 LOO 내삽오차", "—", "RMS 86.4 nT · 중앙 20.3 nT",
+             "목표 50 nT 를 자료 자체가 이미 넘는다"],
+            ["성기게 할수록", "—", "5 km 115 · 7.5 km 124 · 10 km 147 nT",
+             "더 조밀해도 급히 좋아지지 않는다"],
+            ["이방성 비", "—", "1.04 (등방)", "측선 흔적이 남지 않을 만큼 가공됨"]]
+    y = table(s, M, BODY_Y + 1.48, CW,
+              ["지표", "사례연구(250 m)", "전국 공개본", "의미"], rows,
+              [0.20, 0.16, 0.30, 0.34], row_h=0.40, head_fill="8C2F2F", size=10)
+    band(s, M, y + 0.20, CW, 1.30,
+         "그래서 기준을 이렇게 나누는 것이 맞다\n\n"
+         "① 총자력 F 50 nT — 전국 공개본으로는 불가. 원측선 확보 구간에 한정해 "
+         "적용하거나 목표를 자료 해상도에 맞춰 재설정한다\n"
+         "② 편각 D 0.1° — 이 한계와 무관하다. 지각층은 F 에만 기여하고 D·I 에는 "
+         "들어가지 않으므로, 사업의 법정 목적인 자침편각은 별개 경로다", RED)
     return s
 
 
@@ -1135,7 +1181,8 @@ def audit(prs):
             if r > W - 0.30 or l < 0.30 - 1e-6:
                 bad.append(f"  [{i:02d}] 좌우 이탈 x={l:.2f}~{r:.2f}  {tag}")
             # 푸터·페이지번호 자체는 예외
-            if b > SAFE_BOTTOM and t < FOOT_Y - 0.10 and Emu(sh.height).inches > 0.25:
+            if b > SAFE_BOTTOM and Emu(sh.height).inches > 0.25 and (
+                    t < FOOT_Y - 0.10 or b > H - 0.02):
                 bad.append(f"  [{i:02d}] 하단 침범 y={t:.2f}~{b:.2f}  {tag}")
     if bad:
         print("\n⚠ 판면 점검 위반")
@@ -1153,7 +1200,7 @@ def main():
 
     builders = [sl_divider, sl_why, sl_structure, sl_nointerp, sl_pipeline,
                 sl_data_status, sl_result, sl_residual, sl_impl, sl_webdemo,
-                sl_kigam, sl_ngii, sl_match, sl_datareq,
+                sl_kigam, sl_resolution, sl_ngii, sl_match, sl_datareq,
                 sl_external_verdict, sl_compliance, sl_roadmap, sl_risk,
                 sl_cmp_concept, sl_cmp_table, sl_cmp_flow, sl_lineage,
                 sl_closing]
