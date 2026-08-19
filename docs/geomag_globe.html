@@ -356,7 +356,10 @@ function drawLegend(mode){
   for(let x=0;x<legc.width;x++){const t=x/(legc.width-1);const c=colorAt(mode,lo+(hi-lo)*t);
     lg.fillStyle=`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;lg.fillRect(x,0,1,legc.height);}
   const unit=mode==='F'?' nT':'°', fmt=v=>mode==='F'?Math.round(v).toLocaleString():v.toFixed(0);
-  legtitle.textContent=mode==='F'?'총자력 F (nT)':mode==='D'?'편각 D (°, 서−/동+)':'복각 I (°, 남−/북+)';
+  // 한국 패치가 켜져 있으면 이 범례가 «전역 표면 전용»임을 제목에 못 박는다
+  // (패치는 다른 색표·다른 범위를 쓰므로 이 막대로 읽으면 안 된다)
+  const base=mode==='F'?'총자력 F (nT)':mode==='D'?'편각 D (°, 서−/동+)':'복각 I (°, 남−/북+)';
+  legtitle.textContent=base+(lmmOn?'  — 전역 표면 기준':'');
   tk[0].textContent=fmt(lo)+(mode==='F'?'':unit); tk[1].textContent=fmt((lo+hi)/2); tk[2].textContent=fmt(hi)+(mode==='F'?'':unit);
 }
 
@@ -546,7 +549,7 @@ function buildLMM(year){
   lmmGroup.visible=lmmOn;
 }
 
-function lmmApply(){ if(lmmOn && LMMDATA){ buildLMM(+yearEl.value);
+function lmmApply(){ drawLegend(MODE); if(lmmOn && LMMDATA){ buildLMM(+yearEl.value);
   if(document.getElementById('siteinfo').style.display!=='none') showLMMInfo(); } }
 
 // 모듈 스코프라 콘솔에서 안 보인다 → 상태 점검용 훅 (검증에 쓴다)
@@ -560,6 +563,7 @@ const tgLMM=document.getElementById('tgLMM');
 tgLMM.onclick=async()=>{
   if(lmmLoading) return;
   lmmOn=!lmmOn; tgLMM.classList.toggle('on',lmmOn);
+  drawLegend(MODE);          // 전역 범례에 「전역 표면 기준」 꼬리표 갱신
   if(!lmmOn){ lmmGroup.visible=false; hideSite(); return; }
   if(!LMMDATA){
     lmmLoading=true; busy.style.opacity=1;
@@ -570,6 +574,7 @@ tgLMM.onclick=async()=>{
     if(!LMMDATA) return;
   }
   buildLMM(+yearEl.value); lmmGroup.visible=true;
+  drawLegend(MODE);
   spin=false; tgS.classList.remove('on');
   if(camera.position.length()>3) flyKorea();
   showLMMInfo();
@@ -618,10 +623,18 @@ function showLMMInfo(){
     +"border:1px solid rgba(120,175,255,.45);background:"
     +(LMMVIEW==='diff'?"rgba(79,150,255,.35)":"rgba(20,40,72,.4)")+";color:#e8f1ff'>LMM − IGRF</button>"
     +"</div>"
-    +(lmmRange?("<div style='font-size:11px;color:#9fb2c8;margin-bottom:6px'>"
-      +"패치 색범위 <b style='color:#dce9ff'>"+fmtR(lmmRange[0])+" ~ "+fmtR(lmmRange[1])+"</b>"
-      +"<br><span style='color:#8fa3ba'>전역 범례와 다른 척도 — 한국 변화폭에 맞춰 다시 잡음"
-      +"</span></div>"):"")
+    +(lmmRange?("<div style='font-size:11px;color:#9fb2c8;margin-bottom:7px'>"
+      +"<div style='color:#dce9ff;margin-bottom:3px'>패치 색범위 (전용 척도)</div>"
+      +"<div style='height:9px;border-radius:3px;border:1px solid rgba(255,255,255,.18);"
+      +"background:linear-gradient(90deg,"+lmmGradient()+")'></div>"
+      +"<div style='display:flex;justify-content:space-between;margin-top:2px'>"
+      +"<span>"+fmtR(lmmRange[0])+"</span><span>"+fmtR((lmmRange[0]+lmmRange[1])/2)+"</span>"
+      +"<span>"+fmtR(lmmRange[1])+"</span></div>"
+      +"<div style='color:#8fa3ba;margin-top:3px'>⚠ 오른쪽 위 전역 범례와 "
+      +"<b style='color:#ffcf9a'>다른 색표·다른 범위</b>다. 한국 변화폭에 맞춰 다시 "
+      +"잡은 순차형 척도이므로, 패치 색은 이 막대로 읽을 것"
+      +(MODE==='D'?" (전 구간 서편각이다 — 붉은 쪽도 서편각)":"")
+      +"</div></div>"):"")
     +(loo?("<div>LOO 편각 D <b>"+loo.D.toFixed(3)+"°</b> "
       +"<span style='color:#ffb27a'>목표 0.1°</span></div>"
       +"<div>LOO 총자력 F <b>"+loo.F.toFixed(1)+" nT</b> "
@@ -644,6 +657,13 @@ function showLMMInfo(){
   const set=v=>{ if(LMMVIEW===v) return; LMMVIEW=v; buildLMM(+yearEl.value); showLMMInfo(); };
   el.querySelector('#lmmVal').onclick=()=>set('value');
   el.querySelector('#lmmDif').onclick=()=>set('diff');
+}
+
+// 패치가 실제로 쓰는 색표를 CSS 그라디언트로 — 막대와 메시가 같은 색을 쓴다
+function lmmGradient(){
+  const st = (LMMVIEW==='diff') ? CM_DIV : CM_F;
+  return st.map((c,i)=>"rgb("+c.map(Math.round).join(",")+") "
+    +(100*i/(st.length-1)).toFixed(0)+"%").join(",");
 }
 
 // 패치 색범위 표기 — 성분과 표시방식에 따라 단위가 달라진다
