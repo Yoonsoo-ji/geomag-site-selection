@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-중간보고회 LMM 본문 — 스토리 판본 (14장)
+중간보고회 LMM 본문 — 스토리 판본 (16장)
 ==========================================
 
 기존 28장은 검증 기록을 빠짐없이 담은 «자료»에 가깝다. 발표 본문은 그것을
-그대로 읽을 수 없으므로, **연구 흐름 하나로 꿰는 14장**을 따로 만든다.
+그대로 읽을 수 없으므로, **연구 흐름 하나로 꿰는 16장**을 따로 만든다.
 디자인 토큰·도판·수치는 `create_midterm_lmm_slides.py` 것을 그대로 재사용한다.
 
-    Ⅰ 왜 국가 LMM 인가      1 문제제기 · 2 연구목표
-    Ⅱ 무엇을 만들었나        3 4축 구조 · 4 자료 활용현황 · 5 구축 파이프라인
+    Ⅰ 왜 국가 LMM 인가      1 문제제기 · 2 층별 기여(수치) · 3 연구목표
+    Ⅱ 무엇을 만들었나        4 4축 구조 · 5 자료 활용현황 · 6 파이프라인 · 7 웹 시연
     Ⅲ 어떻게 검증했나        6 검증체계 · 7 모델 선택 결과
     Ⅳ 어디까지 왔나          8 현재 성능 · 9 중요한 발견
     Ⅴ 왜 그런가              10 편각 원인진단 · 11 지각 벡터
@@ -40,6 +40,19 @@ LOO, DIAG, MODEL = B.LOO, B.DIAG, B.MODEL
 N_SITES, KPI_D, KPI_F = B.N_SITES, B.KPI_D, B.KPI_F
 ASY = B.ASY
 D_MIN = LOO["D"] * 60      # 분
+
+
+PAGES = "https://yoonsoo-ji.github.io/geomag-site-selection"
+
+VAL = {(r["성분"], r["단계"]): r["RMS"] for r in MODEL["validation"]}
+
+
+def link(slide, x, y, w, h, label, url, size=11.5, color=BLUE):
+    """클릭 가능한 링크 상자 — 발표 중 그대로 눌러 띄운다."""
+    box = text(slide, x, y, w, h, label, size, color, True)
+    r = box.text_frame.paragraphs[0].runs[0]
+    r.hyperlink.address = url
+    return box
 
 
 # ══════════════════════════════════════════════════════ Ⅰ. 왜 국가 LMM 인가
@@ -92,9 +105,86 @@ def s02_goal(prs, page):
             text(s, x + bw + 0.04, y + 0.80, 0.28, 0.34, "▶", 18, BLUE, True, "c")
     band(s, M, y + 2.16, CW, 1.34,
          "중간보고 시점의 위치\n\n"
-         "① 자료 통합 → ② 4축 시범구축 → ③ **독립검증(현재)** → "
+         "① 자료 통합 → ② 4축 시범구축 → ③ 독립검증(현재) → "
          "④ 원인별 개선 → ⑤ 신규 50점 최종검증\n"
          "지금은 ③ 의 후반부다. 만들고, 재고, 한계를 특정하는 단계까지 왔다.")
+    return s
+
+
+def s01a_why_lmm(prs, page):
+    """왜 층을 쌓는가 — 각 층이 실제로 줄인 몫을 수치로."""
+    s = slide_base(prs, "Ⅰ. 연구 배경",
+                   "층을 쌓는 이유 — 각 층이 실제로 줄이는 몫이 있다",
+                   "국내 실측 성과에 대해 IGRF 단독부터 단계별로 잔차를 쟀다. "
+                   "개념이 아니라 측정값이다.", page, rule=GREEN)
+    y = BODY_Y
+    rows = [
+        ["총자력 F", f"{VAL[('F_nT','IGRF')]:.0f} nT",
+         f"{VAL[('F_nT','+Crustal')]:.0f} nT",
+         f"{VAL[('F_nT','+Crustal+Regional')]:.0f} nT",
+         f"−{100*(1-VAL[('F_nT','+Crustal+Regional')]/VAL[('F_nT','IGRF')]):.0f} %"],
+        ["편각 D", f"{VAL[('D_deg','IGRF')]*60:.1f}′", "—",
+         f"{VAL[('D_deg','+Regional')]*60:.1f}′",
+         f"−{100*(1-VAL[('D_deg','+Regional')]/VAL[('D_deg','IGRF')]):.0f} %"],
+        ["복각 I", f"{VAL[('I_deg','IGRF')]*60:.1f}′", "—",
+         f"{VAL[('I_deg','+Regional')]*60:.1f}′",
+         f"−{100*(1-VAL[('I_deg','+Regional')]/VAL[('I_deg','IGRF')]):.0f} %"],
+    ]
+    y = table(s, M, y, 7.90,
+              ["성분", "① Core 단독", "+ ③ Crustal", "+ ② Regional", "감소"],
+              rows, [0.18, 0.20, 0.20, 0.22, 0.20], row_h=0.52)
+    band(s, 8.35, BODY_Y, CW + M - 8.35, 2.10,
+         "읽는 법\n\n"
+         "· 총자력은 지각 자기이상이 대부분을\n  걷어낸다 (87 → 59 nT)\n\n"
+         "· 편각·복각은 지각층이 스칼라만 주므로\n  ② 지역장이 담당한다\n\n"
+         "· 그래도 편각은 목표 6′ 에 못 미친다", "23456B")
+    band(s, M, y + 0.30, CW, 1.42,
+         "이것이 「왜 LMM 인가」에 대한 답이다.\n\n"
+         "· IGRF 는 전지구 핵 자기장 모델이라 국내 지표값과 총자력에서 87 nT, "
+         "편각에서 32′ 어긋난다\n"
+         "· 층을 쌓으면 그 몫이 실제로 줄어든다 — 다만 남는 편각 오차가 이 연구의 "
+         "과제다", GREEN)
+    return s
+
+
+def s05a_web(prs, page):
+    """웹 시연 — 링크를 걸어 발표 중 바로 띄운다."""
+    s = slide_base(prs, "Ⅱ. 구축 내용",
+                   "구축 결과는 웹에서 바로 확인할 수 있다",
+                   "설치 없이 브라우저만으로 열린다. 아래 주소를 눌러 시연한다.",
+                   page, rule=BLUE)
+    items = [
+        ("LMM 계산기", "lmm.html",
+         "좌표·표고·일자를 넣으면 편각·복각·총자력을 계산한다.\n"
+         "층별 기여(Core·Regional·Crustal)와 정확도 고지를 함께 보여준다."),
+        ("한국 지자기도", "lmm_map.html",
+         "IGRF · LMM · 차이를 나란히 그린다.\n"
+         "2020 연구의 지자기도와 같은 형식이라 직접 견줄 수 있다."),
+        ("3D 지구 자기장", "geomag_globe.html",
+         "전지구 자기장 위에 한국 고해상 패치를 얹는다.\n"
+         "선점 후보·기존점 마커에서 상세 지도로 이어진다."),
+        ("선점 검토 지도", "survey_review.html",
+         "현장조사 103점의 등급·사진·방위표지와\n기존 측정점 30점을 함께 본다."),
+    ]
+    y = BODY_Y
+    for i, (name, page_, desc) in enumerate(items):
+        col = 0 if i % 2 == 0 else 1
+        row = i // 2
+        x = M + col * (CW / 2 + 0.20)
+        yy = y + row * 1.62
+        w = CW / 2 - 0.20
+        rect(s, x, yy, w, 1.42, LGRAY)
+        rect(s, x, yy, 0.06, 1.42, BLUE)
+        text(s, x + 0.24, yy + 0.14, w - 0.48, 0.30, name, 13.5, NAVY, True)
+        link(s, x + 0.24, yy + 0.48, w - 0.48, 0.26,
+             f"{PAGES}/{page_}", f"{PAGES}/{page_}", 9.5)
+        text(s, x + 0.24, yy + 0.80, w - 0.48, 0.52, desc, 10.5, GRAY,
+             space=1.35)
+    band(s, M, y + 3.30, CW, 1.10,
+         "시연 순서 — ① 계산기에서 한 점을 계산해 층별 기여를 보여주고 "
+         "② 지자기도에서 IGRF 와의 차이를 보인 뒤\n"
+         "③ 지구본에서 한국 패치를 확대해 선점 후보까지 이어 간다. "
+         "모두 외부 서버 없이 동작한다.")
     return s
 
 
@@ -409,14 +499,18 @@ def s12_vs2020(prs, page):
          "통합 LMM + 독립 교차검증", 11.5, NAVY, space=1.4)
     text(s, M + bw + 0.08, y + 1.00, 0.30, 0.34, "▶", 20, BLUE, True, "c")
     rows = [
-        ["관측망", "15점", f"{N_SITES}점 사용 · 50점 확대 설계"],
-        ["지역장", "별도 층 없음", "지표 절대측정으로 직접 구성"],
-        ["지각장", "반영 없음", "KIGAM 자력이상 1:1 결합"],
-        ["외부장", "청양 단독 보정", "4소 공간보간 · 성분별 관측구간"],
-        ["검증", "과거 성과와 비교", "평가집합 동결 + Station-LOSO"],
+        ["관측망", "반복측량 15점", f"{N_SITES}점 사용 · 50점 확대 설계"],
+        ["지역장", "별도 층 없음 — IGRF 계산값 사용",
+         "지표 절대측정으로 직접 구성(R0)"],
+        ["지각장", "반영 없음",
+         f"KIGAM 자력이상 1:1 결합 — 총자력 잔차 "
+         f"{VAL[('F_nT','IGRF')]:.0f} → {VAL[('F_nT','+Crustal')]:.0f} nT"],
+        ["외부장", "청양 단독 보정", "관측소 4소 공간보간 · 성분별 관측구간(잠정)"],
+        ["검증", "과거 성과와 비교", "평가집합 동결 + Station-LOSO + 블록 홀드아웃"],
+        ["산출물", "지자기도(정적)", "계산기·지자기도·3D 지구본 웹 공개"],
     ]
-    table(s, M, y + 2.52, CW, ["구분", "2020", "이번 연구"], rows,
-          [0.16, 0.32, 0.52], row_h=0.40, size=10)
+    table(s, M, y + 2.44, CW, ["구분", "2020 연구", "이번 연구"], rows,
+          [0.14, 0.34, 0.52], row_h=0.36, size=9.5)
     return s
 
 
@@ -463,7 +557,7 @@ def s14_next(prs, page):
          "· 지역장 공간구조 재검토\n· 목표 편각 6′ · 총자력 50 nT"),
         ("Track C", "신규 50점 관측망", GREEN,
          "· 자기환경 조사 기반 선점\n· 35~40점 모델 구축용\n"
-         "· 10~15점 **검증 전용**\n· 최종 독립검증의 근거"),
+         "· 10~15점 검증 전용\n· 최종 독립검증의 근거"),
     ]
     bw = (CW - 2 * 0.24) / 3
     for i, (no, tt, col, body) in enumerate(tracks):
@@ -476,7 +570,7 @@ def s14_next(prs, page):
     band(s, M, BODY_Y + 2.56, CW, 1.34,
          "신규 50점의 설계가 가장 중요하다\n\n"
          "전부를 모델 적합에 쓰면 최종 성능을 객관적으로 말할 수 없다. "
-         "일부를 처음부터 **검증 전용**으로\n남겨 두면 최종 보고서에서 "
+         "일부를 처음부터 검증 전용으로\n남겨 두면 최종 보고서에서 "
          "「모델 구축에 사용하지 않은 신규 국가기준점에서 독립검증하였다」고 "
          "쓸 수 있다.", ORANGE)
     return s
@@ -490,7 +584,8 @@ def main():
     prs.slide_width = Inches(W)
     prs.slide_height = Inches(H)
 
-    builders = [s01_problem, s02_goal, s03_structure, s04_data, s05_pipeline,
+    builders = [s01_problem, s01a_why_lmm, s02_goal,
+                s03_structure, s04_data, s05_pipeline, s05a_web,
                 s06_valid_system, s07_selection, s08_perf, s09_finding,
                 s10_why_D, s11_vector, s12_vs2020, s13_conclusion, s14_next]
     for i, fn in enumerate(builders, 1):
