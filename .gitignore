@@ -24,6 +24,8 @@ data/*.xlsx
 data/*.html
 data/*.dat
 data/*.csv
+# 측점 이력표는 큐레이션한 메타데이터라 커밋한다
+!data/station_history.csv
 data/*.json
 data/수치지질도_25만축척_전국/
 

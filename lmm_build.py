@@ -49,8 +49,16 @@ INCLUDE_2019 = True
 REGIONAL_DEGREE = 2
 
 # 지각층을 편각·복각에도 기여시킬지 (스칼라 dF -> 벡터 b 복원, 아래 crustal_vector).
-# False 면 종전처럼 지각층은 F 에만 더해진다.
-CRUSTAL_VECTOR = True
+#
+# **기본 False — 진단 전용** (설계안 v2, 2026-08-19).
+# 벡터 복원은 KIGAM 격자의 결측 39% 를 0 nT 로 채운 뒤 FFT 로 역산한다. 결측과
+# 「이상 0」은 다른 뜻이고 그 경계의 인공 불연속에 파수영역 미분이 민감하므로,
+# 생산 모형에 바로 넣지 않는다. 진단(lmm_diagnose)은 계속 계산한다.
+#
+# ⚠ 성능만 보면 켜는 쪽이 낫다 — 평가 측점을 고정한 비교에서
+#   편각 0.5123 -> 0.5022° , 복각 0.1972 -> 0.0881° (`_compare_F_models.py`).
+#   결측 보간을 개선한 뒤(0 채움 대신 조화 내삽) 다시 판정할 것.
+CRUSTAL_VECTOR = False
 
 # inlier 판정에 쓸 다항식 차수. 적합 차수와 **분리**해야 한다.
 #
@@ -60,6 +68,22 @@ CRUSTAL_VECTOR = True
 # 잔차의 상관이 r=+0.67 이지만, 전체 16점에서는 r=+0.26 (p=0.34) 로 유의하지 않다.
 # 0차는 기울기를 만들 수 없으므로 이 되먹임이 끊긴다.
 REGIONAL_INLIER_DEGREE = 0
+
+# 지각 이상(KIGAM)을 F 에 결합하는 방식.
+#   "one"      A_KIGAM 을 1:1 로 더한다 (종전)
+#   "estimate" α 를 자료로 추정한다 (F 다항식과 동시 선형 추정)
+#   "none"     지각층을 F 에 쓰지 않는다
+# 채택 = "one". α 를 추정하면 표본 내 적합은 좋아지지만(α=0.670) 교차검증은
+# 나빠진다 — 평가 측점 고정 LOO F: F0(미사용) 72.3 / F1(1:1) 63.0 / Fα 67.0 nT.
+# F inlier 13점으로 α 를 자유롭게 두면 과적합이다. α=1 이 예측에서 최선이다.
+CRUSTAL_SCALE_MODE = "one"
+
+# Regional 에 시간항 d·(t−t0) 을 둘지 (R1T). IGRF 가 담지 못한 지역 영년변화가
+# 남아 있으면 잡힌다.
+# 채택 = False. 평가 측점 고정 비교에서 편각 0.5022 -> 0.4995° (무의미)이고
+# 복각은 0.0881 -> 0.0971° 로 악화된다. 16측점으로는 시간항을 지지할 수 없다.
+REGIONAL_TIME_TERM = False
+TIME_T0 = 2023.0
 
 # 정규화 기준점 (한반도 중심)
 LAT0, LON0 = 36.0, 127.5
@@ -105,6 +129,104 @@ def load_survey_points() -> pd.DataFrame:
     df = apply_external_correction(df)
     df = apply_quality_filter(df)
     return df.reset_index(drop=True)
+
+
+# ── 0단계. 측점·장비·관측 이력 감사 ──────────────────────────────────────────
+#
+# 2020 지구물리측량 연구보고서는 2012~2019 성과를 신뢰도로 걸러 냈고(2017 장비
+# 고장분 전량 제외, 2011 D·I 미관측), 여주·가야·순창의 표석 망실·재설과
+# 미원·강화의 편각 이상을 따로 지적했다. **표지가 재설되면 같은 이름이라도 다른
+# 측점**이므로 과거·현재 잔차를 한 점으로 묶으면 안 된다.
+#
+#   Grade A  야장·시각·표지·장비가 모두 정상 → 적합에 사용
+#   Grade B  메타데이터 일부 불완전 → 검증·비교용
+#   Grade C  이설·망실·장비 고장·방위각 이상 → 적합에서 제외
+#
+# station 열의 "*" 는 전 측점 공통(연도 기준) 규칙이다.
+STATION_HISTORY_CSV = DATA / "station_history.csv"
+
+# 적합에 넣을 등급. 기본은 A 만 — B 는 검증·비교용으로 남긴다.
+STATION_GRADES_FOR_FIT = ("A",)
+
+# ⚠ 재설 연도가 보고서 본문에 명시돼 있지 않아 2020 년을 경계로 가정했다.
+#   부록에서 확인되면 station_history.csv 의 from_year/to_year 만 고치면 된다.
+_HIST_CACHE = None
+
+
+def load_station_history() -> pd.DataFrame:
+    """측점 이력표. 없으면 빈 표(전건 Grade A)."""
+    global _HIST_CACHE
+    if _HIST_CACHE is not None:
+        return _HIST_CACHE
+    if not STATION_HISTORY_CSV.exists():
+        _HIST_CACHE = pd.DataFrame(
+            columns=["station", "version", "from_year", "to_year",
+                     "event", "grade", "note", "source"])
+        return _HIST_CACHE
+    h = pd.read_csv(STATION_HISTORY_CSV, encoding="utf-8-sig")
+    for c in ("from_year", "to_year"):
+        h[c] = pd.to_numeric(h[c], errors="coerce")
+    h["version"] = pd.to_numeric(h["version"], errors="coerce").fillna(1).astype(int)
+    _HIST_CACHE = h
+    return h
+
+
+def _hist_rows(name, year):
+    h = load_station_history()
+    if h.empty:
+        return h
+    m = ((h["station"] == name) | (h["station"] == "*"))
+    lo = h["from_year"].isna() | (h["from_year"] <= year)
+    hi = h["to_year"].isna() | (h["to_year"] >= year)
+    return h[m & lo & hi]
+
+
+def station_version(name, year) -> int:
+    """그 연도의 측점 판(version). 이력이 없으면 1."""
+    r = _hist_rows(name, year)
+    r = r[r["station"] == name]
+    return int(r["version"].max()) if len(r) else 1
+
+
+def station_grade(name, year) -> str:
+    """A/B/C 중 가장 낮은 등급을 준다(하나라도 C 면 C)."""
+    r = _hist_rows(name, year)
+    if not len(r):
+        return "A"
+    g = set(r["grade"].astype(str))
+    for k in ("C", "B", "A"):
+        if k in g:
+            return k
+    return "A"
+
+
+def apply_station_history(df: pd.DataFrame) -> pd.DataFrame:
+    """관측행에 station_version · qc_grade 를 붙이고 등급으로 거른다."""
+    if df.empty:
+        return df
+    ver = [station_version(n, int(y)) for n, y in zip(df["name"], df["year"])]
+    grd = [station_grade(n, int(y)) for n, y in zip(df["name"], df["year"])]
+    df = df.assign(st_version=ver, qc_grade=grd)
+
+    # 한 측점에 여러 판이 실제로 섞여 있을 때만 이름을 분리한다
+    multi = {n for n, g in df.groupby("name")["st_version"] if g.nunique() > 1}
+    df["station"] = df["name"]                       # 원 측점명(외부 결합용)
+    df["site_key"] = [f"{n}#v{v}" if n in multi else n
+                      for n, v in zip(df["name"], df["st_version"])]
+    # 이후 파이프라인은 판을 구분한 이름으로 다룬다 — 재설 전후를 한 점으로
+    # 묶으면 재방문 산포·집계·LOSO 가 모두 어긋난다.
+    df["name"] = df["site_key"]
+    if multi:
+        print(f"  [이력] 판이 나뉘는 측점: {', '.join(sorted(multi))}")
+
+    keep = df["qc_grade"].isin(STATION_GRADES_FOR_FIT)
+    n = int((~keep).sum())
+    if n:
+        rm = df.loc[~keep, ["name", "year", "qc_grade"]]
+        print(f"  [이력] 등급 제외 {n}행: "
+              + ", ".join(f"{r['name']}{int(r['year'])}({r['qc_grade']})"
+                          for _, r in rm.iterrows()))
+    return df[keep]
 
 
 # ── Regional 성과 신뢰도 필터 (audit_regional_reliability.py, 2026-08-19) ──────
@@ -451,12 +573,13 @@ def load_fieldbook_2019(exclude=FB2019_EXCLUDE, apply_external=None,
 def load_all_points(include_2019=True, **fb_kw) -> pd.DataFrame:
     """성과표(2022~2025) + 선택적으로 2019 야장 성과."""
     pts = load_survey_points()
-    if not include_2019:
-        return pts
-    fb = load_fieldbook_2019(**fb_kw)
-    if fb.empty:
-        return pts
-    return pd.concat([pts, fb], ignore_index=True)
+    if include_2019:
+        fb = load_fieldbook_2019(**fb_kw)
+        if not fb.empty:
+            pts = pd.concat([pts, fb], ignore_index=True)
+    # 이력 감사는 **성과표와 야장을 합친 뒤** 한 번에 건다. 야장 유래 행에도
+    # station version·등급이 붙어야 하기 때문이다.
+    return apply_station_history(pts).reset_index(drop=True)
 
 
 def repeatability(pts, residuals):
@@ -527,7 +650,6 @@ def aggregate_sites(pts, residuals):
     """
     t = pts.copy()
     t[["dD", "dI", "dF"]] = residuals[["dD", "dI", "dF"]].values
-
     agg = (
         t.groupby("name")
         .agg(
@@ -535,6 +657,7 @@ def aggregate_sites(pts, residuals):
             lon=("lon", "mean"),
             elev_m=("elev_m", "mean"),
             n_visit=("year", "size"),
+            year=("year", "mean"),
             dD=("dD", "mean"),
             dI=("dI", "mean"),
             dF=("dF", "mean"),
@@ -792,6 +915,31 @@ def poly_labels(degree=REGIONAL_DEGREE):
     return out
 
 
+def design_F(sites, A, crust):
+    """F 용 설계행렬 — 다항식 + (선택) 시간항 + (선택) 지각 결합계수 α."""
+    cols = [A]
+    if REGIONAL_TIME_TERM and "year" in sites:
+        cols.append((sites["year"].values - TIME_T0).reshape(-1, 1))
+    n_reg = sum(c.shape[1] for c in cols)
+    if CRUSTAL_SCALE_MODE == "estimate":
+        cols.append(np.nan_to_num(crust, nan=0.0).reshape(-1, 1))
+    return np.hstack(cols), n_reg
+
+
+def design_DI(sites, A):
+    """D·I 용 설계행렬 — 다항식 + (선택) 시간항."""
+    cols = [A]
+    if REGIONAL_TIME_TERM and "year" in sites:
+        cols.append((sites["year"].values - TIME_T0).reshape(-1, 1))
+    return np.hstack(cols)
+
+
+def crustal_term(sites, crust, coef):
+    """모형이 실제로 F 에 더하는 지각 항 — 결합계수 α 를 반영한다."""
+    a = coef.get("alpha", 1.0 if CRUSTAL_SCALE_MODE != "none" else 0.0)
+    return a * np.nan_to_num(crust, nan=0.0)
+
+
 def igrf_residuals(pts):
     """관측 성과에서 IGRF-14 를 뺀 잔차(방문 단위)."""
     D_i, I_i, F_i, *_ = igrf_dif(
@@ -877,13 +1025,26 @@ def fit_regional(sites, crustal, degree=REGIONAL_DEGREE):
     _, inliers["F"] = robust_lstsq(A_sel, sites["dF"].values)
 
     # 계수는 각 성분의 inlier 집합 위에서 산출
+    AD = design_DI(sites, A)
     coef = {}
-    coef["D"] = np.linalg.lstsq(A[inliers["D"]], y_D[inliers["D"]], rcond=None)[0]
-    coef["I"] = np.linalg.lstsq(A[inliers["I"]], y_I[inliers["I"]], rcond=None)[0]
+    coef["D"] = np.linalg.lstsq(AD[inliers["D"]], y_D[inliers["D"]], rcond=None)[0]
+    coef["I"] = np.linalg.lstsq(AD[inliers["I"]], y_I[inliers["I"]], rcond=None)[0]
+
     mF = inliers["F"]
-    coef["F"] = np.linalg.lstsq(
-        A[mF], (sites["dF"].values - crust)[mF], rcond=None
-    )[0]
+    AF, n_reg = design_F(sites, A, crust)
+    if CRUSTAL_SCALE_MODE == "estimate":
+        # α 를 F 다항식과 **동시에** 추정한다. 순차로 빼면 다항식이 지각 신호를
+        # 먼저 먹어 α 가 작게 나온다.
+        cF = np.linalg.lstsq(AF[mF], sites["dF"].values[mF], rcond=None)[0]
+        coef["F"] = cF[:n_reg]
+        coef["alpha"] = float(cF[n_reg])
+    else:
+        a = 0.0 if CRUSTAL_SCALE_MODE == "none" else 1.0
+        cF = np.linalg.lstsq(
+            AF[mF], (sites["dF"].values - a * np.nan_to_num(crust, nan=0.0))[mF],
+            rcond=None)[0]
+        coef["F"] = cF[:n_reg]
+        coef["alpha"] = a
 
     return coef, crust, inliers
 
@@ -898,9 +1059,10 @@ def validate(sites, coef, crust, inliers, degree=REGIONAL_DEGREE):
     crI = sites["crI"].values if "crI" in sites else np.zeros(len(sites))
     has_cv = bool(np.any(crD != 0) or np.any(crI != 0))
 
+    AD = design_DI(sites, A)
     for comp, resid, cr, reg in [
-        ("D_deg", sites["dD"].values, crD, A @ coef["D"]),
-        ("I_deg", sites["dI"].values, crI, A @ coef["I"]),
+        ("D_deg", sites["dD"].values, crD, AD @ coef["D"]),
+        ("I_deg", sites["dI"].values, crI, AD @ coef["I"]),
     ]:
         m = inliers[comp[0]]
         rows.append((comp, "IGRF", rms(resid[m]), int(m.sum())))
@@ -913,10 +1075,13 @@ def validate(sites, coef, crust, inliers, degree=REGIONAL_DEGREE):
 
     m = inliers["F"]
     dF = sites["dF"].values
+    ct = crustal_term(sites, crust, coef)
+    AF = design_DI(sites, A)          # 다항식(+시간항) 부분만
     rows.append(("F_nT", "IGRF", rms(dF[m]), int(m.sum())))
-    rows.append(("F_nT", "+Crustal", rms((dF - crust)[m]), int(m.sum())))
+    rows.append(("F_nT", "+Crustal", rms((dF - ct)[m]), int(m.sum())))
     rows.append(
-        ("F_nT", "+Crustal+Regional", rms((dF - crust - A @ coef["F"])[m]), int(m.sum()))
+        ("F_nT", "+Crustal+Regional",
+         rms((dF - ct - AF @ coef["F"])[m]), int(m.sum()))
     )
 
     return pd.DataFrame(rows, columns=["성분", "단계", "RMS", "inlier수"])
@@ -944,20 +1109,22 @@ def loo_cv(sites, crustal, degree=REGIONAL_DEGREE):
 
         A = poly_terms(test["lat"].values, test["lon"].values, degree)
         cr = np.nan_to_num(crustal(test["lat"].values, test["lon"].values), nan=0.0)
+        AD = design_DI(test, A)
+        ct = crustal_term(test, cr, c)
 
         crD = float(test["crD"].values[0]) if "crD" in test else 0.0
         crI = float(test["crI"].values[0]) if "crI" in test else 0.0
         if inl["D"][i]:
-            errs["D"].append(test["dD"].values[0] - crD - (A @ c["D"])[0])
+            errs["D"].append(test["dD"].values[0] - crD - (AD @ c["D"])[0])
         if inl["I"][i]:
-            errs["I"].append(test["dI"].values[0] - crI - (A @ c["I"])[0])
+            errs["I"].append(test["dI"].values[0] - crI - (AD @ c["I"])[0])
         if inl["F"][i]:
-            errs["F"].append(test["dF"].values[0] - cr[0] - (A @ c["F"])[0])
+            errs["F"].append(test["dF"].values[0] - ct[0] - (AD @ c["F"])[0])
 
     return {k: rms(v) for k, v in errs.items()}
 
 
-def crustal_diagnostics(sites, crust, inliers):
+def crustal_diagnostics(sites, crust, inliers, coef=None):
     """
     Crustal 층이 지표 점 잔차를 실제로 얼마나 설명하는지 정량화.
 
@@ -1087,6 +1254,9 @@ def export_model(coef, lons, lats, grid, sites, val, cv, degree, rep, cd,
             "nlat": int(lats.size),
             "unit": "nT",
             "values": flat,
+            # 결합계수 — 클라이언트는 F 에 alpha * values 를 더해야 한다.
+            "alpha": float(coef.get("alpha", 1.0)),
+            "scale_mode": CRUSTAL_SCALE_MODE,
             "vector": vec_out,
         },
         "validation": val.to_dict(orient="records"),
