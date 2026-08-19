@@ -427,6 +427,28 @@ function lmmAt(lat,lon,year){
   };
 }
 
+// 패치 표시 방식 — 'value'(LMM 값) / 'diff'(LMM − IGRF)
+let LMMVIEW='value';
+let lmmRange=null;      // 이번에 쓴 색범위 [lo,hi] — 안내문에 그대로 보여준다
+
+// 전역 표면과 **같은 음영식**을 쓴다. 무광 재질이면 패치만 밝게 떠 보인다.
+// (지구 셰이더: col*(0.62+0.5*sh), sh=0.35+0.65*max(dot(n,L),0))
+const lmmMat=()=>new THREE.ShaderMaterial({
+  vertexColors:true, side:THREE.DoubleSide,
+  vertexShader:`varying vec3 vC; varying vec3 vP;
+    void main(){vC=color; vP=position;
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec3 vC; varying vec3 vP;
+    void main(){vec3 n=normalize(vP);
+      float sh=0.35+0.65*clamp(dot(n,normalize(vec3(6.,3.,4.))),0.,1.);
+      gl_FragColor=vec4(vC*(0.62+0.5*sh),1.0);}`
+});
+
+function quantile(sorted,q){
+  const i=(sorted.length-1)*q, lo=Math.floor(i), hi=Math.ceil(i);
+  return sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo);
+}
+
 function buildLMM(year){
   lmmGroup.clear(); lmmMesh=null;
   if(!LMMDATA) return;
@@ -434,7 +456,9 @@ function buildLMM(year){
   const nx=Math.round((B.lon1-B.lon0)/st)+1, ny=Math.round((B.lat1-B.lat0)/st)+1;
   const geo=new THREE.BufferGeometry();
   const pos=new Float32Array(nx*ny*3), col=new Float32Array(nx*ny*3);
+  const val=new Float64Array(nx*ny);
   const idx=[];
+  // 1차: 좌표와 값
   for(let j=0;j<ny;j++){
     const lat=B.lat0+j*st;
     for(let i=0;i<nx;i++){
@@ -442,12 +466,30 @@ function buildLMM(year){
       const p=sph(lat,lon,1.004);              // 지표 바로 위 (z-fighting 방지)
       pos[k*3]=p.x; pos[k*3+1]=p.y; pos[k*3+2]=p.z;
       const v=lmmAt(lat,lon,year);
-      const c=colorAt(MODE, MODE==='F'?v.F:MODE==='D'?v.D:v.I);
-      // ⚠ 정점색은 **작업 색공간(선형)** 으로 넣어야 한다. colorAt 이 주는 값은
-      //   sRGB(0~255) 라 그대로 넣으면 밝게 떠서 전역 표면과 톤이 어긋난다.
-      _c.setRGB(c[0]/255,c[1]/255,c[2]/255,THREE.SRGBColorSpace);
-      col[k*3]=_c.r; col[k*3+1]=_c.g; col[k*3+2]=_c.b;
+      const lv = MODE==='F'?v.F:MODE==='D'?v.D:v.I;
+      if(LMMVIEW==='diff'){
+        const e=IGRF.igrfElements(lat,lon,0,year);
+        const ev = MODE==='F'?e.F:MODE==='D'?e.D:e.I;
+        // 각도는 분(′)으로 봐야 눈에 들어온다
+        val[k]=(lv-ev)*(MODE==='F'?1:60);
+      } else val[k]=lv;
     }
+  }
+  // ⚠ 전역 색범위(F 는 42,000 nT 폭)로 칠하면 한국 변화폭이 1/20 이라 한 덩어리로
+  //   뭉갠다. 패치는 **자기 값 분포로 색범위를 다시 잡는다**(2~98 백분위로 극단 배제).
+  //   전역 범례와 다른 척도이므로 안내문에 범위를 반드시 표기한다.
+  const srt=Array.from(val).sort((a,b)=>a-b);
+  let lo=quantile(srt,0.02), hi=quantile(srt,0.98);
+  if(LMMVIEW==='diff'){const m=Math.max(Math.abs(lo),Math.abs(hi))||1; lo=-m; hi=m;}
+  if(hi-lo<1e-9) hi=lo+1;
+  lmmRange=[lo,hi];
+  const ramp2=(t)=>ramp(t, LMMVIEW==='diff'?CM_DIV:(MODE==='F'?CM_F:CM_DIV));
+  // 2차: 색
+  for(let k=0;k<nx*ny;k++){
+    const c=ramp2((val[k]-lo)/(hi-lo));
+    // 정점색은 작업 색공간(선형)으로. colorAt/ramp 는 sRGB(0~255) 를 준다.
+    _c.setRGB(c[0]/255,c[1]/255,c[2]/255,THREE.SRGBColorSpace);
+    col[k*3]=_c.r; col[k*3+1]=_c.g; col[k*3+2]=_c.b;
   }
   for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){
     const a=j*nx+i,b=a+1,c=a+nx,d=c+1; idx.push(a,c,b, b,c,d);}
@@ -455,8 +497,7 @@ function buildLMM(year){
   geo.setAttribute('color',new THREE.BufferAttribute(col,3));
   geo.setIndex(idx); geo.computeVertexNormals();
   // DoubleSide — FrontSide 면 카메라 각도에 따라 뒷면이 컬링돼 사라진다
-  lmmMesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial(
-    {vertexColors:true,side:THREE.DoubleSide,transparent:true,opacity:0.96}));
+  lmmMesh=new THREE.Mesh(geo,lmmMat());
   lmmGroup.add(lmmMesh);
   // 패치 경계선 — 어디까지가 LMM 인지 눈에 보이게
   const ring=[];
@@ -469,7 +510,8 @@ function buildLMM(year){
   lmmGroup.visible=lmmOn;
 }
 
-function lmmApply(){ if(lmmOn && LMMDATA) buildLMM(+yearEl.value); }
+function lmmApply(){ if(lmmOn && LMMDATA){ buildLMM(+yearEl.value);
+  if(document.getElementById('siteinfo').style.display!=='none') showLMMInfo(); } }
 
 // 모듈 스코프라 콘솔에서 안 보인다 → 상태 점검용 훅 (검증에 쓴다)
 window.__lmm=()=>({on:lmmOn,loaded:!!LMMDATA,vis:lmmGroup.visible,
@@ -532,6 +574,18 @@ function showLMMInfo(){
   el.innerHTML="<b style='color:#cfe0ff'>🇰🇷 한국 LMM</b>"
     +"<div style='color:#9fb2c8;font-size:11px;margin:3px 0 7px'>"
     +"Core(IGRF-14) + Regional + Crustal 결합 · External 미적용</div>"
+    +"<div style='display:flex;gap:5px;margin:0 0 7px'>"
+    +"<button id='lmmVal' style='flex:1;font-size:11px;padding:5px 0;border-radius:7px;cursor:pointer;"
+    +"border:1px solid rgba(120,175,255,.45);background:"
+    +(LMMVIEW==='value'?"rgba(79,150,255,.35)":"rgba(20,40,72,.4)")+";color:#e8f1ff'>LMM 값</button>"
+    +"<button id='lmmDif' style='flex:1;font-size:11px;padding:5px 0;border-radius:7px;cursor:pointer;"
+    +"border:1px solid rgba(120,175,255,.45);background:"
+    +(LMMVIEW==='diff'?"rgba(79,150,255,.35)":"rgba(20,40,72,.4)")+";color:#e8f1ff'>LMM − IGRF</button>"
+    +"</div>"
+    +(lmmRange?("<div style='font-size:11px;color:#9fb2c8;margin-bottom:6px'>"
+      +"패치 색범위 <b style='color:#dce9ff'>"+fmtR(lmmRange[0])+" ~ "+fmtR(lmmRange[1])+"</b>"
+      +"<br><span style='color:#8fa3ba'>전역 범례와 다른 척도 — 한국 변화폭에 맞춰 다시 잡음"
+      +"</span></div>"):"")
     +(loo?("<div>LOO 편각 D <b>"+loo.D.toFixed(3)+"°</b> "
       +"<span style='color:#ffb27a'>목표 0.1°</span></div>"
       +"<div>LOO 총자력 F <b>"+loo.F.toFixed(1)+" nT</b> "
@@ -551,6 +605,16 @@ function showLMMInfo(){
         +"현재 Core+Regional 만 계산합니다.</div>"));
   el.style.display='block'; el.style.left='14px'; el.style.bottom='120px';
   el.style.top='auto'; el.style.width='250px';
+  const set=v=>{ if(LMMVIEW===v) return; LMMVIEW=v; buildLMM(+yearEl.value); showLMMInfo(); };
+  el.querySelector('#lmmVal').onclick=()=>set('value');
+  el.querySelector('#lmmDif').onclick=()=>set('diff');
+}
+
+// 패치 색범위 표기 — 성분과 표시방식에 따라 단위가 달라진다
+function fmtR(v){
+  if(LMMVIEW==='diff') return (v>=0?'+':'')+v.toFixed(MODE==='F'?0:1)
+                              +(MODE==='F'?' nT':'′');
+  return MODE==='F'?Math.round(v).toLocaleString()+' nT':v.toFixed(2)+'°';
 }
 const tgC=document.getElementById('tgContour'),tgL=document.getElementById('tgLines'),tgS=document.getElementById('tgSpin');
 tgC.onclick=()=>{showContour=!showContour;tgC.classList.toggle('on',showContour);contourGroup.visible=showContour;};
