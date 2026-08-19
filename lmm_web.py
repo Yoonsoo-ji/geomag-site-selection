@@ -924,7 +924,7 @@ document.getElementById('acc').innerHTML =
      <li><b>Crustal 층 해상도 부족</b> — 보유 격자는 1.5분(약 2.8 km) 전국 컴필레이션.
          지표 점 잔차와의 상관 r=${SUM.crust_r.toFixed(2)} 이나
          표본이 ${SUM.crust_n}개뿐이라 측점 하나만 바뀌어도 크게 흔들린다.
-         KPI 달성에는 측선간격 250 m 원측선 자료 필요</li>
+         측선간격 250 m 원측선 자료는 존재하지 않아 현 격자가 해상도 상한</li>
      <li><b>지표 측점 부족</b> — 유효 ${SUM.n_sites}개 측점 (설명자료 권고 30점)</li>
    </ul>
    <div style="margin-top:8px">따라서 본 계산기는 <b>IGRF-14 대비 개선된 참고값</b> 및

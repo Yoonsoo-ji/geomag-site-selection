@@ -1125,7 +1125,7 @@ def main():
     print(f"  RMS {cd['rms_before_nT']:.1f} -> {cd['rms_after_nT']:.1f} nT")
     if cd["rms_reduction_pct"] < 40:
         print("  [경고] 전국 1.5분 격자는 지표 점 잔차를 거의 설명하지 못한다.")
-        print("         KPI 달성에는 KIGAM 원측선 자료(측선간격 250 m)가 필요하다.")
+        print("         원측선 자료는 존재하지 않으므로 현 격자가 해상도 상한이다.")
 
     cv = loo_cv(sites, crustal, degree)
     print("\n--- Leave-one-out 교차검증 (실제 예측성능) ---")

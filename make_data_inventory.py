@@ -104,8 +104,8 @@ def crustal_layer():
         if p.exists():
             rows.append(("사용 주의사항", f"data/{f}", "이용조건·인용 규정",
                          human(size_of(p))))
-    note = ("2.8 km 격자만 보유. 원측선(250 m)은 오픈플랫폼에 공개되지 않아 "
-            "KIGAM 활용신청 필요")
+    note = ("2.8 km 격자만 보유. 원측선 자료는 존재하지 않으므로(2026-08 확인) "
+            "현 격자가 지각층 해상도의 상한이다")
     return rows, "해상도 부족", note
 
 

@@ -34,19 +34,24 @@ PHOTO_DIR = ROOT / "docs" / "survey_photos"
 
 # 기존 지자기 측정점(24) — 현황표 1차 비고 초록(15) ∪ 2차 비고 파랑(9). (사용자 확정)
 EXISTING_USE = [
-    # 초록(15)
-    "춘양", "청송", "서산", "청양", "이원", "남지", "거제", "장흥",
-    "성산", "여주", "화천", "봉평", "삼척", "제천", "와도",
-    # 파랑(9)
-    "상주", "미원", "부안", "강화", "함양", "가야", "양산", "순천", "포천",
+    # 기존 지자기 측정점 30점 (2026-08-19 확정)
+    "남양", "춘양", "청송", "상주", "미원", "서산", "청양", "이원", "부안",
+    "안도", "순창", "강화", "함양", "가야", "영천", "양산", "남지", "거제",
+    "남해", "순천", "장흥", "조도", "포천", "성산", "여주", "화천", "설악",
+    "봉평", "삼척", "제천",
 ]
-EXISTING_ALIAS = {}   # 확정 이름이 existing_sites.geojson 과 직접 일치
 
-# 기존 24점 중 **선점 대상 11점** — 저수지·제방에 설치된 점을 제외한 나머지.
-# (저수지·제방은 지반 거동·수위 변동으로 표석 지속성이 확보되지 않아 선점에서 뺀다.)
+# existing_sites.geojson 의 표기가 다른 것만 이어 준다.
+#   · 안도 — geojson 에는 「와도」로 실려 있다(원자료 표기 차이).
+#   · 경주=영천 · 언양=양산 · 임계=삼척 은 확정 이름이 geojson 에도 있어 별칭 불필요.
+EXISTING_ALIAS = {"안도": "와도"}
+
+# 기존 30점 중 **선점 대상 15점**.
+# 나머지 15점은 저수지(제방)에 설치된 점으로 판정되어 선점에서 뺀다 —
+# 지반 거동·수위 변동으로 표석 지속성이 확보되지 않는다.
 EXISTING_TARGET = [
-    "상주", "미원", "부안", "강화", "남지", "거제",
-    "포천", "성산", "여주", "화천", "제천",
+    "상주", "미원", "부안", "강화", "양산", "남지", "거제", "조도",
+    "포천", "성산", "여주", "화천", "봉평", "삼척", "제천",
 ]
 
 GRADE = {   # 등급 → (색, 라벨) — 4단계
@@ -300,7 +305,7 @@ def legend_html(counts, total, n_tgt=0, n_oth=0):
         "<span style='display:inline-block;width:15px;margin-right:5px;"
         "font-size:13px;text-align:center'>⭐</span>"
         f"<span style='font-size:12px;color:#666'>기존점 — 기타 <b>{n_oth}</b> "
-        "<span style='color:#999'>(저수지·제방 등)</span></span></div>"
+        "<span style='color:#999'>(저수지·제방)</span></span></div>"
         "<div style='border-top:1px solid #ddd;margin:7px 0 5px'></div>"
         "<div style='font-size:11px;color:#777;max-width:210px;line-height:1.45'>"
         "<b style='color:#B8860B'>✔</b> 방위각·거리는 기준점·방위표지 좌표로 "
@@ -336,8 +341,13 @@ def _existing_popup(name, pr, target):
     col = "#B8860B" if target else "#8B4513"
     tail = ("<div style='margin-top:5px;padding:4px 6px;background:#FFF6DC;"
             "border-left:3px solid #D7A400;font-size:11px;color:#6B5200'>"
-            "저수지·제방 설치점을 제외한 <b>선점 대상 11점</b> 중 하나 — "
-            "표석 지속성이 확보되어 재설치 없이 선점 가능.</div>") if target else ""
+            f"기존 {len(EXISTING_USE)}점 중 <b>선점 대상 {len(EXISTING_TARGET)}점</b>"
+            " — 표석 지속성이 확보되어 재설치 없이 선점 가능.</div>"
+            ) if target else (
+            "<div style='margin-top:5px;padding:4px 6px;background:#F4F4F4;"
+            "border-left:3px solid #AAA;font-size:11px;color:#555'>"
+            "저수지(제방) 설치점 — 지반 거동·수위 변동으로 표석 지속성이 "
+            "확보되지 않아 선점 대상에서 제외.</div>")
     return (
         f"<div style='font-family:\"맑은 고딕\",sans-serif;font-size:12.5px;min-width:250px'>"
         f"<b style='color:{col}'>{head}: {esc(name)}</b><hr style='margin:4px 0'>"
@@ -352,10 +362,10 @@ def _existing_popup(name, pr, target):
 
 
 def add_existing_layer(m):
-    """기존 지자기 측정점(EXISTING_USE 24) 토글 — 두 레이어로 분리.
+    """기존 지자기 측정점(EXISTING_USE 30) 토글 — 두 레이어로 분리.
 
-      · 🎯 선점 대상 (11) — 저수지·제방 설치점을 제외한 점. 강조 마커, 기본 켬.
-      · ⭐ 기타 기존점 (13) — 나머지. 종전 ⭐ 마커, 기본 끔.
+      · 🎯 선점 대상 (15) — 표석 지속성이 확보되는 점. 강조 마커, 기본 켬.
+      · ⭐ 기타 기존점 (15) — 저수지(제방) 설치점. 종전 ⭐ 마커, 기본 끔.
 
     반환 (선점대상 수, 기타 수).
     """

@@ -7,7 +7,7 @@
 서술만) 을 따른다. 소형 로컬 모델의 tool-calling 불안정성을 피하려는 설계.
 
   · ① 자연어 지자기 계산기 — ppigrf 로 임의 지점·연도 F/D/I/H 정확 계산(+영년변화)
-  · ③ 선점 어드바이저 — survey_sites/existing24 검색·집계
+  · ③ 선점 어드바이저 — survey_sites/existing_pts 검색·집계
 
 반환: {"answer": str, "actions": [{type,...}], "tier": "local|fallback|data-only"}
 actions: 프론트가 지구본을 조종 — focus(lat,lon)·highlight(mids)·open_detail
@@ -82,7 +82,7 @@ def _load(name):
 
 
 SITES = _load("survey_sites.geojson")     # 선점 후보 103
-EXIST = _load("existing24.geojson")       # 기존점 24
+EXIST = _load("existing_pts.geojson")     # 기존 측정점 30
 # 측점 이름 → 좌표 게이지티어 보강
 for f in SITES + EXIST:
     nm = f["properties"].get("name")

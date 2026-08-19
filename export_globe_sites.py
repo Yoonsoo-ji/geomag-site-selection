@@ -2,7 +2,7 @@
 """
 3D 지구본(geomag_globe.html) 3단계용 정적 데이터 생성.
   · docs/data/survey_sites.geojson  — 선점 후보 103(등급 A/B/C·판정·좌표)
-  · docs/data/existing24.geojson    — 기존 측정점 24(EXISTING_USE)
+  · docs/data/existing_pts.geojson  — 기존 측정점(EXISTING_USE)
 
 선점 데이터는 조사서(aggregate_survey_xlsx)에서, 기존점은 existing_sites.geojson 에서.
 """
@@ -73,6 +73,6 @@ for name in EXISTING_USE:
         },
     })
 out2 = {"type": "FeatureCollection", "features": efeats}
-(DATA / "existing24.geojson").write_text(
+(DATA / "existing_pts.geojson").write_text(
     json.dumps(out2, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-print(f"existing24.geojson: {len(efeats)}건")
+print(f"existing_pts.geojson: {len(efeats)}건")
