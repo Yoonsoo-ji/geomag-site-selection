@@ -51,8 +51,8 @@ def loo(sites):
 rows = []
 for vec in (False, True):
     for mode, src in [("none", "cyg"), ("subtract_D", "cyg"),
-                      ("subtract_D", "multi"), ("subtract_quiet_D", "cyg"),
-                      ("subtract_quiet_D", "multi")]:
+                      ("subtract_D", "multi"), ("subtract_quiet_D", "multi"),
+                      ("subtract_DI", "multi"), ("subtract_quiet_DI", "multi")]:
         r = loo(build(mode, src, vec))
         rows.append(dict(지각벡터="적용" if vec else "F만", External=mode,
                          자료원=src, **{k: round(v, 4) for k, v in r.items()}))

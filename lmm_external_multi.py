@@ -22,6 +22,11 @@
    지리 좌표계로 옮기려면 회전을 맞춰야 한다. 관측소별로
    α = D_IGRF(관측소) − median D_관측 을 구해 편차 벡터를 회전시킨다.
 
+**성분별 시간창** — 야장에는 세션 전체(시작~종료) 외에 「편각구간」·「복각구간」이
+따로 있다. 한 세션에서 두 구간의 중심시각은 중앙 12분·최대 53분 떨어져 있으므로,
+D 는 편각 관측 구간, I 는 복각 관측 구간의 편차로 각각 보정한다. F 는 야장 기록이
+일자 단위라 세션 전체 구간을 쓴다.
+
 ⚠ 이 산출물은 **관측 성과 정리 단계**의 보정량이다. 계산기(예측 시점)에는
    들어가지 않는다 — LMM 은 정온시 기준값 모형이다.
 
@@ -103,6 +108,18 @@ def align_to_geographic(df: pd.DataFrame, lat: float, lon: float) -> pd.DataFram
     out["Y"] = df.X * sa + df.Y * ca
     out["alpha_deg"] = math.degrees(a)
     return out
+
+
+def parse_window(txt):
+    """야장의 「HH:MM~HH:MM」 구간 문자열 → (시작, 종료) time. 없으면 None."""
+    if not isinstance(txt, str) or "~" not in txt:
+        return None
+    try:
+        a, b = [x.strip() for x in txt.split("~")]
+        f = lambda x: dt.time(*[int(v) for v in x.split(":")[:2]])
+        return f(a), f(b)
+    except Exception:      # noqa: BLE001
+        return None
 
 
 def quiet_baseline(obs: pd.DataFrame, kp: pd.DataFrame, center: dt.date):
@@ -206,53 +223,81 @@ def main(mode="plane"):
         day, site = r["날짜"], r["측점"]
         t0, t1 = to_utc(day, r["시작"]), to_utc(day, r["종료"])
         xy = site_xy.get(site)
+        blank = {"Kp": np.nan, "dF": np.nan, "dD_arcmin": np.nan,
+                 "dI_arcmin": np.nan, "n_station": 0, "보간": "-",
+                 "창": "-"}
         if xy is None:
-            rows.append({**r, "Kp": np.nan, "dF": np.nan, "dD_arcmin": np.nan,
-                         "n_station": 0, "보간": "-", "상태": "측점 좌표 없음"})
+            rows.append({**r, **blank, "상태": "측점 좌표 없음"})
             continue
 
-        dev = []          # (lat, lon, vX, vY, vZ)
-        for key, d in obs.items():
-            ck = (key, day)
-            if ck not in base_cache:
-                base_cache[ck] = quiet_baseline(d.reset_index(), kp, day)
-            b = base_cache[ck]
-            seg = d[(d.index >= t0) & (d.index <= t1)].dropna(subset=["X"])
-            if b is None or seg.empty:
-                continue
-            dev.append((STATIONS[key]["lat"], STATIONS[key]["lon"],
-                        seg.X.mean() - b["X"], seg.Y.mean() - b["Y"],
-                        seg.Z.mean() - b["Z"]))
+        # 성분별 관측 구간 — 야장에 「편각구간」·「복각구간」이 따로 있다.
+        # 없으면 세션 전체로 물러선다(2019 일부 양식).
+        wD = parse_window(r.get("편각구간"))
+        wI = parse_window(r.get("복각구간"))
+        win = {
+            "D": (to_utc(day, wD[0]), to_utc(day, wD[1])) if wD else (t0, t1),
+            "I": (to_utc(day, wI[0]), to_utc(day, wI[1])) if wI else (t0, t1),
+            "F": (t0, t1),
+        }
+        used = ("성분별" if (wD and wI) else "세션전체")
 
-        if not dev:
-            rows.append({**r, "Kp": np.nan, "dF": np.nan, "dD_arcmin": np.nan,
-                         "n_station": 0, "보간": "-", "상태": "관측소 자료 없음"})
-            continue
+        def deviations(a0, a1):
+            """주어진 시간창에서 관측소별 (위도, 경도, vX, vY, vZ)."""
+            out = []
+            for key, dfo in obs.items():
+                ck = (key, day)
+                if ck not in base_cache:
+                    base_cache[ck] = quiet_baseline(dfo.reset_index(), kp, day)
+                b = base_cache[ck]
+                seg = dfo[(dfo.index >= a0) & (dfo.index <= a1)].dropna(subset=["X"])
+                if b is None or seg.empty:
+                    continue
+                out.append((STATIONS[key]["lat"], STATIONS[key]["lon"],
+                            seg.X.mean() - b["X"], seg.Y.mean() - b["Y"],
+                            seg.Z.mean() - b["Z"]))
+            return out
 
-        vX, how = interpolate([(a, b, c) for a, b, c, _, _ in dev],
-                              None, None, xy["lat"], xy["lon"], mode)
-        vY, _ = interpolate([(a, b, d_) for a, b, _, d_, _ in dev],
-                            None, None, xy["lat"], xy["lon"], mode)
-        vZ, _ = interpolate([(a, b, e) for a, b, _, _, e in dev],
-                            None, None, xy["lat"], xy["lon"], mode)
-
-        # 편차를 **측점의 기준장**(IGRF)에 얹어 F·D 변화로 환산한다.
-        # 관측소 기준장을 쓰던 종전 방식보다 측점 위도차를 바르게 반영한다.
         Di, Ii, Fi, X0, Y0, Z0 = LB.igrf_dif(
             np.array([xy["lat"]]), np.array([xy["lon"]]), np.array([0.0]),
             dt.datetime(day.year, day.month, day.day))
         X0, Y0, Z0 = float(X0[0]), float(Y0[0]), float(Z0[0])
         bH = math.hypot(X0, Y0)
         bF = math.hypot(bH, Z0)
-        mH = math.hypot(X0 + vX, Y0 + vY)
-        mF = math.hypot(mH, Z0 + vZ)
-        dF = mF - bF
-        dD = math.degrees(math.atan2(Y0 + vY, X0 + vX)
-                          - math.atan2(Y0, X0)) * 60
+
+        res, how, nst = {}, "-", 0
+        for comp in ("D", "I", "F"):
+            dev = deviations(*win[comp])
+            if not dev:
+                res[comp] = np.nan
+                continue
+            nst = max(nst, len(dev))
+            vX, how = interpolate([(a, b, c) for a, b, c, _, _ in dev],
+                                  None, None, xy["lat"], xy["lon"], mode)
+            vY, _ = interpolate([(a, b, d_) for a, b, _, d_, _ in dev],
+                                None, None, xy["lat"], xy["lon"], mode)
+            vZ, _ = interpolate([(a, b, e) for a, b, _, _, e in dev],
+                                None, None, xy["lat"], xy["lon"], mode)
+            mH = math.hypot(X0 + vX, Y0 + vY)
+            mF = math.hypot(mH, Z0 + vZ)
+            if comp == "D":
+                res["D"] = math.degrees(math.atan2(Y0 + vY, X0 + vX)
+                                        - math.atan2(Y0, X0)) * 60
+            elif comp == "I":
+                res["I"] = math.degrees(math.atan2(Z0 + vZ, mH)
+                                        - math.atan2(Z0, bH)) * 60
+            else:
+                res["F"] = mF - bF
+
+        if nst == 0:
+            rows.append({**r, **blank, "상태": "관측소 자료 없음"})
+            continue
 
         rows.append({**r, "Kp": float(kp_for([t0], kp).iloc[0]),
-                     "dF": dF, "dD_arcmin": dD, "n_station": len(dev),
-                     "보간": how, "상태": "정상"})
+                     "dF": res.get("F", np.nan),
+                     "dD_arcmin": res.get("D", np.nan),
+                     "dI_arcmin": res.get("I", np.nan),
+                     "n_station": nst, "보간": how, "창": used,
+                     "상태": "정상"})
 
     res = pd.DataFrame(rows)
     ok = res[res["상태"] == "정상"]
@@ -264,9 +309,21 @@ def main(mode="plane"):
         print(f"  |F| 평균 {ok.dF.abs().mean():.1f} nT  최대 {ok.dF.abs().max():.1f}")
         print(f"  |D| 평균 {ok.dD_arcmin.abs().mean():.2f}′ 최대 "
               f"{ok.dD_arcmin.abs().max():.2f}′")
+        print(f"  |I| 평균 {ok.dI_arcmin.abs().mean():.2f}′ 최대 "
+              f"{ok.dI_arcmin.abs().max():.2f}′")
+        print("  시간창: " + ", ".join(f"{k} {v}건"
+                                    for k, v in ok['창'].value_counts().items()))
+        # 성분별 창을 따로 쓴 효과 — 같은 세션에서 D 와 I 보정량이 얼마나 갈리나
+        both = ok[ok['창'] == '성분별']
+        if len(both):
+            g = (both.dD_arcmin - both.dI_arcmin).abs()
+            print(f"  같은 세션 D-I 보정량 차: 중앙 {g.median():.2f}′ "
+                  f"최대 {g.max():.2f}′")
 
-    cols = [c for c in ("측점", "날짜", "시작", "종료", "Kp", "dF", "dD_arcmin",
-                        "n_station", "보간", "상태", "파일") if c in res.columns]
+    cols = [c for c in ("측점", "날짜", "시작", "종료", "편각구간", "복각구간",
+                        "Kp", "dF", "dD_arcmin", "dI_arcmin",
+                        "n_station", "보간", "창", "상태", "파일")
+            if c in res.columns]
     out = res[cols].copy()
     out["날짜"] = out["날짜"].astype(str)
     OUT_CSV.parent.mkdir(parents=True, exist_ok=True)

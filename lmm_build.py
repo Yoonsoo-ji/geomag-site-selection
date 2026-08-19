@@ -210,7 +210,8 @@ def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
     ec = pd.read_csv(EXTERNAL_CSV, encoding="utf-8-sig")
     ec = ec[ec["상태"] == "정상"].copy()
     ec["연도"] = pd.to_datetime(ec["날짜"]).dt.year
-    if EXTERNAL_MODE in ("subtract_quiet", "subtract_quiet_D"):
+    if EXTERNAL_MODE in ("subtract_quiet", "subtract_quiet_D",
+                         "subtract_quiet_DI"):
         # 교란시 세션의 보정량은 신뢰하지 않는다(균일·평면 근사가 폭풍 중에 가장
         # 크게 깨진다). 값을 만지는 대신 그 세션의 보정만 쓰지 않는 방식.
         ec = ec[ec["Kp"] <= FB2019_MAX_KP]
@@ -218,9 +219,11 @@ def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
         df["ext_src"] = "미적용(표본없음)"
         return df
 
-    g = (ec.groupby(["측점", "연도"])
-           .agg(dF=("dF", "mean"), dD=("dD_arcmin", "mean"),
-                kp_max=("Kp", "max"), n=("dF", "size")).reset_index())
+    agg = dict(dF=("dF", "mean"), dD=("dD_arcmin", "mean"),
+               kp_max=("Kp", "max"), n=("dF", "size"))
+    if "dI_arcmin" in ec.columns:
+        agg["dI"] = ("dI_arcmin", "mean")
+    g = ec.groupby(["측점", "연도"]).agg(**agg).reset_index()
     out = df.merge(g, left_on=["name", "year"], right_on=["측점", "연도"],
                    how="left")
     hit = out["dF"].notna()
@@ -236,15 +239,20 @@ def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
         #   총자력은 악화된다 — F 잔차는 외부장(38 nT)이 아니라 **지각장 불일치**
         #   (약 190 nT)가 지배하므로, 균일한 시간 보정을 빼면 잡음만 더해진다.
         #   편각 잔차는 20.7′ 이고 보정량이 5.4′ 라 비중이 커서 이득이 난다.
-        if EXTERNAL_MODE not in ("subtract_D", "subtract_quiet_D"):
+        if EXTERNAL_MODE not in ("subtract_D", "subtract_quiet_D",
+                                 "subtract_DI", "subtract_quiet_DI"):
             out.loc[hit, "F_nT"] = out.loc[hit, "F_nT"] - out.loc[hit, "dF"]
         out.loc[hit, "D_deg"] = out.loc[hit, "D_deg"] - out.loc[hit, "dD"] / 60.0
+        # 복각은 「복각 관측 구간」의 보정량으로 따로 뺀다(야장에 구간이 있다).
+        if EXTERNAL_MODE in ("subtract_DI", "subtract_quiet_DI") and "dI" in out:
+            hitI = hit & out["dI"].notna()
+            out.loc[hitI, "I_deg"] = out.loc[hitI, "I_deg"] - out.loc[hitI, "dI"] / 60.0
         out["ext_src"] = np.where(hit, EXTERNAL_MODE, "미적용")
         print(f"  [External] {EXTERNAL_MODE} - {int(hit.sum())}/{len(out)}행 보정 "
               f"(|dF| 평균 {out.loc[hit, 'dF'].abs().mean():.1f} nT · "
               f"|dD| 평균 {out.loc[hit, 'dD'].abs().mean():.2f}')")
-    return out.drop(columns=[c for c in ("측점", "연도", "dF", "dD", "kp_max", "n")
-                             if c in out])
+    return out.drop(columns=[c for c in ("측점", "연도", "dF", "dD", "dI",
+                                        "kp_max", "n") if c in out])
 
 
 # 야장에서 복원한 세션표 (lmm_fieldbook.py 산출). 없으면 종전 7/1 대체로 동작한다.

@@ -566,48 +566,72 @@ def build(d):
                "우선 의심 — 직접 증거는 없음"]],
              [5.4, 3.0, 5.0])
 
-    # ── 4. CYG ────────────────────────────────────────────────────────
-    heading(doc, "4. 외부장(CYG) 자료 현황과 제약", 1)
-    cyg = d["cyg_cache"]
-    rows = []
-    for g in cyg["groups"]:
-        fmt = lambda s: f"{s[:4]}-{s[4:6]}-{s[6:]}"
-        rows.append([g["group"], f"{g['n_days']}일",
-                     f"{fmt(g['first'])} ~ {fmt(g['last'])}"])
-    tcap(doc, "표 11. 청양(CYG) 1분 자료 캐시 실측 현황")
-    booktabs(doc, ["구간", "일수", "날짜 범위"], rows,
-             [3.4, 2.6, 7.0], aligns=["l", "r", "l"])
-    rich(doc, [
-        ("CYG 자료는 보유하고 있고 실제로 사용 중이다. 2019 구간 78일은 야장 "
-         "세션의 외부장 보정에 쓰였고, 2024년 6월 10일 표본은 일변동 규모를 "
-         "재는 데 쓰였다. 적용이 막힌 것은 ", False),
-        ("2022~25 성과표 구간뿐이며, 원인은 CYG 가 아니라 성과표", True),
-        ("에 있다.", False)])
-    rich(doc, [
-        ("lmm_build.py 의 load_survey_points() 는 성과표에 연도만 있으므로 "
-         "관측 일자를 ", False),
-        ("7월 1일로 대체", True),
-        (f"한다. 실제로 성과표 유래 레코드의 월·일은 "
-         f"{', '.join(d['survey_date_stub']['unique_monthday'])} 하나뿐이다. "
-         "CYG 는 1분 자료인데 조회할 시각이 없고, 나아가 실제 관측 날짜조차 "
-         "모르므로 해당 구간 자료를 내려받을 수도 없다.", False)])
-    tcap(doc, "표 12. 7월 1일 근사가 발생시키는 비용")
-    booktabs(doc,
-             ["영향", "규모"],
-             [["영년변화(Core 층) 오차 — 실제 날짜가 ±4개월 어긋날 때", "±0.7′"],
-              ["External 층 — 보정 자체가 봉쇄", "6.7′ (중앙값) ~ 13.2′ (최대)"]],
-             [8.6, 4.4], aligns=["l", "r"])
+    # ── 4. External ───────────────────────────────────────────────────
+    heading(doc, "4. 외부장(External) 자료 현황과 적용", 1)
     para(doc,
-         "즉 날짜 근사는 기준장에는 거의 해롭지 않고 외부장 보정만 완전히 "
-         "막는다. 법정으로는 지구물리측량 작업규정 제19조 제1항 제6호가 시각 "
-         "동시 측정을 의무화하므로 2022~25 야장에는 시각이 있어야 하며, "
-         "성과표로 정리되는 과정에서 탈락한 것으로 판단된다.")
-    note(doc,
-         "웹 계산기가 ④ External 을 미적용으로 표시하는 것은 결함이 아니다. "
-         "LMM 은 정온시 기준값 모형이므로 외부장 보정이 들어갈 자리는 예측 "
-         "시점이 아니라 관측 성과를 정리하는 단계이다.")
+         "이 장은 2026년 8월 국토지리정보원 야장 원본을 확보하면서 전면 "
+         "수정되었다. 종전 기록은 「2022~25 성과표에는 연도만 있어 외부장 "
+         "보정이 불가능하다」고 적었으나, 야장에는 분 단위 관측시각이 그대로 "
+         "남아 있었다. 자료의 부재가 아니라 자료를 쓰지 않았던 것이 문제였다.")
 
-    # ── 5. 2019 단독 ──────────────────────────────────────────────────
+    fb = fieldbook_summary()
+    if fb["rows"]:
+        tcap(doc, f"표 11. 야장에서 복원한 관측시각 (총 {fb['total']}세션, "
+                     f"시각 결측 {fb['missing']}건)")
+        booktabs(doc, ["연도", "세션 수", "시각 확보"], fb["rows"],
+                 [3.4, 3.0, 3.0], aligns=["c", "r", "r"])
+        rich(doc, [
+            ("시각이 없는 것은 ", False),
+            (f"{fb['missing']}건({fb['missing_note']})", True),
+            ("뿐이고, 2022~2025 구간은 전 세션에 시작·종료 시각이 있다. "
+             "게다가 야장은 세션 전체 구간과 별도로 ", False),
+            ("편각 관측 구간과 복각 관측 구간을 따로", True),
+            (" 기록한다. 두 구간의 중심시각은 서로 중앙 12분, 최대 53분 "
+             "떨어져 있으므로 성분마다 자기 구간의 외부장을 써야 한다.",
+             False)])
+
+    ext = external_summary()
+    if ext:
+        tcap(doc, "표 12. 산출한 외부장 보정량")
+        booktabs(doc, ["항목", "값"], ext["rows"], [8.0, 5.0],
+                 aligns=["l", "r"])
+        para(doc,
+             "관측소 4개소(청양·제주·강릉·이천)의 정온야간 기준선 대비 세션 "
+             "구간 편차를 1차 평면으로 공간보간하여 측점 위치의 편차를 "
+             "추정하였다. 강릉·제주의 수평 성분은 계기 좌표계로 기록되므로 "
+             "관측 편각의 중앙값과 IGRF 편각의 차이만큼 회전시켜 지리 "
+             "좌표계로 맞추었다.")
+
+    heading(doc, "4.1 그럼에도 모형에 반영하지 않은 이유", 2)
+    para(doc,
+         "보정량을 실제로 걸어 처음부터 다시 적합한 뒤, 평가 측점을 한 번만 "
+         "정해 고정하고 교차검증으로 비교하였다. 설정마다 강건 적합이 평가 "
+         "측점을 다시 고르게 두면 비교가 순환에 빠지기 때문이다.")
+    tcap(doc, "표 13. 외부장 적용 방식별 교차검증 편각 (평가 측점 고정)")
+    booktabs(doc,
+             ["방식", "보정량 자료원", "LOO 편각 D"],
+             [["미적용 (채택)", "—", "0.5016°"],
+              ["편각 보정", "청양 단독", "0.5098°"],
+              ["편각 보정", "관측소 4개소", "0.5156°"],
+              ["편각 보정 (정온 세션만)", "관측소 4개소", "0.5311°"],
+              ["편각·복각 보정 (성분별 구간)", "관측소 4개소", "0.5156°"]],
+             [5.0, 4.0, 4.0], aligns=["l", "l", "r"])
+    rich(doc, [
+        ("어떤 방식도 기준선을 넘지 못한다. 이유는 규모다. 편각 보정량은 세션 "
+         "평균 ", False),
+        (f"{ext['dD_mean']:.1f}′" if ext else "약 7′", True),
+        (f" 인데 남은 잔차는 {asym['rD_rms']:.0f}′ 이다. 보정이 실제 오차와 "
+         "상관을 갖지 않으면 이 규모 차이에서는 잡음만 더해진다. 따라서 "
+         "현 단계에서는 ", False),
+        ("보정량을 산출·보관하되 모형에는 반영하지 않는다", True),
+        (". 측점별 계통 오차를 걷어낸 뒤 다시 판정한다.", False)])
+    note(doc,
+         "종전 기록의 「7월 1일 대체」는 성과표만 읽던 시절의 처리다. 현재 "
+         "lmm_build.attach_fieldbook_datetime() 이 (측점, 연도)로 야장 세션과 "
+         "맞춰 실제 관측일시를 채우며, 성과표 25행 중 18행이 매칭된다. 미매칭 "
+         "7행은 2022년 성과 6건과 2024년 삼척으로, 해당 연도 야장이 없는 "
+         "경우다.")
+
     heading(doc, "5. 2019 자료 단독 구축 가능성", 1)
     rich(doc, [
         (f"2019 야장으로 쓸 수 있는 측점은 {o19['n_sites']}개, 세션 "
@@ -651,7 +675,7 @@ def build(d):
         rows.append([c["name"],
                      f"{c['dD']['fb2019']:+.2f}′", f"{c['dD']['survey']:+.2f}′",
                      f"{c['dD']['diff']:+.2f}′", f"{c['dF']['diff']:+.1f} nT"])
-    tcap(doc, "표 14. 겹치는 측점의 시기간 대조")
+    tcap(doc, "표 15. 겹치는 측점의 시기간 대조")
     booktabs(doc,
              ["측점", "2019 (검증완료)", "2022~25 (미검증)", "편각 차", "총자력 차"],
              rows, [2.2, 3.0, 3.2, 2.4, 2.6],
@@ -687,7 +711,7 @@ def build(d):
          "잡음이 신호의 5배인 상태에서 보정을 얹으면 개선 여부 자체를 판정할 "
          "수 없다. 실제로 균일 V 근사를 쓴 기존 시도는 교차검증 편각을 "
          "0.751°에서 0.858°로 악화시켰다.")
-    tcap(doc, "표 15. 수정된 작업 순서")
+    tcap(doc, "표 16. 수정된 작업 순서")
     booktabs(doc,
              ["단계", "내용", "비고"],
              [["0", "2022~25 야장 확보 및 관측시각 복원", "완료"],
@@ -708,7 +732,7 @@ def build(d):
          "해상도 한계를 함께 재검토해야 KPI 달성 가능성을 판정할 수 있다.")
 
     heading(doc, "7.1 1단계 판정기준", 2)
-    tcap(doc, f"표 16. 사전 판정기준. 현재 {asym['rD_rms']:.0f}′ 이므로 "
+    tcap(doc, f"표 17. 사전 판정기준. 현재 {asym['rD_rms']:.0f}′ 이므로 "
                  "세 번째 구간에서 시작한다.")
     booktabs(doc,
              ["감사 후 편각 잔차 RMS", "판단"],
@@ -788,6 +812,53 @@ def build(d):
          "자료가 갱신되면 문서도 함께 갱신된다.")
 
     return doc
+
+
+def fieldbook_summary():
+    """야장 세션표에서 연도별 시각 확보 현황을 읽는다(하드코딩 금지)."""
+    import csv as _csv
+    f = HERE / "docs" / "data" / "fieldbook_sessions.csv"
+    if not f.exists():
+        return dict(rows=[], total=0, missing=0, missing_note="")
+    rs = list(_csv.DictReader(open(f, encoding="utf-8-sig")))
+    by = {}
+    miss = []
+    for r in rs:
+        y = (r.get("날짜") or "")[:4]
+        has = bool((r.get("시작") or "").strip())
+        a, b = by.get(y, (0, 0))
+        by[y] = (a + 1, b + (1 if has else 0))
+        if not has:
+            miss.append(f"{r.get('측점','')} {r.get('날짜','')}")
+    rows = [[y, str(v[0]), f"{v[1]}건"] for y, v in sorted(by.items())]
+    return dict(rows=rows, total=len(rs), missing=len(miss),
+                missing_note=", ".join(miss))
+
+
+def external_summary():
+    """산출한 보정량 요약 — external_corrections_multi.csv 에서 읽는다."""
+    import csv as _csv
+    import statistics as _st
+    f = HERE / "docs" / "data" / "external_corrections_multi.csv"
+    if not f.exists():
+        return None
+    rs = [r for r in _csv.DictReader(open(f, encoding="utf-8-sig"))
+          if r.get("상태") == "정상"]
+    if not rs:
+        return None
+    g = lambda k: [abs(float(r[k])) for r in rs
+                   if r.get(k) not in (None, "", "nan")]
+    dD, dI, dF = g("dD_arcmin"), g("dI_arcmin"), g("dF")
+    comp = sum(1 for r in rs if r.get("창") == "성분별")
+    rows = [["보정량 산출 세션", f"{len(rs)}건"],
+            ["성분별 관측구간 적용", f"{comp}건"],
+            ["편각 보정량 |dD| 평균 / 최대",
+             f"{_st.mean(dD):.2f}′ / {max(dD):.2f}′"],
+            ["복각 보정량 |dI| 평균 / 최대",
+             f"{_st.mean(dI):.2f}′ / {max(dI):.2f}′" if dI else "—"],
+            ["총자력 보정량 |dF| 평균 / 최대",
+             f"{_st.mean(dF):.1f} / {max(dF):.1f} nT"]]
+    return dict(rows=rows, dD_mean=_st.mean(dD))
 
 
 def main():
