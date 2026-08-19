@@ -114,8 +114,14 @@ def align_to_geographic(df: pd.DataFrame, lat: float, lon: float) -> pd.DataFram
 # Kp 는 전지구 지수이고 CYG·KASA 는 한반도에서 직접 잰 값이다. 그래서 Kp 를
 # 「제외 기준」으로 쓰지 않고 플래그로만 남기고, 실제 채택 여부는 **관측소가
 # 그 시간창에서 실제로 흔들렸는지**(변동폭)로 판단한다.
+# 기준선 통계 — 세션 대표값과 같은 규약(중앙값)을 기본으로 한다.
+BASELINE_STAT = "median"
+
 KP_QUIET, KP_CAUTION = 2.0, 3.0
-RANGE_QUIET_NT, RANGE_CAUTION_NT = 15.0, 40.0
+# 성분별 문턱 — 편각 KPI 6′ 를 기준으로 잡았다. 관측 창 안에서 관측소 편각이
+# 이미 3′ 이상 흔들렸다면 그 세션의 「한 값 대표」가 성립하지 않는다.
+RANGE_QUIET = {"D": 3.0, "I": 3.0, "F": 15.0}      # ′, ′, nT
+RANGE_CAUTION = {"D": 8.0, "I": 8.0, "F": 40.0}
 
 
 def kp_flag(kp):
@@ -126,15 +132,27 @@ def kp_flag(kp):
     return "CAUTION" if kp <= KP_CAUTION else "DISTURBED"
 
 
-def session_qc(kp, rng):
-    """세션 채택 등급 — 관측소 실측 변동폭 우선, Kp 는 보조."""
-    if rng != rng:
+def session_qc(kp, rng: dict):
+    """
+    세션 채택 등급 — 관측소가 그 창에서 실제로 흔들렸는지로 판정한다.
+
+    rng 는 성분별 변동폭 {"D": 분, "I": 분, "F": nT}. 하나라도 CAUTION 문턱을
+    넘으면 그 등급으로 내려간다. Kp 는 전지구 지수이므로 보조로만 쓴다.
+    """
+    if not rng or all(v != v for v in rng.values()):
         return kp_flag(kp)
-    if rng <= RANGE_QUIET_NT and kp_flag(kp) != "DISTURBED":
-        return "QUIET"
-    if rng <= RANGE_CAUTION_NT:
-        return "CAUTION"
-    return "DISTURBED"
+    worst = "QUIET"
+    for k, v in rng.items():
+        if v != v:
+            continue
+        if v > RANGE_CAUTION.get(k, 1e9):
+            worst = "DISTURBED"
+        elif v > RANGE_QUIET.get(k, 1e9) and worst != "DISTURBED":
+            worst = "CAUTION"
+    # 실측이 조용해도 Kp 가 폭풍이면 한 단계만 낮춘다(폐기하지는 않는다)
+    if worst == "QUIET" and kp_flag(kp) == "DISTURBED":
+        worst = "CAUTION"
+    return worst
 
 
 def parse_window(txt):
@@ -164,7 +182,9 @@ def quiet_baseline(obs: pd.DataFrame, kp: pd.DataFrame, center: dt.date):
         sel = w[night.to_numpy()]
     if len(sel) < 60:
         return None
-    return {"X": sel.X.mean(), "Y": sel.Y.mean(), "Z": sel.Z.mean(), "n": len(sel)}
+    f = (lambda v: float(v.median())) if BASELINE_STAT == "median" \
+        else (lambda v: float(v.mean()))
+    return {"X": f(sel.X), "Y": f(sel.Y), "Z": f(sel.Z), "n": len(sel)}
 
 
 # ------------------------------------------------------------------ 공간보간
@@ -189,7 +209,7 @@ def interpolate(vals, slat, slon, lat, lon, mode="plane"):
     return float((w * v).sum() / w.sum()), "idw"
 
 
-def main(mode="plane"):
+def main(mode="plane", only=None, out_csv=None):
     sys.stdout.reconfigure(encoding="utf-8")
     print("=" * 78)
     print(f"④ External 층 — 다중 관측소 공간보간 ({mode})")
@@ -211,7 +231,9 @@ def main(mode="plane"):
 
     # ── 관측소 자료 적재 ────────────────────────────────────────────────
     obs = {}
-    for key, st in STATIONS.items():
+    use = STATIONS if not only else {k: v for k, v in STATIONS.items()
+                                     if k in only}
+    for key, st in use.items():
         if st["src"] == "kasa":
             d = load_kasa(key)
         else:
@@ -250,7 +272,9 @@ def main(mode="plane"):
         day, site = r["날짜"], r["측점"]
         t0, t1 = to_utc(day, r["시작"]), to_utc(day, r["종료"])
         xy = site_xy.get(site)
-        blank = {"Kp": np.nan, "Kp_flag": "미상", "관측소_변동폭_nT": np.nan,
+        blank = {"Kp": np.nan, "Kp_flag": "미상",
+                 "관측소_D변동_분": np.nan, "관측소_I변동_분": np.nan,
+                 "관측소_F변동_nT": np.nan, "관측소_dB_nT": np.nan,
                  "QC": "미상", "D_utc": "", "I_utc": "",
                  "dF": np.nan, "dD_arcmin": np.nan, "dI_arcmin": np.nan,
                  "n_station": 0, "보간": "-", "창": "-"}
@@ -288,10 +312,18 @@ def main(mode="plane"):
                 out.append((STATIONS[key]["lat"], STATIONS[key]["lon"],
                             seg.X.median() - b["X"], seg.Y.median() - b["Y"],
                             seg.Z.median() - b["Z"]))
+                # 관측소 자신의 D·I·F 시계열 변동폭 — X 만 보면 Y·Z 의 흔들림을
+                # 놓친다(편각은 Y, 복각은 Z 에 민감하다).
+                H = np.hypot(seg.X, seg.Y)
+                Dd = np.degrees(np.arctan2(seg.Y, seg.X)) * 60      # 분
+                Ii = np.degrees(np.arctan2(seg.Z, H)) * 60          # 분
+                Ff = np.hypot(H, seg.Z)
+                rng_ = lambda v: float(np.nanmax(v) - np.nanmin(v)) if len(v) else np.nan
                 spread.append(dict(
                     key=key, n=int(len(seg)),
-                    rangeX=float(seg.X.max() - seg.X.min()),
-                    stdX=float(seg.X.std(ddof=0)) if len(seg) > 1 else 0.0))
+                    rD=rng_(Dd), rI=rng_(Ii), rF=rng_(Ff),
+                    dB=float(np.hypot(np.hypot(rng_(seg.X), rng_(seg.Y)),
+                                      rng_(seg.Z)))))
             return out, spread
 
         Di, Ii, Fi, X0, Y0, Z0 = LB.igrf_dif(
@@ -308,8 +340,10 @@ def main(mode="plane"):
             if spread:
                 qc[comp] = dict(
                     n_min=min(x["n"] for x in spread),
-                    range_max=max(x["rangeX"] for x in spread),
-                    std_max=max(x["stdX"] for x in spread))
+                    rD=max(x["rD"] for x in spread),
+                    rI=max(x["rI"] for x in spread),
+                    rF=max(x["rF"] for x in spread),
+                    dB=max(x["dB"] for x in spread))
             if not dev:
                 res[comp] = np.nan
                 continue
@@ -335,13 +369,26 @@ def main(mode="plane"):
             rows.append({**r, **blank, "상태": "관측소 자료 없음"})
             continue
 
-        kpv = float(kp_for([t0], kp).iloc[0])
-        rng = max((v["range_max"] for v in qc.values()), default=np.nan)
+        # Kp 는 3시간 구간값이라 세션이 경계를 넘으면 시작시각만으로는 놓친다.
+        # 성분 시간창 전체(양 끝 + 30분 간격)에서 최대값을 QC 에 쓴다.
+        wlo = min(w[0] for w in win.values())
+        whi = max(w[1] for w in win.values())
+        probes = pd.date_range(wlo, whi, freq="30min").tolist()
+        if probes[-1] != whi:
+            probes.append(whi)
+        kpv = float(np.nanmax(kp_for(probes, kp).to_numpy()))
+        rD = qc.get("D", {}).get("rD", np.nan)
+        rI = qc.get("I", {}).get("rI", np.nan)
+        rF = qc.get("F", {}).get("rF", np.nan)
+        dB = max((v.get("dB", np.nan) for v in qc.values()), default=np.nan)
         rows.append({**r,
                      "Kp": kpv,
                      "Kp_flag": kp_flag(kpv),
-                     "관측소_변동폭_nT": round(rng, 1) if rng == rng else np.nan,
-                     "QC": session_qc(kpv, rng),
+                     "관측소_D변동_분": round(rD, 2) if rD == rD else np.nan,
+                     "관측소_I변동_분": round(rI, 2) if rI == rI else np.nan,
+                     "관측소_F변동_nT": round(rF, 1) if rF == rF else np.nan,
+                     "관측소_dB_nT": round(dB, 1) if dB == dB else np.nan,
+                     "QC": session_qc(kpv, {"D": rD, "I": rI, "F": rF}),
                      "D_utc": f"{win['D'][0]:%Y-%m-%d %H:%M}~{win['D'][1]:%H:%M}",
                      "I_utc": f"{win['I'][0]:%Y-%m-%d %H:%M}~{win['I'][1]:%H:%M}",
                      "dF": res.get("F", np.nan),
@@ -376,15 +423,17 @@ def main(mode="plane"):
                   f"최대 {g.max():.2f}′")
 
     cols = [c for c in ("측점", "날짜", "시작", "종료", "편각구간", "복각구간",
-                        "D_utc", "I_utc", "Kp", "Kp_flag", "관측소_변동폭_nT",
-                        "QC", "dF", "dD_arcmin", "dI_arcmin",
+                        "D_utc", "I_utc", "Kp", "Kp_flag",
+                        "관측소_D변동_분", "관측소_I변동_분", "관측소_F변동_nT",
+                        "관측소_dB_nT", "QC", "dF", "dD_arcmin", "dI_arcmin",
                         "n_station", "보간", "창", "상태", "파일")
             if c in res.columns]
     out = res[cols].copy()
     out["날짜"] = out["날짜"].astype(str)
-    OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
-    out.to_csv(OUT_CSV, index=False, encoding="utf-8-sig")
-    print(f"[저장] {OUT_CSV}  ({len(out)}행, 정상 {len(ok)}행)")
+    dst = Path(out_csv) if out_csv else OUT_CSV
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    out.to_csv(dst, index=False, encoding="utf-8-sig")
+    print(f"[저장] {dst}  ({len(out)}행, 정상 {len(ok)}행)")
     return res
 
 
@@ -392,5 +441,11 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", default="plane",
                     choices=["plane", "idw", "nearest"])
+    ap.add_argument("--baseline", default="median", choices=["median", "mean"],
+                    help="정온야간 기준선 통계(민감도 비교용)")
+    ap.add_argument("--stations", default="", help="쉼표로 구분(예: CYG). 비우면 전부")
+    ap.add_argument("--out", default="", help="산출 CSV 경로")
     a = ap.parse_args()
-    main(a.mode)
+    BASELINE_STAT = a.baseline
+    main(a.mode, only=[x.strip() for x in a.stations.split(",") if x.strip()] or None,
+         out_csv=a.out or None)

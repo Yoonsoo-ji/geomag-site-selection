@@ -25,6 +25,7 @@ CYG dmin 자료를 확보하면 add_external_layer() 를 통해 확장한다.
 
 import json
 import math
+import sys
 import datetime as dt
 from pathlib import Path
 
@@ -142,6 +143,12 @@ def load_survey_points() -> pd.DataFrame:
 #   Grade B  메타데이터 일부 불완전 → 검증·비교용
 #   Grade C  이설·망실·장비 고장·방위각 이상 → 적합에서 제외
 #
+# 열이 두 축으로 나뉜다.
+#   geometry_version  물리적 판 — 표석 재설·이설·좌표 재설정에만 올라간다.
+#                     이것이 바뀌면 **다른 측점**이므로 site_key 를 분리한다.
+#   qc_epoch          품질 구간 라벨 — 편각 신뢰성 문제처럼 「같은 점인데 그 시기
+#                     자료를 믿기 어려운」 경우. 측점을 쪼개지 않는다.
+#
 # station 열의 "*" 는 전 측점 공통(연도 기준) 규칙이다.
 STATION_HISTORY_CSV = DATA / "station_history.csv"
 
@@ -166,7 +173,14 @@ def load_station_history() -> pd.DataFrame:
     h = pd.read_csv(STATION_HISTORY_CSV, encoding="utf-8-sig")
     for c in ("from_year", "to_year"):
         h[c] = pd.to_numeric(h[c], errors="coerce")
-    h["version"] = pd.to_numeric(h["version"], errors="coerce").fillna(1).astype(int)
+    # 구 스키마(version) 호환
+    if "geometry_version" not in h.columns and "version" in h.columns:
+        h = h.rename(columns={"version": "geometry_version"})
+    h["geometry_version"] = (pd.to_numeric(h["geometry_version"], errors="coerce")
+                             .fillna(1).astype(int))
+    if "qc_epoch" not in h.columns:
+        h["qc_epoch"] = ""
+    h["qc_epoch"] = h["qc_epoch"].fillna("")
     _HIST_CACHE = h
     return h
 
@@ -182,10 +196,22 @@ def _hist_rows(name, year):
 
 
 def station_version(name, year) -> int:
-    """그 연도의 측점 판(version). 이력이 없으면 1."""
+    """
+    그 연도의 **물리적** 측점 판(geometry_version). 이력이 없으면 1.
+
+    표석 재설·이설·좌표 재설정처럼 「다른 점이 된」 경우에만 올라간다.
+    자료 품질 문제(편각 이상 등)는 여기가 아니라 qc_epoch/grade 로 다룬다.
+    """
     r = _hist_rows(name, year)
     r = r[r["station"] == name]
-    return int(r["version"].max()) if len(r) else 1
+    return int(r["geometry_version"].max()) if len(r) else 1
+
+
+def station_epoch(name, year) -> str:
+    """그 연도가 속한 품질구간 이름(있으면). 진단·집계 라벨용."""
+    r = _hist_rows(name, year)
+    r = r[(r["station"] == name) & (r["qc_epoch"].astype(str) != "")]
+    return str(r["qc_epoch"].iloc[-1]) if len(r) else ""
 
 
 def station_grade(name, year) -> str:
@@ -206,13 +232,16 @@ def apply_station_history(df: pd.DataFrame) -> pd.DataFrame:
         return df
     ver = [station_version(n, int(y)) for n, y in zip(df["name"], df["year"])]
     grd = [station_grade(n, int(y)) for n, y in zip(df["name"], df["year"])]
-    df = df.assign(st_version=ver, qc_grade=grd)
+    epo = [station_epoch(n, int(y)) for n, y in zip(df["name"], df["year"])]
+    df = df.assign(geometry_version=ver, qc_grade=grd, qc_epoch=epo)
 
     # 한 측점에 여러 판이 실제로 섞여 있을 때만 이름을 분리한다
-    multi = {n for n, g in df.groupby("name")["st_version"] if g.nunique() > 1}
+    # 분할은 **물리적 판이 실제로 갈릴 때만** 한다
+    multi = {n for n, g in df.groupby("name")["geometry_version"]
+             if g.nunique() > 1}
     df["station"] = df["name"]                       # 원 측점명(외부 결합용)
-    df["site_key"] = [f"{n}#v{v}" if n in multi else n
-                      for n, v in zip(df["name"], df["st_version"])]
+    df["site_key"] = [f"{n}#g{v}" if n in multi else n
+                      for n, v in zip(df["name"], df["geometry_version"])]
     # 이후 파이프라인은 판을 구분한 이름으로 다룬다 — 재설 전후를 한 점으로
     # 묶으면 재방문 산포·집계·LOSO 가 모두 어긋난다.
     df["name"] = df["site_key"]
@@ -222,9 +251,9 @@ def apply_station_history(df: pd.DataFrame) -> pd.DataFrame:
     keep = df["qc_grade"].isin(STATION_GRADES_FOR_FIT)
     n = int((~keep).sum())
     if n:
-        rm = df.loc[~keep, ["name", "year", "qc_grade"]]
+        rm = df.loc[~keep, ["station", "year", "qc_grade"]]
         print(f"  [이력] 등급 제외 {n}행: "
-              + ", ".join(f"{r['name']}{int(r['year'])}({r['qc_grade']})"
+              + ", ".join(f"{r['station']}{int(r['year'])}({r['qc_grade']})"
                           for _, r in rm.iterrows()))
     return df[keep]
 
@@ -298,20 +327,29 @@ def apply_quality_filter(df: pd.DataFrame) -> pd.DataFrame:
 #   F : 보정량 38 nT / 잔차 약 190 nT → 지각장 불일치가 지배해 잡음만 더해짐 (+8.3)
 # 그래서 **편각에만** 적용한다. 감사 전 표본에서는 D 도 악화됐었다(+0.079) —
 # 방위 기준 오류가 외부장 신호를 덮고 있었기 때문이다.
-# 2026-08-19 재판정 — **미적용으로 되돌린다.**
+# 2026-08-19 3차 판정 — **E2(4소 평면보간) · 편각·복각 성분별 보정을 채택**한다.
 #
-# 오전에 "subtract_quiet_D + multi 가 LOO 편각을 0.365->0.323 으로 줄인다"고 채택했으나,
-# 그 비교는 순환이었다. inlier 를 1차 적합으로 골랐기 때문에 설정마다 평가 측점이
-# 달라졌다. 평가 집합을 «지각벡터 미적용 · External 미적용 · 0차» 에서 한 번만 정하고
-# 고정해 다시 견주면 (`_fair_grid.py`):
+# 오전에는 순환 비교로 채택했다가(잘못), 낮에는 미적용으로 되돌렸다. 그때는
+# 세션 전체를 한 시각으로 대표시키고 대표값도 평균이었으며 QC 도 X 성분만 봤다.
+# 성분별 관측구간·중앙값·성분별 QC 를 갖춘 뒤 조건을 모두 맞춰(degree 0 · Grade A ·
+# 지각 α=1 · 벡터 OFF · 평가집합 고정) 다시 견주니 결과가 바뀌었다
+# (`compare_external_models.py`):
 #
-#   지각벡터 적용 기준   none 0.5016 / subtract_D·cyg 0.5098 / subtract_D·multi 0.5177
-#                        subtract_quiet_D·cyg 0.5189 / ·multi 0.5323
+#   자료원          subtract_D   subtract_DI   subtract_quiet_DI
+#   미적용            0.5123°       —              —
+#   E0 청양단독       0.5495        0.5495         0.5150
+#   E1 최근접         0.5504        0.5504         0.5183
+#   **E2 평면보간**   **0.4987**    **0.4987**     0.5044
+#   E2b 역거리        0.5595        0.5595         0.5384
 #
-# **어떤 보정도 편각을 개선하지 못한다.** 자문 권고대로 대체관측소 공간보간까지
-# 구현했으나(lmm_external_multi.py), 현재 16측점 표본에서는 이득이 확인되지 않는다.
-# 보정량 자체는 유지하므로 측점이 늘면 다시 판정할 수 있다.
-EXTERNAL_MODE = "none"
+# **공간보간만이 기준선을 넘는다.** 단일 관측소(E0)나 최근접(E1)은 오히려 나쁘다 —
+# 「가장 가까운 관측소와 변화가 같다」는 가정이 한반도 규모에서 성립하지 않는다는
+# 뜻이고, 자문 지적과 같은 방향이다. 복각도 성분별 구간을 쓰면 0.2505 → 0.2430° 로
+# 함께 좋아진다.
+#
+# ⚠ 개선폭은 작다(D −0.0136° · I −0.0075°). 12개 설정 중 최소를 고른 것이므로
+#   선택편의를 포함한다. 채택 근거는 폭이 아니라 **방식의 물리적 타당성**이다.
+EXTERNAL_MODE = "subtract_DI"
 
 # 보정량 자료원 — "cyg"(청양 단독, 균일 V 근사) | "multi"(관측소 4소 공간보간).
 # 자문 권고는 대체관측소 활용이므로 자료가 있으면 multi 를 쓴다. 파일이 없으면
@@ -334,9 +372,13 @@ def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
     ec["연도"] = pd.to_datetime(ec["날짜"]).dt.year
     if EXTERNAL_MODE in ("subtract_quiet", "subtract_quiet_D",
                          "subtract_quiet_DI"):
-        # 교란시 세션의 보정량은 신뢰하지 않는다(균일·평면 근사가 폭풍 중에 가장
-        # 크게 깨진다). 값을 만지는 대신 그 세션의 보정만 쓰지 않는 방식.
-        ec = ec[ec["Kp"] <= FB2019_MAX_KP]
+        # QC 열이 있으면 그것을 우선한다 — Kp 는 전지구 지수라 보조다.
+        if "QC" in ec.columns:
+            ec = ec[ec["QC"] == "QUIET"]
+        else:
+            # 교란시 세션의 보정량은 신뢰하지 않는다(균일·평면 근사가 폭풍 중에
+            # 가장 크게 깨진다). 값을 만지는 대신 그 세션의 보정만 쓰지 않는다.
+            ec = ec[ec["Kp"] <= FB2019_MAX_KP]
     if ec.empty:
         df["ext_src"] = "미적용(표본없음)"
         return df
@@ -1051,7 +1093,8 @@ def fit_regional(sites, crustal, degree=REGIONAL_DEGREE):
 
 # ------------------------------------------------------------------ 검증
 def validate(sites, coef, crust, inliers, degree=REGIONAL_DEGREE):
-    """IGRF 단독 / +Crustal / +Regional 단계별 RMS 를 inlier 기준으로 산출."""
+    """단계별 RMS. 평가 측점은 동결 집합(있으면)을 쓴다."""
+    inliers = eval_mask(sites, inliers)
     A = poly_terms(sites["lat"].values, sites["lon"].values, degree)
     rows = []
 
@@ -1092,6 +1135,57 @@ def rms(x):
     return float(np.sqrt(np.nanmean(x ** 2)))
 
 
+# ── 평가 집합 동결 ──────────────────────────────────────────────────────────
+EVAL_SET_JSON = DOCS_DATA / "eval_set.json"
+USE_FROZEN_EVAL = True
+_EVAL_CACHE = None
+
+
+def load_eval_set():
+    """동결된 평가 집합 {성분: {측점명: bool}}. 없으면 None."""
+    global _EVAL_CACHE
+    if _EVAL_CACHE is not None:
+        return _EVAL_CACHE
+    if not (USE_FROZEN_EVAL and EVAL_SET_JSON.exists()):
+        return None
+    _EVAL_CACHE = json.loads(EVAL_SET_JSON.read_text(encoding="utf-8"))
+    return _EVAL_CACHE
+
+
+def eval_mask(sites, inliers):
+    """
+    평가에 쓸 마스크. 동결 파일이 있으면 그것을 쓰고, 없으면 그때의 inlier.
+
+    ⚠ 적합에는 그때그때의 inlier 를 쓴다(강건 적합의 목적). 동결되는 것은
+      **성능을 재는 측점 집합**이다.
+    """
+    ev = load_eval_set()
+    if not ev:
+        return inliers
+    out = {}
+    for k in ("D", "I", "F"):
+        tbl = ev.get(k, {})
+        out[k] = np.array([bool(tbl.get(str(n), False)) for n in sites["name"]])
+    return out
+
+
+def freeze_eval_set(sites, crustal, degree=0):
+    """기준 설정의 inlier 를 평가 집합으로 저장한다(의도적으로만 호출)."""
+    _, _, inl = fit_regional(sites, crustal, degree)
+    doc = {k: {str(n): bool(v) for n, v in zip(sites["name"], inl[k])}
+           for k in ("D", "I", "F")}
+    doc["_note"] = ("기준 설정(External 미적용 · 지각 벡터 OFF · degree 0 · "
+                    "Grade A)에서 1회 확정한 평가 측점. 이후 모든 비교는 이 "
+                    "집합 위에서만 한다.")
+    doc["_generated"] = dt.datetime.now().isoformat(timespec="seconds")
+    EVAL_SET_JSON.parent.mkdir(parents=True, exist_ok=True)
+    EVAL_SET_JSON.write_text(json.dumps(doc, ensure_ascii=False, indent=1),
+                             encoding="utf-8")
+    print(f"[동결] 평가 집합 저장 {EVAL_SET_JSON} "
+          + " · ".join(f"{k} {int(inl[k].sum())}" for k in ("D", "I", "F")))
+    return doc
+
+
 def loo_cv(sites, crustal, degree=REGIONAL_DEGREE):
     """
     Leave-one-out 교차검증.
@@ -1099,7 +1193,8 @@ def loo_cv(sites, crustal, degree=REGIONAL_DEGREE):
     적합에 쓰이지 않은 측점에서의 예측오차이므로 과적합에 속지 않는다.
     inlier 로 판정된 측점만 평가 대상으로 삼는다.
     """
-    _, _, inl = fit_regional(sites, crustal, degree)
+    _, _, inl0 = fit_regional(sites, crustal, degree)
+    inl = eval_mask(sites, inl0)
     errs = {"D": [], "I": [], "F": []}
 
     for i in range(len(sites)):
@@ -1369,4 +1464,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if "--freeze-eval" in sys.argv:
+        _pts = load_all_points(include_2019=INCLUDE_2019)
+        _res = igrf_residuals(_pts)
+        _sites = attach_crustal_di(aggregate_sites(_pts, _res), None)
+        _lo, _la, _g = load_kigam_grid()
+        USE_FROZEN_EVAL = False
+        freeze_eval_set(_sites, CrustalGrid(_lo, _la, _g), 0)
+    else:
+        main()
