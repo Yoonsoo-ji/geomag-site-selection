@@ -129,6 +129,8 @@ function crustalAt(lat,lon,cr){
 // 지각 이상벡터 — 스칼라 dF 에서 파수영역 역산으로 복원한 (북·동·하) 성분.
 // b_down 은 내보내기 용량을 아끼려 여기서 유도한다(스칼라 격자와 정의상 정합):
 //   b_down = (dF + dc - l*b_north - m*b_east) / n
+// 지각 결합계수 — 모형 정의상 F 에는 α·ΔF 를 더한다(기본 1).
+function crAlpha(cr){ return (cr && cr.alpha !== undefined) ? cr.alpha : 1; }
 function crustalVecAt(lat,lon,cr){
   const V=cr&&cr.vector; if(!V) return null;
   const i=Math.round((lon-cr.lon0)/cr.dlon), j=Math.round((lat-cr.lat0)/cr.dlat);
@@ -152,7 +154,7 @@ function calc(lat,lon,year){
   const cd=crustalDI(e, open?crustalVecAt(lat,lon,MODEL.crustal):null);
   return {igrf:e,
     lmm:{D:e.D+cd.D+regTerm(r.D,lat,lon,r), I:e.I+cd.I+regTerm(r.I,lat,lon,r),
-         F:e.F+(c===null?0:c)+regTerm(r.F,lat,lon,r)},
+         F:e.F+(c===null?0:crAlpha(MODEL.crustal)*c)+regTerm(r.F,lat,lon,r)},
     gap:c===null};
 }
 

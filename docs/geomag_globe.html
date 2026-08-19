@@ -432,6 +432,8 @@ const crustalOpen = () => new Date() <= new Date(CRUSTAL_OPEN_UNTIL + 'T23:59:59
 // 지각 이상벡터 — 스칼라 dF 에서 파수영역 역산으로 복원한 (북·동·하) 성분.
 // b_down 은 내보내기 용량을 아끼려 여기서 유도한다(스칼라 격자와 정의상 정합):
 //   b_down = (dF + dc - l*b_north - m*b_east) / n
+// 지각 결합계수 — 모형 정의상 F 에는 α·ΔF 를 더한다(기본 1).
+function crAlpha(cr){ return (cr && cr.alpha !== undefined) ? cr.alpha : 1; }
 function crustalVecAt(lat,lon,cr){
   const V=cr&&cr.vector; if(!V) return null;
   const i=Math.round((lon-cr.lon0)/cr.dlon), j=Math.round((lat-cr.lat0)/cr.dlat);
@@ -457,7 +459,7 @@ function lmmAt(lat,lon,year){
   return {
     D:e.D+cd.D+regTerm(r.D,lat,lon,r),
     I:e.I+cd.I+regTerm(r.I,lat,lon,r),
-    F:e.F+(c===null?0:c)+regTerm(r.F,lat,lon,r),
+    F:e.F+(c===null?0:crAlpha(cr)*c)+regTerm(r.F,lat,lon,r),
     gap:open && c===null,                  // 항공자력 자료 공백 여부
     noCrustal:!open                        // 공개기한 경과로 지각층 제외
   };
@@ -614,7 +616,9 @@ function showLMMInfo(){
   const loo=LMMDATA&&LMMDATA.loo_cv, n=LMMDATA&&LMMDATA.sites?LMMDATA.sites.length:0;
   el.innerHTML="<b style='color:#cfe0ff'>🇰🇷 한국 LMM</b>"
     +"<div style='color:#9fb2c8;font-size:11px;margin:3px 0 7px'>"
-    +"Core(IGRF-14) + Regional + Crustal 결합 · External 미적용</div>"
+    +"Core(IGRF-14) + Regional(상수항) + Crustal(1:1) 결합<br>"
+    +"<span style='color:#8fa3ba'>중간보고 기준판 v1 · 외부장은 성과 정리 "
+    +"단계에만 적용 · 지각 벡터 미적용</span></div>"
     +"<div style='display:flex;gap:5px;margin:0 0 7px'>"
     +"<button id='lmmVal' style='flex:1;font-size:11px;padding:5px 0;border-radius:7px;cursor:pointer;"
     +"border:1px solid rgba(120,175,255,.45);background:"
