@@ -110,6 +110,33 @@ def align_to_geographic(df: pd.DataFrame, lat: float, lon: float) -> pd.DataFram
     return out
 
 
+# ── QC ────────────────────────────────────────────────────────────────────
+# Kp 는 전지구 지수이고 CYG·KASA 는 한반도에서 직접 잰 값이다. 그래서 Kp 를
+# 「제외 기준」으로 쓰지 않고 플래그로만 남기고, 실제 채택 여부는 **관측소가
+# 그 시간창에서 실제로 흔들렸는지**(변동폭)로 판단한다.
+KP_QUIET, KP_CAUTION = 2.0, 3.0
+RANGE_QUIET_NT, RANGE_CAUTION_NT = 15.0, 40.0
+
+
+def kp_flag(kp):
+    if kp != kp:
+        return "미상"
+    if kp <= KP_QUIET:
+        return "QUIET"
+    return "CAUTION" if kp <= KP_CAUTION else "DISTURBED"
+
+
+def session_qc(kp, rng):
+    """세션 채택 등급 — 관측소 실측 변동폭 우선, Kp 는 보조."""
+    if rng != rng:
+        return kp_flag(kp)
+    if rng <= RANGE_QUIET_NT and kp_flag(kp) != "DISTURBED":
+        return "QUIET"
+    if rng <= RANGE_CAUTION_NT:
+        return "CAUTION"
+    return "DISTURBED"
+
+
 def parse_window(txt):
     """야장의 「HH:MM~HH:MM」 구간 문자열 → (시작, 종료) time. 없으면 None."""
     if not isinstance(txt, str) or "~" not in txt:
@@ -223,9 +250,10 @@ def main(mode="plane"):
         day, site = r["날짜"], r["측점"]
         t0, t1 = to_utc(day, r["시작"]), to_utc(day, r["종료"])
         xy = site_xy.get(site)
-        blank = {"Kp": np.nan, "dF": np.nan, "dD_arcmin": np.nan,
-                 "dI_arcmin": np.nan, "n_station": 0, "보간": "-",
-                 "창": "-"}
+        blank = {"Kp": np.nan, "Kp_flag": "미상", "관측소_변동폭_nT": np.nan,
+                 "QC": "미상", "D_utc": "", "I_utc": "",
+                 "dF": np.nan, "dD_arcmin": np.nan, "dI_arcmin": np.nan,
+                 "n_station": 0, "보간": "-", "창": "-"}
         if xy is None:
             rows.append({**r, **blank, "상태": "측점 좌표 없음"})
             continue
@@ -242,8 +270,13 @@ def main(mode="plane"):
         used = ("성분별" if (wD and wI) else "세션전체")
 
         def deviations(a0, a1):
-            """주어진 시간창에서 관측소별 (위도, 경도, vX, vY, vZ)."""
-            out = []
+            """
+            주어진 시간창에서 관측소별 (위도, 경도, vX, vY, vZ).
+
+            대표값은 **중앙값**이다 — 1분 자료의 스파이크 한두 개에 평균이 끌려간다.
+            창 안의 산포(range)는 QC 로 따로 모은다.
+            """
+            out, spread = [], []
             for key, dfo in obs.items():
                 ck = (key, day)
                 if ck not in base_cache:
@@ -253,9 +286,13 @@ def main(mode="plane"):
                 if b is None or seg.empty:
                     continue
                 out.append((STATIONS[key]["lat"], STATIONS[key]["lon"],
-                            seg.X.mean() - b["X"], seg.Y.mean() - b["Y"],
-                            seg.Z.mean() - b["Z"]))
-            return out
+                            seg.X.median() - b["X"], seg.Y.median() - b["Y"],
+                            seg.Z.median() - b["Z"]))
+                spread.append(dict(
+                    key=key, n=int(len(seg)),
+                    rangeX=float(seg.X.max() - seg.X.min()),
+                    stdX=float(seg.X.std(ddof=0)) if len(seg) > 1 else 0.0))
+            return out, spread
 
         Di, Ii, Fi, X0, Y0, Z0 = LB.igrf_dif(
             np.array([xy["lat"]]), np.array([xy["lon"]]), np.array([0.0]),
@@ -265,8 +302,14 @@ def main(mode="plane"):
         bF = math.hypot(bH, Z0)
 
         res, how, nst = {}, "-", 0
+        qc = {}
         for comp in ("D", "I", "F"):
-            dev = deviations(*win[comp])
+            dev, spread = deviations(*win[comp])
+            if spread:
+                qc[comp] = dict(
+                    n_min=min(x["n"] for x in spread),
+                    range_max=max(x["rangeX"] for x in spread),
+                    std_max=max(x["stdX"] for x in spread))
             if not dev:
                 res[comp] = np.nan
                 continue
@@ -292,7 +335,15 @@ def main(mode="plane"):
             rows.append({**r, **blank, "상태": "관측소 자료 없음"})
             continue
 
-        rows.append({**r, "Kp": float(kp_for([t0], kp).iloc[0]),
+        kpv = float(kp_for([t0], kp).iloc[0])
+        rng = max((v["range_max"] for v in qc.values()), default=np.nan)
+        rows.append({**r,
+                     "Kp": kpv,
+                     "Kp_flag": kp_flag(kpv),
+                     "관측소_변동폭_nT": round(rng, 1) if rng == rng else np.nan,
+                     "QC": session_qc(kpv, rng),
+                     "D_utc": f"{win['D'][0]:%Y-%m-%d %H:%M}~{win['D'][1]:%H:%M}",
+                     "I_utc": f"{win['I'][0]:%Y-%m-%d %H:%M}~{win['I'][1]:%H:%M}",
                      "dF": res.get("F", np.nan),
                      "dD_arcmin": res.get("D", np.nan),
                      "dI_arcmin": res.get("I", np.nan),
@@ -313,6 +364,10 @@ def main(mode="plane"):
               f"{ok.dI_arcmin.abs().max():.2f}′")
         print("  시간창: " + ", ".join(f"{k} {v}건"
                                     for k, v in ok['창'].value_counts().items()))
+        print("  QC: " + ", ".join(f"{k} {v}건"
+                                   for k, v in ok['QC'].value_counts().items()))
+        print("  Kp: " + ", ".join(f"{k} {v}건"
+                                   for k, v in ok['Kp_flag'].value_counts().items()))
         # 성분별 창을 따로 쓴 효과 — 같은 세션에서 D 와 I 보정량이 얼마나 갈리나
         both = ok[ok['창'] == '성분별']
         if len(both):
@@ -321,7 +376,8 @@ def main(mode="plane"):
                   f"최대 {g.max():.2f}′")
 
     cols = [c for c in ("측점", "날짜", "시작", "종료", "편각구간", "복각구간",
-                        "Kp", "dF", "dD_arcmin", "dI_arcmin",
+                        "D_utc", "I_utc", "Kp", "Kp_flag", "관측소_변동폭_nT",
+                        "QC", "dF", "dD_arcmin", "dI_arcmin",
                         "n_station", "보간", "창", "상태", "파일")
             if c in res.columns]
     out = res[cols].copy()
