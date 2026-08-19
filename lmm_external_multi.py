@@ -85,6 +85,15 @@ def load_kasa(key: str) -> pd.DataFrame:
     return out.dropna(subset=["time"]).sort_values("time").drop_duplicates("time")
 
 
+ALIGN_ROTATE = True      # False 면 회전을 넣지 않는다(규약 검증용)
+
+# 관측소별 사용 성분 제한.
+# ⚠ 제주는 Z 가 IGRF 대비 약 5,300 nT 어긋나 있고 **일변동 진폭도 이천 대비
+#   1.30 배**다(verify_kasa_axes.py · _check_amp.py). X·Y 는 0.98 로 정상이므로
+#   편각에는 쓰되 Z 는 빼는 선택지를 둔다.
+STATION_COMPONENTS = {}      # 예: {"JJ": {"X", "Y"}}
+
+
 def align_to_geographic(df: pd.DataFrame, lat: float, lon: float) -> pd.DataFrame:
     """
     계기 좌표계로 기록된 X·Y 를 지리 좌표계로 회전한다.
@@ -95,7 +104,7 @@ def align_to_geographic(df: pd.DataFrame, lat: float, lon: float) -> pd.DataFram
     """
     import lmm_build as LB
     d = df.dropna(subset=["X", "Y"])
-    if d.empty:
+    if d.empty or not ALIGN_ROTATE:
         return df.assign(alpha_deg=0.0)
     D_obs = float(np.degrees(np.arctan2(d.Y.median(), d.X.median())))
     yr = int(pd.to_datetime(d.time.iloc[len(d) // 2]).year)
@@ -300,7 +309,7 @@ def main(mode="plane", only=None, out_csv=None):
             대표값은 **중앙값**이다 — 1분 자료의 스파이크 한두 개에 평균이 끌려간다.
             창 안의 산포(range)는 QC 로 따로 모은다.
             """
-            out, spread = [], []
+            out, spread, keys = [], [], []
             for key, dfo in obs.items():
                 ck = (key, day)
                 if ck not in base_cache:
@@ -309,6 +318,7 @@ def main(mode="plane", only=None, out_csv=None):
                 seg = dfo[(dfo.index >= a0) & (dfo.index <= a1)].dropna(subset=["X"])
                 if b is None or seg.empty:
                     continue
+                keys.append(key)
                 out.append((STATIONS[key]["lat"], STATIONS[key]["lon"],
                             seg.X.median() - b["X"], seg.Y.median() - b["Y"],
                             seg.Z.median() - b["Z"]))
@@ -324,7 +334,7 @@ def main(mode="plane", only=None, out_csv=None):
                     rD=rng_(Dd), rI=rng_(Ii), rF=rng_(Ff),
                     dB=float(np.hypot(np.hypot(rng_(seg.X), rng_(seg.Y)),
                                       rng_(seg.Z)))))
-            return out, spread
+            return out, spread, keys
 
         Di, Ii, Fi, X0, Y0, Z0 = LB.igrf_dif(
             np.array([xy["lat"]]), np.array([xy["lon"]]), np.array([0.0]),
@@ -336,7 +346,7 @@ def main(mode="plane", only=None, out_csv=None):
         res, how, nst = {}, "-", 0
         qc = {}
         for comp in ("D", "I", "F"):
-            dev, spread = deviations(*win[comp])
+            dev, spread, dev_keys = deviations(*win[comp])
             if spread:
                 qc[comp] = dict(
                     n_min=min(x["n"] for x in spread),
@@ -348,12 +358,22 @@ def main(mode="plane", only=None, out_csv=None):
                 res[comp] = np.nan
                 continue
             nst = max(nst, len(dev))
-            vX, how = interpolate([(a, b, c) for a, b, c, _, _ in dev],
-                                  None, None, xy["lat"], xy["lon"], mode)
-            vY, _ = interpolate([(a, b, d_) for a, b, _, d_, _ in dev],
-                                None, None, xy["lat"], xy["lon"], mode)
-            vZ, _ = interpolate([(a, b, e) for a, b, _, _, e in dev],
-                                None, None, xy["lat"], xy["lon"], mode)
+            # 성분마다 쓸 관측소를 따로 고른다(제주 Z 제외 같은 경우)
+            def pick(axis, idx):
+                out = []
+                for k, tup in zip(dev_keys, dev):
+                    ok_ = STATION_COMPONENTS.get(k)
+                    if ok_ is not None and axis not in ok_:
+                        continue
+                    out.append((tup[0], tup[1], tup[idx]))
+                return out or [(t[0], t[1], t[idx]) for t in dev]
+
+            vX, how = interpolate(pick("X", 2), None, None,
+                                  xy["lat"], xy["lon"], mode)
+            vY, _ = interpolate(pick("Y", 3), None, None,
+                                xy["lat"], xy["lon"], mode)
+            vZ, _ = interpolate(pick("Z", 4), None, None,
+                                xy["lat"], xy["lon"], mode)
             mH = math.hypot(X0 + vX, Y0 + vY)
             mF = math.hypot(mH, Z0 + vZ)
             if comp == "D":
@@ -444,8 +464,15 @@ if __name__ == "__main__":
     ap.add_argument("--baseline", default="median", choices=["median", "mean"],
                     help="정온야간 기준선 통계(민감도 비교용)")
     ap.add_argument("--stations", default="", help="쉼표로 구분(예: CYG). 비우면 전부")
+    ap.add_argument("--no-rotate", action="store_true",
+                    help="계기축 회전을 넣지 않는다(좌표축 규약 검증용)")
+    ap.add_argument("--jj-z-off", action="store_true",
+                    help="제주 Z 를 보간에서 뺀다(감도 1.30배 문제)")
     ap.add_argument("--out", default="", help="산출 CSV 경로")
     a = ap.parse_args()
     BASELINE_STAT = a.baseline
+    ALIGN_ROTATE = not a.no_rotate
+    if a.jj_z_off:
+        STATION_COMPONENTS["JJ"] = {"X", "Y"}
     main(a.mode, only=[x.strip() for x in a.stations.split(",") if x.strip()] or None,
          out_csv=a.out or None)

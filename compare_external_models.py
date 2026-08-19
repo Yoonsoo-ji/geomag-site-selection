@@ -40,6 +40,10 @@ SOURCES = {
     "E1 최근접": DATA / "external_E1_nearest.csv",
     "E2 평면보간": DATA / "external_corrections_multi.csv",
     "E2b 역거리": DATA / "external_E2b_idw.csv",
+    # 좌표축 규약 검증용 변형 (verify_kasa_axes.py 참조)
+    "E2 회전없음": DATA / "external_E2_norot.csv",
+    "E2 제주제외": DATA / "external_E2_noJJ.csv",
+    "E2 제주Z제외": DATA / "external_E2_jjZoff.csv",
 }
 MODES = ["subtract_D", "subtract_DI", "subtract_quiet_DI"]
 
