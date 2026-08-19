@@ -149,7 +149,9 @@ def main():
                     .read_text(encoding="utf-8"))
     R = MJ["regional"]
     u, v = PT["lat"] - R["lat0"], PT["lon"] - R["lon0"]
-    reg = {k: float(np.dot(R[k], [1.0, u, v])) for k in ("D", "I", "F")}
+    # 배포 차수에 맞춰 항을 자른다 (0차면 상수항만)
+    _basis = [1.0, u, v]
+    reg = {k: float(np.dot(R[k], _basis[:len(R[k])])) for k in ("D", "I", "F")}
 
     C = MJ["crustal"]
     gv = np.array([np.nan if x is None else x for x in C["values"]],

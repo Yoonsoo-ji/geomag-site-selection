@@ -52,6 +52,15 @@ REGIONAL_DEGREE = 2
 # False 면 종전처럼 지각층은 F 에만 더해진다.
 CRUSTAL_VECTOR = True
 
+# inlier 판정에 쓸 다항식 차수. 적합 차수와 **분리**해야 한다.
+#
+# robust IRLS 는 「그 차수의 적합면에 잘 맞는 점」을 남긴다. 그래서 1차로 inlier 를
+# 고르면 「평면 기울기에 동조하는 점」만 살아남아 그 기울기를 스스로 정당화한다.
+# 실제로 편각에서 이 순환이 확인됐다 — 1차 적합이 만든 inlier 11점에서는 경도와
+# 잔차의 상관이 r=+0.67 이지만, 전체 16점에서는 r=+0.26 (p=0.34) 로 유의하지 않다.
+# 0차는 기울기를 만들 수 없으므로 이 되먹임이 끊긴다.
+REGIONAL_INLIER_DEGREE = 0
+
 # 정규화 기준점 (한반도 중심)
 LAT0, LON0 = 36.0, 127.5
 
@@ -167,15 +176,20 @@ def apply_quality_filter(df: pd.DataFrame) -> pd.DataFrame:
 #   F : 보정량 38 nT / 잔차 약 190 nT → 지각장 불일치가 지배해 잡음만 더해짐 (+8.3)
 # 그래서 **편각에만** 적용한다. 감사 전 표본에서는 D 도 악화됐었다(+0.079) —
 # 방위 기준 오류가 외부장 신호를 덮고 있었기 때문이다.
-# 2026-08-19 갱신 — 관측소 4소 공간보간(multi) + 정온세션 한정 + 편각 전용.
-#   생산 설정 LOO D:  미적용 0.5899 / subtract_D·cyg 0.3653 /
-#                     subtract_D·multi 0.4028 / **subtract_quiet_D·multi 0.3232**
-# 다중 관측소는 «정온 세션에 한정할 때만» 이득이 난다. 교란시에는 4소 평면적합이
-# 크게 발산해(|dF| 최대 567 nT) 잡음을 키운다 — 공간투영 근사가 폭풍 중에 먼저
-# 깨진다는 뜻이다. ⚠ 8개 설정 중 LOO 최소를 고른 것이므로 0.365→0.323 차이는
-# 선택편의를 포함한다. 방향(정온 한정·공간보간)이 물리적으로 타당한 것이 근거이고,
-# 차이 자체를 성과로 읽지 말 것.
-EXTERNAL_MODE = "subtract_quiet_D"
+# 2026-08-19 재판정 — **미적용으로 되돌린다.**
+#
+# 오전에 "subtract_quiet_D + multi 가 LOO 편각을 0.365->0.323 으로 줄인다"고 채택했으나,
+# 그 비교는 순환이었다. inlier 를 1차 적합으로 골랐기 때문에 설정마다 평가 측점이
+# 달라졌다. 평가 집합을 «지각벡터 미적용 · External 미적용 · 0차» 에서 한 번만 정하고
+# 고정해 다시 견주면 (`_fair_grid.py`):
+#
+#   지각벡터 적용 기준   none 0.5016 / subtract_D·cyg 0.5098 / subtract_D·multi 0.5177
+#                        subtract_quiet_D·cyg 0.5189 / ·multi 0.5323
+#
+# **어떤 보정도 편각을 개선하지 못한다.** 자문 권고대로 대체관측소 공간보간까지
+# 구현했으나(lmm_external_multi.py), 현재 16측점 표본에서는 이득이 확인되지 않는다.
+# 보정량 자체는 유지하므로 측점이 늘면 다시 판정할 수 있다.
+EXTERNAL_MODE = "none"
 
 # 보정량 자료원 — "cyg"(청양 단독, 균일 V 근사) | "multi"(관측소 4소 공간보간).
 # 자문 권고는 대체관측소 활용이므로 자료가 있으면 multi 를 쓴다. 파일이 없으면
@@ -843,10 +857,16 @@ def fit_regional(sites, crustal, degree=REGIONAL_DEGREE):
     # inlier 판정은 IGRF 잔차만으로 수행한다.
     # Crustal 보정 후 잔차로 판정하면 "Crustal 이 잘 맞는 측점"만 남게 되어
     # Crustal 층의 기여도가 부풀려지는 선택편향이 생긴다.
+    #
+    # ⚠ 판정에 쓰는 기저는 **적합 차수와 분리**한다(REGIONAL_INLIER_DEGREE).
+    #   같은 차수로 고르면 그 차수의 자유도에 동조하는 점만 남아 스스로를
+    #   정당화한다 — 편각 동서 기울기가 그렇게 생겼다.
+    A_sel = poly_terms(sites["lat"].values, sites["lon"].values,
+                       min(REGIONAL_INLIER_DEGREE, degree))
     inliers = {}
-    _, inliers["D"] = robust_lstsq(A, y_D)
-    _, inliers["I"] = robust_lstsq(A, y_I)
-    _, inliers["F"] = robust_lstsq(A, sites["dF"].values)
+    _, inliers["D"] = robust_lstsq(A_sel, y_D)
+    _, inliers["I"] = robust_lstsq(A_sel, y_I)
+    _, inliers["F"] = robust_lstsq(A_sel, sites["dF"].values)
 
     # 계수는 각 성분의 inlier 집합 위에서 산출
     coef = {}
@@ -957,13 +977,21 @@ def crustal_diagnostics(sites, crust, inliers):
     }
 
 
-def select_degree(sites, crustal, candidates=(1, 2, 3)):
-    """LOO-CV 오차가 가장 작은 다항식 차수를 고른다."""
+def select_degree(sites, crustal, candidates=(0, 1, 2, 3)):
+    """
+    LOO-CV 오차가 가장 작은 다항식 차수를 고른다.
+
+    0차(상수 오프셋)를 후보에 넣는 이유 — 측점이 16개뿐이라 지역장의 «공간 구조»가
+    자료로 결정되지 않을 수 있다. 그 경우 평면 항은 잡음을 외삽할 뿐이므로
+    상수항만 두는 편이 낫다. inlier 판정이 0차로 고정돼 있어 이 비교는 순환이 아니다.
+    """
     scores = {}
     for d in candidates:
         n_terms = (d + 1) * (d + 2) // 2
         if len(sites) < n_terms + 3:
             continue
+        if d == 0:
+            n_terms = 1
         cv = loo_cv(sites, crustal, d)
         # D 와 F 를 각 KPI 로 정규화해 합산
         scores[d] = cv["D"] / 0.1 + cv["F"] / 50.0

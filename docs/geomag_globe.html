@@ -397,8 +397,19 @@ const _c=new THREE.Color();   // 색공간 변환용 재사용 객체
 let LMMDATA=null, lmmMesh=null, lmmOn=false, lmmLoading=false;
 const lmmGroup=new THREE.Group(); earthGroup.add(lmmGroup);
 
-function regTerm(c,lat,lon,r){ // degree-1 다항식: [1, u, v]
-  const u=lat-r.lat0, v=lon-r.lon0; return c[0]+c[1]*u+c[2]*v; }
+// 차수에 무관한 다항식 평가 — 계수 개수만큼만 항을 만든다.
+// (0차면 상수항 하나. 1차 고정으로 두면 0차 모형에서 c[1]·c[2] 가 undefined 가 돼
+//  전체가 NaN 으로 무너진다.)
+function regTerm(c,lat,lon,r){
+  const u=lat-r.lat0, v=lon-r.lon0;
+  const deg=(r.degree!==undefined)?r.degree:1;
+  let s=0,k=0;
+  for(let t=0;t<=deg;t++) for(let p=0;p<=t;p++){
+    if(k>=c.length) break;
+    s+=c[k++]*Math.pow(u,t-p)*Math.pow(v,p);
+  }
+  return s;
+}
 
 function crustalAt(lat,lon,cr){
   const i=Math.round((lon-cr.lon0)/cr.dlon), j=Math.round((lat-cr.lat0)/cr.dlat);
