@@ -170,6 +170,42 @@ OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 ANOMALY_EXCLUDE_THRESHOLD_NT = 800.0  # nT  조건부 제외 / 현장 정밀조사 대상 — 상위 약 1% 극단값
 ANOMALY_CAUTION_THRESHOLD_NT = 400.0  # nT  현장 검증 필수 (고그레디언트 — 자연/인공 혼재)
 ANOMALY_SITE_RADIUS_DEG      =  0.05  # °   ≈ 5.5 km
+
+# ── 구배 가중치 (2026-08, 자문 권고 「필터가 아니라 가중치로」 반영) ──────
+#
+# 종전 방식은 계단 점수(5/8/10/7) + 800 nT 하드 제외였다. 계단은 경계값 근처에서
+# 1 nT 차이로 점수가 3점 뛰는 불연속을 만들고, 하드 제외는 「고구배 = 부적합」이라는
+# 판단을 후보 생성 단계에 못 박아 뒤에서 되돌릴 수 없게 한다. 구배가 큰 곳은
+# 지질경계 정보를 담고 있어 모델 기여도는 오히려 높을 수 있으므로, 자문 의견대로
+# 연속 가중치로 바꾸고 배제는 현장조사 판단에 넘긴다.
+#
+# 형태: 로그 구배 축의 비대칭 정규곡선. 250 nT 에서 최고점,
+#   낮은 쪽은 완만하게(변화가 작아 기여가 적을 뿐 측정 자체는 양호),
+#   높은 쪽은 가파르게(인공잡음 혼재 위험) 떨어뜨린다.
+# 종전 계단값과의 정합: 30 nT→5.0 · 150 nT→9.6 · 250 nT→10.0 · 400 nT→6.9 ·
+#   800 nT→1.1 (종전 7점 구간의 취지를 유지하되 연속적으로 이어진다)
+ANOMALY_GRADIENT_MODE = "weight"   # "weight"(권고) | "filter"(종전 하드 문턱)
+ANOMALY_OPT_NT        = 250.0      # 최고점 구배
+ANOMALY_SIGMA_LOW     = 1.80       # 로그축 저구배쪽 폭
+ANOMALY_SIGMA_HIGH    = 0.55       # 로그축 고구배쪽 폭 (가파르게)
+ANOMALY_LOW_FLOOR     = 4.0        # 저구배 하한 — 기여도는 낮아도 측정 자체는 양호
+
+
+def anomaly_gradient_score(v, max_score=10.0):
+    """P90-P10 구배(nT)를 0~max_score 연속 점수로. 계단 없음."""
+    import numpy as _np
+    v = _np.asarray(v, float)
+    out = _np.full(v.shape, _np.nan)
+    ok = _np.isfinite(v) & (v > 0)
+    x = _np.log(_np.where(ok, v, 1.0) / ANOMALY_OPT_NT)
+    sig = _np.where(x < 0, ANOMALY_SIGMA_LOW, ANOMALY_SIGMA_HIGH)
+    out[ok] = max_score * _np.exp(-0.5 * (x[ok] / sig[ok]) ** 2)
+    # 저구배쪽 하한 — 「기여는 적으나 측정 환경은 조용하다」는 종전 취지를 유지.
+    # 고구배쪽에는 하한을 두지 않는다(인공잡음 위험이 실제 감점 사유이므로).
+    lo = ok & (x < 0)
+    floor = ANOMALY_LOW_FLOOR * max_score / 10.0
+    out[lo] = _np.maximum(out[lo], floor)
+    return out
 # 하위 호환성 유지
 ANOMALY_VARIATION_THRESHOLD  = ANOMALY_EXCLUDE_THRESHOLD_NT
 
@@ -1653,7 +1689,15 @@ def build_exclusion_zones(
         print("    [수계] 수계 데이터 없음 (건너뜀)")
 
     # 자기이상
-    if anomaly_gdf is not None and len(anomaly_gdf) > 0:
+    if ANOMALY_GRADIENT_MODE == "weight":
+        # 자문 권고 — 구배는 후보 생성 단계에서 잘라내지 않고 점수로만 반영한다.
+        # (고구배 지역도 지질경계 정보를 담아 모델 기여가 클 수 있고, 배제 여부는
+        #  현장 정밀 자력측량으로 판단할 사안이다.)
+        zones["anomaly"] = None
+        n_hi = 0 if anomaly_gdf is None else len(anomaly_gdf)
+        print(f"    [9] 자기이상도: 하드 제외 없음 — 구배 가중치로 반영 "
+              f"(>{ANOMALY_EXCLUDE_THRESHOLD_NT:.0f} nT 셀 {n_hi}개는 s5 감점)")
+    elif anomaly_gdf is not None and len(anomaly_gdf) > 0:
         def _build_anomaly():
             an_utm = anomaly_gdf.to_crs(UTM_CRS)
             g = unary_union(an_utm.geometry)
@@ -2087,13 +2131,18 @@ def compute_priority(
             valid = ~np.isnan(p90p10)
             if valid.sum() > 0:
                 # 지질경계·변화 구간 포괄 설계 — 중간 그레디언트(150~400 nT) 최고점
-                def _score_contribution(v):
-                    if v <  30:   return 5.0   # 변화 매우 작음 — 모델 보정 기여 제한
-                    if v <= 150:  return 8.0   # 저~중 그레디언트 — 안정 측정+일정 기여
-                    if v <= 400:  return 10.0  # 중간 그레디언트 — 지질경계·변화 구간 반영
-                    if v <= 800:  return 7.0   # 고그레디언트 — 자연/인공 혼재, 현장 검증 필수
-                    return 0.0                 # 조건부 제외 (필터에서 제거)
-                s5[valid] = np.array([_score_contribution(v) for v in p90p10[valid]])
+                if ANOMALY_GRADIENT_MODE == "weight":
+                    # 연속 가중치 (자문 권고) — 경계값 불연속 없음
+                    s5[valid] = anomaly_gradient_score(p90p10[valid])
+                else:
+                    def _score_contribution(v):
+                        if v <  30:   return 5.0
+                        if v <= 150:  return 8.0
+                        if v <= 400:  return 10.0
+                        if v <= 800:  return 7.0
+                        return 0.0
+                    s5[valid] = np.array(
+                        [_score_contribution(v) for v in p90p10[valid]])
                 s5[~valid] = 6.0   # 데이터 미취득 지점 → 중립값
                 emag_available = True
                 result["mag_p90p10_nT"] = np.round(p90p10, 1)

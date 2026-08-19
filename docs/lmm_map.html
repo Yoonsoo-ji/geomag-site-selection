@@ -114,11 +114,33 @@ function crustalAt(lat,lon,cr){
   const v=cr.values[j*cr.nlon+i];
   return (v===null||v===undefined||!isFinite(v))?null:v;
 }
+
+// 지각 이상벡터 — 스칼라 dF 에서 파수영역 역산으로 복원한 (북·동·하) 성분.
+// b_down 은 내보내기 용량을 아끼려 여기서 유도한다(스칼라 격자와 정의상 정합):
+//   b_down = (dF + dc - l*b_north - m*b_east) / n
+function crustalVecAt(lat,lon,cr){
+  const V=cr&&cr.vector; if(!V) return null;
+  const i=Math.round((lon-cr.lon0)/cr.dlon), j=Math.round((lat-cr.lat0)/cr.dlat);
+  if(i<0||i>=cr.nlon||j<0||j>=cr.nlat) return null;
+  const k=j*cr.nlon+i, bn=V.b_north[k], be=V.b_east[k];
+  if(bn===undefined||be===undefined) return null;
+  const s0=cr.values[k], s=(s0===null||s0===undefined||!isFinite(s0))?0:s0;
+  return {n:bn, e:be, d:(s+V.dc_nT-V.l*bn-V.m*be)/V.n};
+}
+// 벡터합 후 각을 다시 재어 편각·복각 기여를 얻는다(소각 근사 없음).
+function crustalDI(e,bv){
+  if(!bv) return {D:0,I:0};
+  const X=e.X+bv.n, Y=e.Y+bv.e, Z=e.Z+bv.d;
+  return {D:Math.atan2(Y,X)*180/Math.PI-e.D,
+          I:Math.atan2(Z,Math.hypot(X,Y))*180/Math.PI-e.I};
+}
 function calc(lat,lon,year){
   const e=IGRF.igrfElements(lat,lon,0,year);
-  const r=MODEL.regional, c=crustalOpen()?crustalAt(lat,lon,MODEL.crustal):null;
+  const open=crustalOpen();
+  const r=MODEL.regional, c=open?crustalAt(lat,lon,MODEL.crustal):null;
+  const cd=crustalDI(e, open?crustalVecAt(lat,lon,MODEL.crustal):null);
   return {igrf:e,
-    lmm:{D:e.D+regTerm(r.D,lat,lon,r), I:e.I+regTerm(r.I,lat,lon,r),
+    lmm:{D:e.D+cd.D+regTerm(r.D,lat,lon,r), I:e.I+cd.I+regTerm(r.I,lat,lon,r),
          F:e.F+(c===null?0:c)+regTerm(r.F,lat,lon,r)},
     gap:c===null};
 }

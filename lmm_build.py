@@ -24,6 +24,7 @@ CYG dmin 자료를 확보하면 add_external_layer() 를 통해 확장한다.
 """
 
 import json
+import math
 import datetime as dt
 from pathlib import Path
 
@@ -47,8 +48,14 @@ INCLUDE_2019 = True
 # Regional 층 다항식 차수. 측점 26개 기준 2차(6계수)까지가 안전.
 REGIONAL_DEGREE = 2
 
+# 지각층을 편각·복각에도 기여시킬지 (스칼라 dF -> 벡터 b 복원, 아래 crustal_vector).
+# False 면 종전처럼 지각층은 F 에만 더해진다.
+CRUSTAL_VECTOR = True
+
 # 정규화 기준점 (한반도 중심)
 LAT0, LON0 = 36.0, 127.5
+
+KM_PER_DEG = 111.32
 
 
 # ---------------------------------------------------------------- 자료 적재
@@ -160,8 +167,25 @@ def apply_quality_filter(df: pd.DataFrame) -> pd.DataFrame:
 #   F : 보정량 38 nT / 잔차 약 190 nT → 지각장 불일치가 지배해 잡음만 더해짐 (+8.3)
 # 그래서 **편각에만** 적용한다. 감사 전 표본에서는 D 도 악화됐었다(+0.079) —
 # 방위 기준 오류가 외부장 신호를 덮고 있었기 때문이다.
-EXTERNAL_MODE = "subtract_D"
-EXTERNAL_CSV = BASE / "docs" / "data" / "external_corrections.csv"
+# 2026-08-19 갱신 — 관측소 4소 공간보간(multi) + 정온세션 한정 + 편각 전용.
+#   생산 설정 LOO D:  미적용 0.5899 / subtract_D·cyg 0.3653 /
+#                     subtract_D·multi 0.4028 / **subtract_quiet_D·multi 0.3232**
+# 다중 관측소는 «정온 세션에 한정할 때만» 이득이 난다. 교란시에는 4소 평면적합이
+# 크게 발산해(|dF| 최대 567 nT) 잡음을 키운다 — 공간투영 근사가 폭풍 중에 먼저
+# 깨진다는 뜻이다. ⚠ 8개 설정 중 LOO 최소를 고른 것이므로 0.365→0.323 차이는
+# 선택편의를 포함한다. 방향(정온 한정·공간보간)이 물리적으로 타당한 것이 근거이고,
+# 차이 자체를 성과로 읽지 말 것.
+EXTERNAL_MODE = "subtract_quiet_D"
+
+# 보정량 자료원 — "cyg"(청양 단독, 균일 V 근사) | "multi"(관측소 4소 공간보간).
+# 자문 권고는 대체관측소 활용이므로 자료가 있으면 multi 를 쓴다. 파일이 없으면
+# 자동으로 cyg 로 내려간다(조용히 무보정이 되지 않도록).
+EXTERNAL_SOURCE = "multi"
+EXTERNAL_CSV_CYG = BASE / "docs" / "data" / "external_corrections.csv"
+EXTERNAL_CSV_MULTI = BASE / "docs" / "data" / "external_corrections_multi.csv"
+EXTERNAL_CSV = (EXTERNAL_CSV_MULTI
+                if EXTERNAL_SOURCE == "multi" and EXTERNAL_CSV_MULTI.exists()
+                else EXTERNAL_CSV_CYG)
 
 
 def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
@@ -172,7 +196,9 @@ def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
     ec = pd.read_csv(EXTERNAL_CSV, encoding="utf-8-sig")
     ec = ec[ec["상태"] == "정상"].copy()
     ec["연도"] = pd.to_datetime(ec["날짜"]).dt.year
-    if EXTERNAL_MODE == "subtract_quiet":
+    if EXTERNAL_MODE in ("subtract_quiet", "subtract_quiet_D"):
+        # 교란시 세션의 보정량은 신뢰하지 않는다(균일·평면 근사가 폭풍 중에 가장
+        # 크게 깨진다). 값을 만지는 대신 그 세션의 보정만 쓰지 않는 방식.
         ec = ec[ec["Kp"] <= FB2019_MAX_KP]
     if ec.empty:
         df["ext_src"] = "미적용(표본없음)"
@@ -196,7 +222,7 @@ def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
         #   총자력은 악화된다 — F 잔차는 외부장(38 nT)이 아니라 **지각장 불일치**
         #   (약 190 nT)가 지배하므로, 균일한 시간 보정을 빼면 잡음만 더해진다.
         #   편각 잔차는 20.7′ 이고 보정량이 5.4′ 라 비중이 커서 이득이 난다.
-        if EXTERNAL_MODE != "subtract_D":
+        if EXTERNAL_MODE not in ("subtract_D", "subtract_quiet_D"):
             out.loc[hit, "F_nT"] = out.loc[hit, "F_nT"] - out.loc[hit, "dF"]
         out.loc[hit, "D_deg"] = out.loc[hit, "D_deg"] - out.loc[hit, "dD"] / 60.0
         out["ext_src"] = np.where(hit, EXTERNAL_MODE, "미적용")
@@ -599,6 +625,131 @@ class CrustalGrid:
         return out
 
 
+
+def crustal_ref_dir(lats, ref_lat=None, ref_lon=127.5, epoch=None):
+    """벡터 역산에 쓰는 기준 주자기장 방향 (l, m, n) — 격자 중앙 위도에서 평가."""
+    if ref_lat is None:
+        ref_lat = float(np.mean(lats))
+    if epoch is None:
+        epoch = dt.datetime(int(EPOCH), 1, 1)
+    Dm, Im = igrf_dif(np.array([ref_lat]), np.array([ref_lon]),
+                      np.array([0.0]), epoch)[:2]
+    Dm, Im = float(np.ravel(Dm)[0]), float(np.ravel(Im)[0])
+    return {"D": Dm, "I": Im,
+            "l": math.cos(math.radians(Im)) * math.cos(math.radians(Dm)),
+            "m": math.cos(math.radians(Im)) * math.sin(math.radians(Dm)),
+            "n": math.sin(math.radians(Im)),
+            "ref_lat": ref_lat, "ref_lon": ref_lon}
+
+
+def crustal_vector(lons, lats, grid, ref_lat=None, ref_lon=127.5, epoch=None):
+    """
+    스칼라 자기이상 dF 격자에서 이상벡터 3성분 (북·동·하) 을 복원한다.
+
+    항공자력은 총자력 이상만 준다. 이는 이상벡터를 주자기장 방향
+    (l, m, n) 으로 투영한 값이므로 dF = l*b_north + m*b_east + n*b_down 이다.
+    포텐셜장은 조화함수라 파수영역에서 이 관계가 닫히고, 역산하면 3성분을
+    모두 되찾을 수 있다 — 지각층이 편각·복각에 기여하는 통로가 이것이다.
+
+    반환: (b_north, b_east, b_down)  격자와 같은 shape, 단위 nT.
+
+    주의: 파수 0 성분(격자 평균)은 복원되지 않아 상수 오프셋이 남는다.
+          Regional 상수항이 흡수하므로 무해하다.
+    """
+    from scipy.signal.windows import tukey
+
+    ref = crustal_ref_dir(lats, ref_lat, ref_lon, epoch)
+    ref_lat = ref["ref_lat"]
+    l, m, n = ref["l"], ref["m"], ref["n"]
+
+    dlat = float(np.median(np.diff(lats)))
+    dlon = float(np.median(np.diff(lons)))
+    dx_km = dlat * KM_PER_DEG
+    dy_km = dlon * KM_PER_DEG * math.cos(math.radians(ref_lat))
+
+    g0 = np.nan_to_num(grid, nan=0.0)
+    ny, nx = g0.shape
+    py, px = ny // 2, nx // 2
+    gp = np.pad(g0, ((py, py), (px, px)), mode="reflect")
+    gp = gp * np.outer(tukey(gp.shape[0], alpha=2 * py / gp.shape[0]),
+                       tukey(gp.shape[1], alpha=2 * px / gp.shape[1]))
+
+    kx = 2 * np.pi * np.fft.fftfreq(gp.shape[0], d=dx_km)[:, None]
+    ky = 2 * np.pi * np.fft.fftfreq(gp.shape[1], d=dy_km)[None, :]
+    k = np.sqrt(kx ** 2 + ky ** 2)
+    Ft = np.fft.fft2(gp)
+    den = 1j * (l * kx + m * ky) + n * k
+    den[0, 0] = 1.0
+    inv = np.where(k > 0, 1.0 / den, 0.0)
+
+    cy, cx = slice(py, py + ny), slice(px, px + nx)
+    bx = np.real(np.fft.ifft2(1j * kx * Ft * inv))[cy, cx]
+    by = np.real(np.fft.ifft2(1j * ky * Ft * inv))[cy, cx]
+    bz = np.real(np.fft.ifft2(k * Ft * inv))[cy, cx]
+    return bx, by, bz
+
+
+class CrustalVector:
+    """복원된 지각 이상벡터의 쌍선형 보간자. 반환 (b_north, b_east, b_down)."""
+
+    def __init__(self, lons, lats, bx, by, bz):
+        self.lons, self.lats = lons, lats
+        self.b = (bx, by, bz)
+        self.dlon = float(np.median(np.diff(lons)))
+        self.dlat = float(np.median(np.diff(lats)))
+
+    def __call__(self, lat, lon):
+        lat = np.atleast_1d(np.asarray(lat, float))
+        lon = np.atleast_1d(np.asarray(lon, float))
+        fx = (lon - self.lons[0]) / self.dlon
+        fy = (lat - self.lats[0]) / self.dlat
+        i0 = np.clip(np.floor(fx).astype(int), 0, self.lons.size - 2)
+        j0 = np.clip(np.floor(fy).astype(int), 0, self.lats.size - 2)
+        tx = np.clip(fx - i0, 0, 1)
+        ty = np.clip(fy - j0, 0, 1)
+        out = []
+        for a in self.b:
+            out.append((1 - tx) * (1 - ty) * a[j0, i0]
+                       + tx * (1 - ty) * a[j0, i0 + 1]
+                       + (1 - tx) * ty * a[j0 + 1, i0]
+                       + tx * ty * a[j0 + 1, i0 + 1])
+        return tuple(out)
+
+
+def crustal_di(lat, lon, elev_m, cvec, epoch=None):
+    """
+    지각 이상벡터가 만드는 편각·복각 기여량(도)을 계산한다.
+
+    IGRF 벡터에 b 를 더한 뒤 각을 다시 재는 방식이라 소각 근사를 쓰지 않는다.
+    """
+    if epoch is None:
+        epoch = dt.datetime(int(EPOCH), 1, 1)
+    lat = np.atleast_1d(np.asarray(lat, float))
+    lon = np.atleast_1d(np.asarray(lon, float))
+    elev_m = np.atleast_1d(np.asarray(elev_m, float))
+    D_i, I_i, _, X, Y, Z = igrf_dif(lat, lon, elev_m, epoch)
+    bx, by, bz = cvec(lat, lon)
+    bx, by, bz = (np.nan_to_num(v, nan=0.0) for v in (bx, by, bz))
+    Xc, Yc, Zc = X + bx, Y + by, Z + bz
+    dD = np.degrees(np.arctan2(Yc, Xc)) - D_i
+    dI = np.degrees(np.arctan2(Zc, np.hypot(Xc, Yc))) - I_i
+    return dD, dI
+
+
+def attach_crustal_di(sites, cvec):
+    """측점표에 지각층의 D·I 기여량 열(crD, crI)을 붙인다. cvec 이 None 이면 0."""
+    sites = sites.copy()
+    if cvec is None:
+        sites["crD"] = 0.0
+        sites["crI"] = 0.0
+    else:
+        dD, dI = crustal_di(sites["lat"].values, sites["lon"].values,
+                            sites["elev_m"].values, cvec)
+        sites["crD"] = dD
+        sites["crI"] = dI
+    return sites
+
+
 # --------------------------------------------------------- Layer 2 Regional
 def poly_terms(lat, lon, degree=REGIONAL_DEGREE):
     """정규화 좌표 다항식 기저. 반환 shape (n, n_terms)."""
@@ -672,17 +823,22 @@ def fit_regional(sites, crustal, degree=REGIONAL_DEGREE):
     """
     측점별 평균 잔차에 다항식을 적합(시그마 클리핑 적용).
 
-    F 는 Crustal 층이 단파장을 먼저 설명하므로 그 잔차에 적합하고,
-    D·I 는 항공자력이 스칼라 이상만 제공하므로 전체 잔차에 적합한다.
+    F 는 Crustal 층이 단파장을 먼저 설명하므로 그 잔차에 적합한다.
+    D·I 도 CRUSTAL_VECTOR 를 쓰면(sites 에 crD·crI 열이 있으면) 같은 방식으로
+    지각 기여를 먼저 빼고 적합한다. 열이 없으면 종전처럼 전체 잔차에 적합한다.
     """
     crust = np.nan_to_num(
         crustal(sites["lat"].values, sites["lon"].values), nan=0.0
     )
     A = poly_terms(sites["lat"].values, sites["lon"].values, degree)
 
+    # 지각 벡터 기여를 먼저 뺀다 (열이 없으면 0 — 종전 동작과 동일)
+    crD = sites["crD"].values if "crD" in sites else 0.0
+    crI = sites["crI"].values if "crI" in sites else 0.0
+
     # 재방문 산포로 불합격한 측점은 해당 성분에서 NaN 처리해 적합에서 제외
-    y_D = np.where(sites["D_ok"].values, sites["dD"].values, np.nan)
-    y_I = np.where(sites["I_ok"].values, sites["dI"].values, np.nan)
+    y_D = np.where(sites["D_ok"].values, sites["dD"].values - crD, np.nan)
+    y_I = np.where(sites["I_ok"].values, sites["dI"].values - crI, np.nan)
 
     # inlier 판정은 IGRF 잔차만으로 수행한다.
     # Crustal 보정 후 잔차로 판정하면 "Crustal 이 잘 맞는 측점"만 남게 되어
@@ -710,13 +866,22 @@ def validate(sites, coef, crust, inliers, degree=REGIONAL_DEGREE):
     A = poly_terms(sites["lat"].values, sites["lon"].values, degree)
     rows = []
 
-    for comp, resid, reg in [
-        ("D_deg", sites["dD"].values, A @ coef["D"]),
-        ("I_deg", sites["dI"].values, A @ coef["I"]),
+    crD = sites["crD"].values if "crD" in sites else np.zeros(len(sites))
+    crI = sites["crI"].values if "crI" in sites else np.zeros(len(sites))
+    has_cv = bool(np.any(crD != 0) or np.any(crI != 0))
+
+    for comp, resid, cr, reg in [
+        ("D_deg", sites["dD"].values, crD, A @ coef["D"]),
+        ("I_deg", sites["dI"].values, crI, A @ coef["I"]),
     ]:
         m = inliers[comp[0]]
         rows.append((comp, "IGRF", rms(resid[m]), int(m.sum())))
-        rows.append((comp, "+Regional", rms((resid - reg)[m]), int(m.sum())))
+        if has_cv:
+            rows.append((comp, "+Crustal", rms((resid - cr)[m]), int(m.sum())))
+            rows.append((comp, "+Crustal+Regional",
+                         rms((resid - cr - reg)[m]), int(m.sum())))
+        else:
+            rows.append((comp, "+Regional", rms((resid - reg)[m]), int(m.sum())))
 
     m = inliers["F"]
     dF = sites["dF"].values
@@ -752,10 +917,12 @@ def loo_cv(sites, crustal, degree=REGIONAL_DEGREE):
         A = poly_terms(test["lat"].values, test["lon"].values, degree)
         cr = np.nan_to_num(crustal(test["lat"].values, test["lon"].values), nan=0.0)
 
+        crD = float(test["crD"].values[0]) if "crD" in test else 0.0
+        crI = float(test["crI"].values[0]) if "crI" in test else 0.0
         if inl["D"][i]:
-            errs["D"].append(test["dD"].values[0] - (A @ c["D"])[0])
+            errs["D"].append(test["dD"].values[0] - crD - (A @ c["D"])[0])
         if inl["I"][i]:
-            errs["I"].append(test["dI"].values[0] - (A @ c["I"])[0])
+            errs["I"].append(test["dI"].values[0] - crI - (A @ c["I"])[0])
         if inl["F"][i]:
             errs["F"].append(test["dF"].values[0] - cr[0] - (A @ c["F"])[0])
 
@@ -808,12 +975,32 @@ def select_degree(sites, crustal, candidates=(1, 2, 3)):
 
 # ------------------------------------------------------------------ 내보내기
 def export_model(coef, lons, lats, grid, sites, val, cv, degree, rep, cd,
-                 epoch_label="", years=()):
+                 epoch_label="", years=(), vec=None):
     DOCS_DATA.mkdir(parents=True, exist_ok=True)
 
     # 격자를 정수 nT 로 양자화하고 NaN 은 null 로 (JSON 용량 절감)
     g = np.where(np.isnan(grid), None, np.round(grid).astype(object))
     flat = [None if v is None else int(v) for v in g.ravel()]
+
+    # 지각 이상벡터 — 북·동 두 성분만 싣고 하향은 클라이언트에서 유도한다.
+    #   b_down = (dF + dc - l*b_north - m*b_east) / n
+    # 스칼라 격자와 벡터가 정의상 정합하고 용량도 한 성분 아낀다.
+    vec_out = None
+    if vec is not None:
+        bx, by, bz = vec
+        ref = crustal_ref_dir(lats)
+        proj = ref["l"] * bx + ref["m"] * by + ref["n"] * bz
+        dc = float(np.median(proj - np.nan_to_num(grid, nan=0.0)))
+        vec_out = {
+            "unit": "nT",
+            "note": ("anomaly vector recovered from scalar dF by Fourier "
+                     "potential-field inversion; b_down is derived on the client "
+                     "as (dF + dc - l*b_north - m*b_east)/n"),
+            "l": ref["l"], "m": ref["m"], "n": ref["n"],
+            "ref_D": ref["D"], "ref_I": ref["I"], "dc_nT": dc,
+            "b_north": [int(v) for v in np.round(bx).ravel()],
+            "b_east": [int(v) for v in np.round(by).ravel()],
+        }
 
     model = {
         "name": "Korea LMM v1 (quiet-time baseline)",
@@ -823,16 +1010,24 @@ def export_model(coef, lons, lats, grid, sites, val, cv, degree, rep, cd,
             "core": "IGRF-14 (degree 13, ppigrf/IGRF14.shc)",
             "regional": (f"polynomial degree {degree} on {len(sites)} absolute sites "
                          f"({epoch_label})"),
-            "crustal": "KIGAM aeromagnetic anomaly grid 1.5 arcmin (1982-2018)",
+            "crustal": ("KIGAM aeromagnetic anomaly grid 1.5 arcmin (1982-2018)"
+                        + (" + anomaly vector (b_north, b_east, b_down) recovered by "
+                           "Fourier potential-field inversion, applied to D and I"
+                           if vec_out is not None else
+                           " (scalar dF only, applied to F)")),
             "external": (
-                "PARTIALLY APPLIED - Kp>2 storm sessions excluded for the 2019 subset "
-                "(where observation times exist); CYG values are NOT subtracted "
-                "directly because (1) uniform-V approximation degrades declination "
-                "(LOO D 0.751->0.858 deg) and (2) logbook F is a per-day single value, "
-                "so session-time correction is incoherent. For 2022-2025 the survey "
-                "results record only the year, so no correction is possible. "
-                "PROVISIONAL ASSUMPTION: results are treated as NOT diurnally "
-                "corrected (unverified - see ASSUME_NO_DIURNAL_CORRECTION)."),
+                f"APPLIED TO DECLINATION ONLY (mode={EXTERNAL_MODE}, "
+                f"source={EXTERNAL_SOURCE}). Session-time disturbance is estimated "
+                "from four observatories (Cheongyang CYG, Jeju, Gangneung, Icheon) "
+                "by first-order spatial interpolation of the quiet-night baseline "
+                "deviation, and subtracted from the survey declination. Storm "
+                "sessions (Kp>2) are left uncorrected because the spatial "
+                "approximation breaks down first under disturbance. Total field F "
+                "is NOT corrected: its residual is dominated by crustal-field "
+                "mismatch (~190 nT) rather than external field (~38 nT), so a "
+                "spatially smooth time correction only adds noise. The model "
+                "itself remains a quiet-time baseline - no external term is "
+                "evaluated at prediction time."),
         },
         "observation_years": sorted(int(y) for y in years),
         "epoch_label": epoch_label,
@@ -856,6 +1051,7 @@ def export_model(coef, lons, lats, grid, sites, val, cv, degree, rep, cd,
             "nlat": int(lats.size),
             "unit": "nT",
             "values": flat,
+            "vector": vec_out,
         },
         "validation": val.to_dict(orient="records"),
         "loo_cv": cv,
@@ -885,6 +1081,12 @@ def main():
           f"(유효 {np.isfinite(grid).sum()}점, 간격 "
           f"{np.median(np.diff(lons))*111:.1f} km, "
           f"커버리지 {100*np.isfinite(grid).sum()/grid.size:.0f}%)")
+    vec = None
+    if CRUSTAL_VECTOR:
+        vec = crustal_vector(lons, lats, grid)
+        _ref = crustal_ref_dir(lats)
+        print(f"[Layer 3] 지각 이상벡터 복원 (주자기장 D={_ref['D']:.2f}deg "
+              f"I={_ref['I']:.2f}deg) -> 편각·복각에도 기여")
     print("[Layer 4] CYG 1분 자료 없음 -> 외부장 보정 미적용 (정온시 baseline 모델)")
 
     res = igrf_residuals(pts)
@@ -897,6 +1099,12 @@ def main():
 
     sites = aggregate_sites(pts, res)
     print(f"\n[집계] 측점 {len(sites)}개 (재방문 평균으로 외부장 잡음 부분 완화)")
+
+    cvec = CrustalVector(lons, lats, *vec) if vec is not None else None
+    sites = attach_crustal_di(sites, cvec)
+    if cvec is not None:
+        print(f"          지각 벡터 기여 D {rms(sites['crD'])*60:.2f}분 · "
+              f"I {rms(sites['crI'])*60:.2f}분")
 
     print("\n--- Regional 다항식 차수 선정 (LOO-CV) ---")
     degree = select_degree(sites, crustal)
@@ -924,8 +1132,8 @@ def main():
     print(f"D: {cv['D']:.4f} deg   I: {cv['I']:.4f} deg   F: {cv['F']:.1f} nT")
 
     print("\n--- KPI 판정 (D < 0.1 deg, F < 50 nT) ---")
-    d_fin = val.query("성분=='D_deg' and 단계=='+Regional'")["RMS"].values[0]
-    f_fin = val.query("성분=='F_nT' and 단계=='+Crustal+Regional'")["RMS"].values[0]
+    d_fin = float(val.query("성분=='D_deg'")["RMS"].values[-1])
+    f_fin = float(val.query("성분=='F_nT'")["RMS"].values[-1])
     print(f"적합 D-RMS {d_fin:.4f} deg -> {'통과' if d_fin < 0.1 else '위반'}")
     print(f"적합 F-RMS {f_fin:.1f} nT   -> {'통과' if f_fin < 50 else '위반'}")
     print(f"LOO  D-RMS {cv['D']:.4f} deg -> {'통과' if cv['D'] < 0.1 else '위반'}")
@@ -944,7 +1152,7 @@ def main():
     epoch_label = ", ".join(f"{a}" if a == b else f"{a}-{b}" for a, b in groups)
 
     export_model(coef, lons, lats, grid, sites, val, cv, degree, rep, cd,
-                 epoch_label=epoch_label, years=years)
+                 epoch_label=epoch_label, years=years, vec=vec)
 
     DOCS_OUT.mkdir(parents=True, exist_ok=True)
     stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
