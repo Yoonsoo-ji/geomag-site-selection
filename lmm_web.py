@@ -28,6 +28,12 @@ OUT_HTML = BASE / "docs" / "lmm.html"
 # 계산기가 지원할 Epoch 범위. 앞뒤 epoch 를 포함해 선형보간/외삽한다.
 EPOCHS_WANTED = [2015.0, 2020.0, 2025.0, 2030.0]
 
+# 1:50,000 도폭(경위도 15′) 내 편각 변화 중앙값(′). 도엽별로 대표값 하나를 적으려면
+# 모델 오차가 이보다 작아야 표기가 의미를 갖는다 — 누가 정해 준 목표치가 아니라
+# 산출물 정의에서 나오는 요구 분해능이다.
+# 산출 근거: create_lmm_report.sheet_scale_table() (IGRF-14 로 직접 계산, 0.0905°)
+SHEET_VAR_ARCMIN = 5.43
+
 
 def load_shc(path: Path, wanted):
     """IGRF .shc 파일에서 필요한 epoch 의 Gauss 계수만 추출."""
@@ -126,6 +132,11 @@ def build_html(model, nmax, epochs, g, h) -> str:
                 "crust_n": cd["n"],
                 "n_sites": len(model["sites"]),
                 "epoch": model.get("epoch_label") or "—",
+                # IGRF 단독일 때의 국내 잔차(적합 표본 기준) — 자체 기준선
+                "d_igrf": val[("D_deg", "IGRF")],
+                "i_igrf": val[("I_deg", "IGRF")],
+                "f_igrf": val[("F_nT", "IGRF")],
+                "sheet_var": SHEET_VAR_ARCMIN,
             },
             ensure_ascii=False,
         ),
@@ -922,8 +933,9 @@ document.getElementById('acc').innerHTML =
    지각 1:1 결합(α=1) · External 관측소 4소 공간보간(잠정) · 지각 벡터 미적용</span><br>
    교차검증(Station-LOSO) 실측 오차: <code>D ${SUM.d_loo.toFixed(3)}°</code>
    <code>I ${SUM.i_loo.toFixed(3)}°</code> <code>F ${SUM.f_loo.toFixed(0)} nT</code><br>
-   목표 KPI(D&lt;0.1°, F&lt;50 nT) 중 <b>총자력은 목표의 약 1.3배까지 근접</b>했고
-   <b>편각이 남았습니다</b>. 남은 원인:
+   참고 — IGRF 단독일 때의 국내 잔차(적합 표본): <code>D ${(SUM.d_igrf*60).toFixed(1)}′</code>
+   <code>I ${(SUM.i_igrf*60).toFixed(1)}′</code> <code>F ${SUM.f_igrf.toFixed(0)} nT</code><br>
+   층을 쌓아 총자력은 크게 줄었고 <b>편각이 과제로 남습니다</b>. 남은 원인:
    <ul style="margin:6px 0 0 18px;padding:0">
      <li><b>기존 반복측량의 편각 계통오차</b> — 재방문마다 마크 참방위각이 옮겨 가는
          사례가 확인됐다. 장비·방위표지·측점 이설 이력을 등급으로 관리해 일부를
@@ -941,11 +953,12 @@ document.getElementById('acc').innerHTML =
    <div style="margin-top:8px">따라서 본 계산기는 <b>IGRF-14 대비 개선된 참고값</b> 및
    계산 체계 검증용으로 사용하고, <b>지형도 자침편차 등 정식 편각 산출에는 사용하지 마십시오.</b></div>
    <div style="margin-top:8px;font-size:12px;opacity:.85">
-   ※ 위 KPI(D&lt;0.1°, F&lt;50 nT)는 「한반도 LMM」 설명자료(오석훈, 강원대)가 제시한
-   <b>공학적 목표치</b>이며 법정 기준이 아닙니다.
-   「지구물리측량 작업규정」(국토지리정보원고시 제2021-2985호) 제20조의 법정 측정오차 한계는
-   <b>편각·복각 정수차 30′(=0.5°), 관측시간 20분 이내</b>로, KPI 보다 5배 느슨합니다.
-   다만 그것은 측정 품질관리 기준이고 KPI 는 모델 예측정확도 목표이므로 성격이 다릅니다.
+   ※ <b>이 모델에 대해 확정된 정확도 목표는 아직 없습니다.</b>
+   용도상으로는 1:50,000 도폭 내 편각 변화 <b>${SUM.sheet_var.toFixed(1)}′</b> 가
+   도엽별 대표값 하나를 적기 위해 요구되는 정밀도의 하한입니다.
+   「지구물리측량 작업규정」(국토지리정보원고시 제2021-2985호) 제20조의 법정 측정오차 한계
+   <b>편각·복각 정수차 30′(=0.5°), 관측시간 20분 이내</b>는 <b>관측 품질관리 기준</b>이어서
+   모델 예측정확도 기준으로는 쓸 수 없습니다.
    같은 규정 제12조제1항은 「국가기본도의 자편각 표기」를 1등 지자기점의 법정 설치목적으로
    정하고 있습니다. 상세는 구축현황보고서 7장 참조.</div>`;
 document.getElementById('foot').textContent =

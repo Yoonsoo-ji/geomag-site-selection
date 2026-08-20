@@ -639,14 +639,12 @@ function showLMMInfo(){
       +"잡은 순차형 척도이므로, 패치 색은 이 막대로 읽을 것"
       +(MODE==='D'?" (전 구간 서편각이다 — 붉은 쪽도 서편각)":"")
       +"</div></div>"):"")
-    +(loo?("<div>LOO 편각 D <b>"+loo.D.toFixed(3)+"°</b> "
-      +"<span style='color:#ffb27a'>목표 0.1°</span></div>"
-      +"<div>LOO 총자력 F <b>"+loo.F.toFixed(1)+" nT</b> "
-      +"<span>목표 50 nT</span></div>"
+    +(loo?("<div>LOO 편각 D <b>"+loo.D.toFixed(3)+"°</b></div>"
+      +"<div>LOO 총자력 F <b>"+loo.F.toFixed(1)+" nT</b></div>"
       +"<div>Regional 측점 <b>"+n+"점</b></div>"):"")
     +"<div style='margin-top:7px;padding:6px 8px;background:rgba(255,180,90,.12);"
     +"border-radius:6px;font-size:11px;color:#ffcf9a'>"
-    +"⚠ 목표 정확도 미달 — 연구·시범계산용. 지형도 자침편차 등 정식 편각 산출에는 "
+    +"⚠ 확정된 정확도 목표 없음 — 연구·시범계산용. 지형도 자침편차 등 정식 편각 산출에는 "
     +"쓰지 않는다.</div>"
     +(crustalOpen()
       ?("<div style='margin-top:6px;font-size:10.5px;color:#8fa3ba'>"

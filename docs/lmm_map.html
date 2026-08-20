@@ -320,10 +320,10 @@ function render(){
   document.getElementById('foot').innerHTML=
     `<b>읽는 법</b> — 왼쪽 두 지도는 같은 색범위다. LMM 은 IGRF 에 한반도 지역장과 `
     +`지각 자기이상을 더한 것이라, 세 번째 지도가 그 «더해진 양»이다.<br>`
-    +`<b>현재 성능</b> — LOO 편각 D ${loo.D.toFixed(3)}° (목표 0.1°) · `
-    +`총자력 F ${loo.F.toFixed(1)} nT (목표 50 nT) · Regional 측점 `
+    +`<b>현재 성능</b> — LOO 편각 D ${loo.D.toFixed(3)}° · `
+    +`총자력 F ${loo.F.toFixed(1)} nT · Regional 측점 `
     +`${(MODEL.sites||[]).length}점. External 층 미적용(정온시 기준값 모형).`
-    +`<div class="warn">목표 정확도 미달 — <b>연구·시범계산용</b>이며 지형도 자침편차 등 `
+    +`<div class="warn">확정된 정확도 목표 없음 — <b>연구·시범계산용</b>이며 지형도 자침편차 등 `
     +`정식 편각 산출에는 쓰지 않는다.</div>`
     +`<div style="margin-top:8px;font-size:11.5px">지각 자기이상: 한국지질자원연구원 `
     +`「한국의 자력이상도」(2019) · 박영수 외, 지구물리와 물리탐사 22(1), 29–36. `

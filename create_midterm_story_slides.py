@@ -46,6 +46,13 @@ PAGES = "https://yoonsoo-ji.github.io/geomag-site-selection"
 
 VAL = {(r["성분"], r["단계"]): r["RMS"] for r in MODEL["validation"]}
 
+# 2020 연구 15점 ↔ ’22~25 측량 15점 — 명단·배치를 하드코딩하지 않는다
+import legacy2020_sets as LS                                   # noqa: E402
+
+SET20 = LS.sets()
+COV20 = LS.coverage(LS.coords(SET20["s2020"]))
+COV22 = LS.coverage(LS.coords(SET20["s2225"], prefer_model=True))
+
 
 def link(slide, x, y, w, h, label, url, size=11.5, color=BLUE):
     """클릭 가능한 링크 상자 — 발표 중 그대로 눌러 띄운다."""
@@ -216,8 +223,8 @@ def s04_data(prs, page):
                    "개념도가 아니라 실제 자료를 연결해 시험한 결과다.", page,
                    rule=GREEN)
     rows = [
-        ["① Core", "IGRF-14 (13차)", "4개 에폭", "구현 완료",
-         "공식 계산기와 표시 자릿수 내 일치"],
+        ["① Core", "IGRF-14 (13차)", "1900~2030", "구현 완료",
+         "전 연도 단일 판본 적용 · 공식 계산기와 자릿수 내 일치"],
         ["② Regional", f"지리원 반복측량 (’19 · ’22~’25)", f"{N_SITES}측점",
          "구현·검증", "R0(상수항) 채택 · 편각 잔차가 크다"],
         ["③ Crustal", "KIGAM 자력이상 (1982~2018)", "2.8 km 격자",
@@ -480,26 +487,31 @@ def s11_vector(prs, page):
 # ══════════════════════════════════════════════════════ Ⅵ. 기존 연구 대비
 def s12_vs2020(prs, page):
     s = slide_base(prs, "Ⅵ. 기존 연구와의 관계",
-                   "2020 연구가 멈춘 지점에서 이어 간다",
+                   "2020 연구가 멈춘 지점에서 이어 간다 — 다만 같은 15점이 아니다",
                    "2020 연구를 대체하는 것이 아니라, 그 판단을 출발점으로 삼아 "
-                   "구조를 확장했다.", page)
+                   "구조를 확장했다. 측점망은 거의 교체됐다.", page)
     y = BODY_Y
     bw = (CW - 0.40) / 2
     rect(s, M, y, bw, 2.30, LGRAY)
     text(s, M + 0.24, y + 0.16, bw - 0.48, 0.32, "2020 연구", 14, GRAY, True)
     text(s, M + 0.24, y + 0.58, bw - 0.48, 1.60,
-         "반복측량 15점\n        ↓\n전국 모델에는 부족하다고 판단\n        ↓\n"
-         "IGRF 30점 계산값\n        +\n청양 상시관측 보정\n        ↓\n"
-         "2020 지자기도", 11.5, NAVY, space=1.4)
+         "2회 이상 측량된 15점\n        ↓\n전국 모델에는 부족하다고 판단\n        ↓\n"
+         "IGRF 30점 계산값 + 청양 상시관측 보정\n        ↓\n"
+         "2020 지자기도", 10.5, NAVY, space=1.24)
     rect(s, M + bw + 0.40, y, bw, 2.30, LBLUE)
     text(s, M + bw + 0.64, y + 0.16, bw - 0.48, 0.32, "이번 연구", 14, BLUE, True)
     text(s, M + bw + 0.64, y + 0.58, bw - 0.48, 1.60,
-         "IGRF (Core)\n        +\n지표 절대측정 (Regional)\n        +\n"
-         "KIGAM 자력이상 (Crustal)\n        +\n다중 관측소 (External)\n        ↓\n"
-         "통합 LMM + 독립 교차검증", 11.5, NAVY, space=1.4)
+         "IGRF (Core) + 지표 절대측정 (Regional)\n        +\n"
+         "KIGAM 자력이상 (Crustal) + 다중 관측소 (External)\n        ↓\n"
+         "통합 LMM + 독립 교차검증", 10.5, NAVY, space=1.24)
     text(s, M + bw + 0.08, y + 1.00, 0.30, 0.34, "▶", 20, BLUE, True, "c")
     rows = [
-        ["관측망", "반복측량 15점", f"{N_SITES}점 사용 · 50점 확대 설계"],
+        ["측점 구성", "2012~19 측량 2회 이상 15점",
+         f"공통 {len(SET20['common'])}점 · 2020 배제분 {len(SET20['only2225'])}점 "
+         f"· 야장 2점 = {N_SITES}점"],
+        ["관측 공백", f"최대 {COV20['max']:.0f} km · 50 km 초과 {COV20['over50']:.0f} %",
+         f"최대 {COV22['max']:.0f} km · {COV22['over50']:.0f} % — "
+         "강원·충청 내륙 축 상실 (50점 배치 설계의 근거)"],
         ["지역장", "별도 층 없음 — IGRF 계산값 사용",
          "지표 절대측정으로 직접 구성(R0)"],
         ["지각장", "반영 없음",
@@ -507,7 +519,6 @@ def s12_vs2020(prs, page):
          f"{VAL[('F_nT','IGRF')]:.0f} → {VAL[('F_nT','+Crustal')]:.0f} nT"],
         ["외부장", "청양 단독 보정", "관측소 4소 공간보간 · 성분별 관측구간(잠정)"],
         ["검증", "과거 성과와 비교", "평가집합 동결 + Station-LOSO + 블록 홀드아웃"],
-        ["산출물", "지자기도(정적)", "계산기·지자기도·3D 지구본 웹 공개"],
     ]
     table(s, M, y + 2.44, CW, ["구분", "2020 연구", "이번 연구"], rows,
           [0.14, 0.34, 0.52], row_h=0.36, size=9.5)
