@@ -72,6 +72,49 @@ def _is_date(v):
     return None
 
 
+def _dms_to_deg(s):
+    """'35˚35´15.8883˝' 같은 도분초 문자열 → 십진도. 실패하면 None."""
+    n = re.findall(r"\d+(?:\.\d+)?", str(s))
+    if len(n) < 3:
+        return None
+    d, m, sec = (float(x) for x in n[:3])
+    return d + m / 60 + sec / 3600
+
+
+def header_coords(df: pd.DataFrame):
+    """
+    야장 머리글의 측점 좌표를 읽는다 → (위도, 경도) 십진도.
+
+    양식(MAG-01H)은 라벨 행 아래에 도분초, 그 아래에 십진도를 둔다.
+
+        N2='위도'            Q2='경도'
+        N3='35˚35´15.8883˝'  Q3='126˚42´58.1406˝'
+        N4=35.58774675       Q4=126.71615017
+
+    십진도 칸을 우선하고, 비어 있으면 도분초를 환산한다. 세 해(2020·2023·
+    2025) 부안 야장에서 셀 위치가 같음을 확인했으나 고정 좌표로 읽지 않고
+    **라벨을 찾아** 상대 위치로 읽는다(행 밀림 사례가 있다).
+    """
+    nrow, ncol = df.shape
+    got = {}
+    for r in range(min(6, nrow)):
+        for c in range(ncol):
+            lab = _norm(df.iat[r, c])
+            if lab not in ("위도", "경도") or lab in got:
+                continue
+            lo = (33.0, 39.0) if lab == "위도" else (124.0, 132.0)
+            for dr in (2, 1):                    # 십진도 칸 우선
+                if r + dr >= nrow:
+                    continue
+                v = df.iat[r + dr, c]
+                val = (float(v) if isinstance(v, (int, float))
+                       and pd.notna(v) else _dms_to_deg(v))
+                if val is not None and lo[0] <= val <= lo[1]:
+                    got[lab] = val
+                    break
+    return got.get("위도"), got.get("경도")
+
+
 def parse_sheet(df: pd.DataFrame):
     """
     한 시트에서 (측점명, 날짜, 시각목록, F) 세션들을 추출.
@@ -108,6 +151,7 @@ def parse_sheet(df: pd.DataFrame):
     if not block_rows:
         return []
 
+    hlat, hlon = header_coords(df)
     sessions = []
     for bi, br in enumerate(block_rows):
         end = block_rows[bi + 1] if bi + 1 < len(block_rows) else nrow
@@ -177,6 +221,8 @@ def parse_sheet(df: pd.DataFrame):
                 "복각구간": f"{it_[0]:%H:%M}~{it_[-1]:%H:%M}" if it_ else None,
                 "이상": flag,
                 "F_nT": col_F.get(c),
+                "위도": hlat,
+                "경도": hlon,
             })
     return sessions
 
@@ -259,7 +305,8 @@ SESSION_CSV = BASE / "docs" / "data" / "fieldbook_sessions.csv"
 def save_sessions(df):
     """세션표를 CSV 로 남긴다 — 원자료가 아니라 일시·측점만 담은 파생 자료."""
     cols = [c for c in ("측점", "날짜", "시작", "종료", "편각구간", "복각구간",
-                        "관측수", "F_nT", "이상", "파일", "시트") if c in df.columns]
+                        "관측수", "F_nT", "위도", "경도", "이상", "파일",
+                        "시트") if c in df.columns]
     out = df[cols].copy()
     out["날짜"] = out["날짜"].astype(str)
     SESSION_CSV.parent.mkdir(parents=True, exist_ok=True)

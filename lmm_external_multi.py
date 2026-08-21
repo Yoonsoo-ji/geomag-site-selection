@@ -141,6 +141,61 @@ def kp_flag(kp):
     return "CAUTION" if kp <= KP_CAUTION else "DISTURBED"
 
 
+def build_site_xy(fb=None):
+    """
+    측점 좌표표 — 여러 출처를 합쳐 만든다.
+
+    ⚠ 종전에는 `LB.load_all_points()` 하나만 썼는데, 그것은 **신뢰도 감사와
+      이력 등급 필터를 이미 거친** 자료다. 그래서 감사에서 배제된 측점은
+      좌표까지 함께 사라져 「측점 좌표 없음」이 되고, 그 세션의 보정량이
+      통째로 버려졌다(부안 20세션이 실제로 그랬다).
+
+      «이 성과를 모델에 넣을 것인가»(투입 판정)와 «이 세션의 보정량을 계산할
+      수 있는가»(좌표 유무)는 다른 문제다. 보정량은 항상 산출해 두고, 쓸지
+      말지는 적합 단계에서 정한다.
+
+    우선순위 — 뒤에 오는 것이 앞을 덮지 않도록 setdefault 로 쌓는다.
+      ① 모델 투입분 (가장 정제된 좌표)
+      ② 성과표 원본 (필터 전)
+      ③ 야장 머리글 좌표
+      ④ 1등 지자기점 관측현황 30점
+    """
+    import lmm_build as LB          # 모듈 수준 import 는 순환이 되어 지역에서 연다
+
+    xy = {}
+
+    def put(name, lat, lon):
+        if name and pd.notna(lat) and pd.notna(lon):
+            xy.setdefault(LB.canon_site(name), {"lat": float(lat),
+                                                "lon": float(lon)})
+
+    pts = LB.load_all_points(include_2019=True)
+    for n, g in pts.groupby("name"):
+        put(n, g["lat"].mean(), g["lon"].mean())
+
+    try:                                     # ② 성과표 원본 (필터 전)
+        raw = pd.read_excel(LB.SURVEY_XLSX, sheet_name="Sheet1")
+        raw = raw.rename(columns={"도엽명": "n", "실": "lat", "실.1": "lon"})
+        raw["n"] = raw["n"].ffill()
+        for n, g in raw.dropna(subset=["lat", "lon"]).groupby("n"):
+            put(n, g["lat"].mean(), g["lon"].mean())
+    except Exception as e:                                     # noqa: BLE001
+        print(f"  [좌표] 성과표 원본 생략({e})")
+
+    if fb is not None and "위도" in fb.columns:                  # ③ 야장 머리글
+        for n, g in fb.dropna(subset=["위도", "경도"]).groupby("측점"):
+            put(n, g["위도"].median(), g["경도"].median())
+
+    try:                                     # ④ 관측현황 30점
+        import legacy2020_sets as LS
+        for n, v in LS.pts30().items():
+            put(n, v["lat"], v["lon"])
+    except Exception as e:                                     # noqa: BLE001
+        print(f"  [좌표] 관측현황 30점 생략({e})")
+
+    return xy
+
+
 def session_qc(kp, rng: dict):
     """
     세션 채택 등급 — 관측소가 그 창에서 실제로 흔들렸는지로 판정한다.
@@ -232,9 +287,7 @@ def main(mode="plane", only=None, out_csv=None):
     print(f"야장 유효 세션 {len(fb)}건 / {len(days)}일 "
           f"({min(days)} ~ {max(days)})")
 
-    # 측점 좌표 — 성과표·야장 공통 명칭 기준
-    pts = LB.load_all_points(include_2019=True)
-    site_xy = (pts.groupby("name")[["lat", "lon"]].mean().to_dict("index"))
+    site_xy = build_site_xy(fb)
 
     kp = fetch_kp()
 
@@ -278,7 +331,7 @@ def main(mode="plane", only=None, out_csv=None):
     base_cache = {}
     rows = []
     for _, r in fb.iterrows():
-        day, site = r["날짜"], r["측점"]
+        day, site = r["날짜"], LB.canon_site(r["측점"])
         t0, t1 = to_utc(day, r["시작"]), to_utc(day, r["종료"])
         xy = site_xy.get(site)
         blank = {"Kp": np.nan, "Kp_flag": "미상",

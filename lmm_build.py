@@ -387,9 +387,11 @@ def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
                kp_max=("Kp", "max"), n=("dF", "size"))
     if "dI_arcmin" in ec.columns:
         agg["dI"] = ("dI_arcmin", "mean")
+    ec["측점"] = ec["측점"].map(canon_site)          # 별칭 통일 (임계→삼척)
     g = ec.groupby(["측점", "연도"]).agg(**agg).reset_index()
-    out = df.merge(g, left_on=["name", "year"], right_on=["측점", "연도"],
-                   how="left")
+    out = df.assign(_key=df["name"].map(canon_site)).merge(
+        g, left_on=["_key", "year"], right_on=["측점", "연도"],
+        how="left").drop(columns=["_key"])
     hit = out["dF"].notna()
 
     if EXTERNAL_MODE == "drop_storm":
@@ -422,6 +424,18 @@ def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
 # 야장에서 복원한 세션표 (lmm_fieldbook.py 산출). 없으면 종전 7/1 대체로 동작한다.
 FIELDBOOK_SESSIONS = BASE / "docs" / "data" / "fieldbook_sessions.csv"
 
+# 측점명 별칭 — 같은 표석의 다른 이름이다. 자료원마다 표기가 달라서
+# 이름 그대로 join 하면 조용히 매칭에 실패한다.
+#   ⚠ 실제로 2022 야장이 「임계」로 되어 있어 성과표 「삼척」과 붙지 않았고,
+#     삼척 2022 가 관측일시 없이(7/1 대체) 적합에 들어가 External 보정도
+#     받지 못했다. 야장에는 2022-10-12 7세션이 그대로 있었다.
+SITE_ALIAS = {"임계": "삼척", "경주": "영천", "언양": "양산"}
+
+
+def canon_site(s):
+    """측점명을 성과표 표기로 통일한다."""
+    return SITE_ALIAS.get(str(s).strip(), str(s).strip())
+
 
 def attach_fieldbook_datetime(df: pd.DataFrame) -> pd.DataFrame:
     """(측점, 연도) 로 야장 세션을 찾아 대표 관측일시를 붙인다.
@@ -446,11 +460,13 @@ def attach_fieldbook_datetime(df: pd.DataFrame) -> pd.DataFrame:
         return pd.Timestamp(f"{r['날짜'].date()} {str(r['시작'])[:8]}")
 
     fb["일시"] = fb.apply(_dt, axis=1)
+    fb["측점"] = fb["측점"].map(canon_site)          # 임계→삼척 등 별칭 통일
     rep_dt = (fb.groupby(["측점", "연도"])["일시"]
                 .median().rename("fb_dt").reset_index())
 
-    out = df.merge(rep_dt, left_on=["name", "year"],
-                   right_on=["측점", "연도"], how="left")
+    out = df.assign(_key=df["name"].map(canon_site)).merge(
+        rep_dt, left_on=["_key", "year"],
+        right_on=["측점", "연도"], how="left").drop(columns=["_key"])
     hit = out["fb_dt"].notna()
     out.loc[hit, "date"] = out.loc[hit, "fb_dt"]
     out.loc[hit, "date_src"] = "야장복원"
