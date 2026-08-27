@@ -113,15 +113,19 @@ SIGMA_MIN_PTS = 8              # 반경 내 최소 유효점
 #     목표 = 현 관측망 + Track C 신규 50점
 # LMM 투입 16점은 「그중 현재 모델에 들어간 자료」이지 관측망이 아니다.
 #
-# ⚠️ 「현 관측망」은 명단 길이 30 이 아니라 **좌표 결함을 뺀 29** 다 — 남양과
-#    서산이 같은 좌표라 서산은 담당면적을 못 받고 공간적으로 사라진다
-#    (`existing_network.BAD_COORDS`). 그래서 기본 목표는 **79** 다.
+# ⚠️ 「현 관측망」은 **좌표를 실제로 가진 측점 수**다. 2026-08-27 이전에는
+#    남양·서산이 같은 좌표라 공간적으로 29점이었으나, 지리원 원장 좌표를
+#    적용해 중복이 해소돼 **30점**이 됐다.
 #
-# ✅ **권역 간 비(比)는 N 과 무관하다.** ρ(x) ∝ σ(x) 이고 L = 1/√ρ 이므로
-#    L ∝ 1/√N — N 을 바꾸면 전국이 같은 배율로 늘거나 줄 뿐 **어느 권역이 몇 배
-#    조밀해야 하는가는 바뀌지 않는다.** 따라서 「영남이 경기·강원북보다 약 3배
-#    조밀」은 확정 결론이고, **절대 km 값과 충족도만 N 가정에 딸린 잠정치**다.
-#    산출물에 그렇게 구분해 쓸 것.
+# **권역 간 비(比)는 N 과 무관하다.** ρ(x) ∝ σ(x) 이고 L = 1/√ρ 이므로
+#    L ∝ 1/√N — N 을 바꾸면 전국이 같은 배율로 늘거나 줄 뿐 어느 권역이 몇 배
+#    조밀해야 하는가는 바뀌지 않는다.
+#
+# ⚠️ **그러나 그것을 「확정 사실」로 쓰지 말 것.** N 에 무관하다는 것은 계산이
+#    N 에 딸리지 않는다는 뜻이지 결론이 검증됐다는 뜻이 아니다 — σ 결측
+#    (항공자력 공백) 위에 서 있고 Neyman 배분 가정 자체가 미검증이다.
+#    정확한 표현은 **「N 가정에 독립적인 잠정 설계비」**이며, 절대 km 값과
+#    부족도는 그보다도 더 잠정적이다.
 N_NEW_SITES = 50               # Track C 신규 (35~40 구축용 + 10~15 검증 전용)
 
 
@@ -129,19 +133,20 @@ def _network_size() -> int:
     """
     **공간적으로 쓸 수 있는** 현 관측망 크기.
 
-    ⚠️ 명단 길이(30)가 아니라 **좌표 결함을 뺀 수**다. 좌표가 겹치는 측점은
-    담당면적을 하나도 못 받아 공간 계산에서 사라지는데, 목표 N 에는 계속
-    세어지면 분모·분자 모집단이 또 갈라진다(2026-08-27 검토 지적).
-    서산 좌표가 복구되면 `BAD_COORDS` 가 비고 자동으로 30 으로 돌아온다.
+    ⚠️ 이것은 **기본값일 뿐**이다. 실제 계산에서는 좌표를 실제로 가진 측점
+    수를 세어 목표 N 을 잡는다(`compute_density_design` 이 `n_sites` 로
+    유도). 좌표가 겹치는 측점은 담당면적을 하나도 못 받아 공간 계산에서
+    사라지므로, 행 수를 그대로 분모로 쓰면 모집단이 갈라진다.
+    2026-08-27 에 지리원 원장 좌표를 적용해 중복이 해소돼 30 이 됐다.
     """
     try:
-        from existing_network import BAD_COORDS, EXISTING_NETWORK
-        return len(EXISTING_NETWORK) - len(BAD_COORDS)
+        from existing_network import EXISTING_NETWORK
+        return len(EXISTING_NETWORK)
     except Exception:
-        return 29
+        return 30
 
 
-N_TARGET_SITES = _network_size() + N_NEW_SITES      # = 79 (서산 좌표 복구 시 80)
+N_TARGET_SITES = _network_size() + N_NEW_SITES      # = 80
 
 # 권장 측점 간격 등급 (km)
 SPACING_TIERS = [
@@ -427,7 +432,7 @@ def catchment_spacing(qlat, qlon, area_km2, slat, slon):
     담당면적이 반복돼 있어 `mean()` 이 **셀 수로 가중**된다(큰 담당구역이
     과대 반영). 측점당 통계는 `area_by_site` 를 쓴다. 담당 셀을 하나도 못 받은
     측점은 0 이므로 `area_by_site > 0` 으로 걸러야 한다 — 좌표가 겹치는 측점이
-    실제로 그렇게 된다(`existing_network.BAD_COORDS`).
+    실제로 그렇게 된다(`existing_network.drop_duplicate_coords` 로 사전 제거).
     """
     qlat = np.atleast_1d(np.asarray(qlat, float))
     qlon = np.atleast_1d(np.asarray(qlon, float))

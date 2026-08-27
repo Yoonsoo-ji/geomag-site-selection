@@ -1455,12 +1455,12 @@ def compute_density_design(
             print(f"      ⚠ 관측망 명단에 있으나 성과표에 없음: {' · '.join(miss)}")
         # ⚠️ 좌표가 겹치는 측점은 담당면적을 하나도 못 받아 «공간적으로 사라진다».
         #    행 수를 그대로 분모로 쓰면 없는 측점을 세어 밀도를 과대평가한다.
+        #    원장 좌표를 적용한 뒤에는 중복이 없어야 하므로, 걸리면 새 결함이다.
         net, coord_dup = EN.drop_duplicate_coords(net_all)
         if coord_dup:
-            for nm in coord_dup:
-                why = EN.BAD_COORDS.get(nm, "다른 측점과 좌표 동일")
-                print(f"      ⚠ 좌표 중복 제외 — {nm}: {why}")
-            print(f"      → 명목 {len(net_all)}점 / **공간 {len(net)}점** 으로 계산")
+            print(f"      ⚠ 좌표 중복 — {' · '.join(coord_dup)} 제외 "
+                  f"(명목 {len(net_all)} → 공간 {len(net)}점). "
+                  f"원장 교정 후에도 남았다면 새 결함이니 확인할 것")
         slat = pd.to_numeric(net["위도"], errors="coerce").values
         slon = pd.to_numeric(net["경도"], errors="coerce").values
         ok = np.isfinite(slat) & np.isfinite(slon)
@@ -2699,6 +2699,20 @@ def load_existing_sites() -> "pd.DataFrame | None":
         existing_names = set(df_latest["도엽명"].dropna().unique())
         df_old = _load_old_sites(existing_names)
         if not df_old.empty:
+            # ⚠️ 구 파일('10~'19)의 좌표에는 전사 오류가 있다 — 원장과 대조하면
+            #    주소는 같은데 좌표만 다른 행이 있다(서산 52 km · 남양 3.6 km ·
+            #    와도 1.45 km). 서산은 남양의 (이미 틀린) 값을 통째로 복사해
+            #    두 행이 같은 좌표였다. 원장으로 교정한다.
+            #    22_25 성과표 행은 **손대지 않는다** — 그쪽이 최신 실측이고,
+            #    원장과 크게 어긋나는 포천·여주·양산은 주소부터 다른 실제 이설이다.
+            try:
+                df_old, moved = EN.apply_register(df_old, name_col="도엽명")
+                if moved:
+                    big = [f"{n} {d:.2f}km" for n, d in moved if d >= 1.0]
+                    print(f"  ✅ 구 파일 좌표를 원장으로 교정: {len(moved)}점"
+                          + (f" · 1 km 이상 {' · '.join(big)}" if big else ""))
+            except Exception as exc:
+                print(f"  ⚠ 원장 좌표 교정 실패(구 파일 값 유지): {exc}")
             df_latest = pd.concat([df_latest, df_old], ignore_index=True)
 
         print(f"  ✅ 기존 측정점 총 {len(df_latest)}개 (22_25 + 구파일 병합)")
@@ -3284,7 +3298,12 @@ def create_folium_map(
     n_net_oth = n_net_all - n_net_tgt
     n_net_old = len(EN.SUPERSEDED)
     n_new = AG.N_NEW_SITES
-    n_bad = n_net_all - n_net if isinstance(n_net, int) else len(EN.BAD_COORDS)
+    n_bad = (n_net_all - n_net) if isinstance(n_net, int) else 0
+    _coord_note = (
+        f'<span style="color:#a00;">⚠ 밀도 계산은 <b>{n_net}점</b> — '
+        f'좌표 중복 {n_bad}점 제외</span><br>' if n_bad > 0 else
+        '<span style="color:#666;font-size:10.5px;">좌표 정본: 지리원 관측망 '
+        '원장 30점 ¶¶</span><br>')
     uni_def = _ds.get("uniform_deficit", "—")
 
     def _swatch(color, label):
@@ -3354,7 +3373,7 @@ def create_folium_map(
       <span style="display:inline-block;vertical-align:middle;margin-right:4px;">🎯</span>선점 대상 {n_net_tgt}점<br>
       <span style="display:inline-block;vertical-align:middle;margin-right:4px;">⭐</span>기타 {n_net_oth}점 <span style="color:#666;">(저수지·제방 설치)</span><br>
       <span style="display:inline-block;vertical-align:middle;margin-right:4px;">▫️</span>옛 위치 {n_net_old}점 <span style="color:#666;">(관측망·밀도계산 제외) ¶</span><br>
-      <span style="color:#a00;">⚠ 밀도 계산은 <b>{n_net}점</b> — 좌표 결함 {n_bad}점 제외 ¶¶</span><br>
+      {_coord_note}
       <hr style="margin:6px 0;border-color:#ccc;">
       <small style="color:#555;">
         격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/EPSG:5179<br>
@@ -3365,12 +3384,14 @@ def create_folium_map(
         ‡ 구배가 크면 그 지점의 값이 주변을 대표하지<br>
         &nbsp;&nbsp;못하고 2.8 km 격자 기반 지각장 보정도<br>
         &nbsp;&nbsp;빗나간다 → 측점은 조용한 자리에.<br>
-        ¶¶ 원본 성과표에서 <b>남양과 서산이 같은 좌표</b>를 쓴다<br>
-        &nbsp;&nbsp;&nbsp;(126°54′46″/37°06′53″). 그 좌표는 <b>남양 도엽</b><br>
-        &nbsp;&nbsp;&nbsp;안이므로 서산 쪽이 오기다. 같은 좌표의 두 점 중<br>
-        &nbsp;&nbsp;&nbsp;하나는 담당면적을 못 받아 공간적으로 사라지므로<br>
-        &nbsp;&nbsp;&nbsp;밀도 계산에서 뺐다. <b>서산 참좌표는 지리원 원장</b><br>
-        &nbsp;&nbsp;&nbsp;<b>확인이 필요하다</b> — 복구되면 30점으로 돌아간다.<br>
+        ¶¶ 좌표 정본은 지리원 관측망 원장 30점<br>
+        &nbsp;&nbsp;&nbsp;(지점코드 1-1~1-30). 구 파일('10~'19)에는<br>
+        &nbsp;&nbsp;&nbsp;<b>주소는 같은데 좌표만 틀린</b> 전사 오류가 있어<br>
+        &nbsp;&nbsp;&nbsp;원장으로 교정했다 — 서산 52.0 km(남양 값이<br>
+        &nbsp;&nbsp;&nbsp;복사돼 두 점이 겹쳐 있었다) · 남양 3.6 km ·<br>
+        &nbsp;&nbsp;&nbsp;와도 1.45 km. 22~25 성과표 15점은 그쪽이<br>
+        &nbsp;&nbsp;&nbsp;최신이라 손대지 않는다(포천·여주·양산의<br>
+        &nbsp;&nbsp;&nbsp;원장 대비 차이는 주소부터 다른 실제 이설).<br>
         ‡‡ 각 국토 격자셀을 가장 가까운 측점에 배정해<br>
         &nbsp;&nbsp;&nbsp;담당면적을 구하고 그 제곱근을 간격으로 쓴다.<br>
         &nbsp;&nbsp;&nbsp;종전 「최근접거리 × 2」는 측점 위에서 0 이 되어<br>
@@ -3506,8 +3527,8 @@ def create_folium_map(
       &nbsp;&nbsp;목표 {n_target_sites}점 = 현 관측망 {n_net} + Track C 신규 {n_new} —<br>
       &nbsp;&nbsp;<b>분모와 분자를 같은 모집단</b>으로 맞춘 것. LMM 투입 16점은<br>
       &nbsp;&nbsp;「그중 현재 모델에 들어간 자료」이지 관측망이 아니다.<br>
-      &nbsp;&nbsp;<span style="color:#a00;">⚠ 좌표 결함 {n_bad}점(서산) 제외 — 남양과 좌표가 같다.<br>
-      &nbsp;&nbsp;지리원 원장 확인 후 재산출 필요.</span><br>
+      &nbsp;&nbsp;좌표 정본은 <b>지리원 관측망 원장 30점</b>. 구 파일의 전사<br>
+      &nbsp;&nbsp;오류(서산 52.0 · 남양 3.6 · 와도 1.45 km)를 교정했다.<br>
       &nbsp;&nbsp;<span style="color:#a00;">⚠ 권역 간 비는 N 과 무관하나, 그것이 「확정 사실」을<br>
       &nbsp;&nbsp;뜻하지는 않는다 — 자료 공백과 미검증 Neyman 가정 위의<br>
       &nbsp;&nbsp;<b>잠정 설계비</b>다. 절대 km·부족도는 더욱 잠정치.</span><br>

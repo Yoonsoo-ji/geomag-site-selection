@@ -24,6 +24,8 @@
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 # 기존 지자기 측정점 30점 (2026-08-19 확정) — 1등 지자기점 관측망
 EXISTING_NETWORK = [
     "남양", "춘양", "청송", "상주", "미원", "서산", "청양", "이원", "부안",
@@ -47,49 +49,83 @@ EXISTING_ALIAS: dict[str, str] = {}
 # 현 이름 쪽 좌표만 쓴다(`lmm_build.SITE_ALIAS` 와 같은 대응).
 SUPERSEDED = {"언양": "양산", "경주": "영천", "임계": "삼척"}
 
-# ── 좌표 결함 — 원본 성과표의 오류 (2026-08-27 확인) ─────────────────────
+# ── 좌표 정본 — 지리원 관측망 원장 30점 (2026-08-27 확보) ──────────────
 #
-# ⚠️ **`'10~'19년 지자기점 관측현황(최종).xls` 에서 남양과 서산이 같은 좌표를
-# 쓴다** — 둘 다 `126° 54′ 46″ / 37° 06′ 53″`. 전 파일에서 유일한 중복이다.
-# 소재지는 서로 다르다(남양 = 화성 동탄면 장지리저수지 · 서산 = 서산 잠홍동
-# 잠홍저수지, 실거리 약 70 km).
+# `data/geomag_network_30.csv` 가 **좌표 정본**이다. 지점명·지점코드·도엽번호·
+# 위경도(도분초)·소재지를 담은 30행이며, 지점코드(1-1 ~ 1-30)가 관측망 자체의
+# 일련번호다.
 #
-# **서산 쪽이 오기다** — 세 갈래로 독립 확인했다(2026-08-27):
+# ⚠️ **`'10~'19년 지자기점 관측현황(최종).xls` 의 좌표에는 전사 오류가 있다.**
+# 원장과 대조하니 **주소는 같은데 좌표만 다른** 세 건이 나왔다 — 이설이 아니라
+# 옮겨 적으면서 틀린 것이다:
 #
-#   ① 행정구역 — 좌표 126.9128E/37.1147N 은 **화성시** 영역이다(남양의 관할).
-#      서산시는 대략 126.3~126.6E · 36.6~37.0N 이라 **45 km 넘게 벗어난다.**
-#      서산 소재지(잠홍동 잠홍저수지)까지 실거리 약 57 km.
-#   ② 도엽 — 좌표는 **「남양」 도엽**(126.75~127.00E · 37.00~37.25N) 안이고
-#      **「서산」 도엽**(126.25~126.50E · 36.75~37.00N) 밖이다. 「측점명 ==
-#      좌표가 든 도엽명」은 33행 중 30행에서 성립한다(예외는 양산=언양 개명,
-#      청양(실제 공주시 소재), 그리고 이 서산).
-#   ③ IGRF — 서산 2018 성과 D −7.4892° · I 53.3028° 를 두 위치의 IGRF-14 와
-#      견주면 복각 잔차가 **중복 좌표 −35.4′ vs 잠홍저수지 −16.4′** 다.
-#      후자는 이 연구의 통상 복각 잔차(약 17′) 수준이고 전자는 그 두 배다.
-#      **측정은 서산시에서 이뤄졌고 좌표 칸만 남양 값이 들어온 것**이다.
+#   | 지점 | 차이 | 내용 |
+#   |---|---|---|
+#   | **서산** | **52.0 km** | 남양 좌표가 통째로 복사돼 있었다(중복). 참값은 서산시 잠홍저수지 |
+#   | **남양** | 3.6 km | 경도 분·초가 틀림(126°54′46″ vs 원장 126°57′10.9″) |
+#   | **와도** | 1.45 km | 경도 초 단위 오차 |
 #
-# ⚠️ 다만 **남양 행도 완전히 자기정합적이지는 않다** — 소재지가 「동탄면
-#    장지리저수지」인데 동탄은 약 127.07E 로 남양 도엽 동쪽 밖이다(좌표에서
-#    13~17 km). 둘 다 화성시이므로 관할은 맞지만 면(面) 표기가 의심스럽다.
-#    즉 이 좌표는 **「화성시의 한 점」으로 확실하고 남양 행에 귀속되나**,
-#    남양의 정확한 위치도 함께 확인하는 편이 안전하다.
+# 남양·서산이 같은 값이었던 것은 **두 행이 함께 오염**된 결과다. 서산은 남양의
+# (그것도 이미 틀린) 값을 물려받았다. 원장을 넣으면 둘 다 제자리로 간다.
 #
-# ⚠️ 서산 행은 **전자력도 깨져 있다** — 60,812 nT 는 한반도 범위(약 50,000)
-#    밖이라 로더가 NaN 으로 거른다(팝업에 「총자력 −」로 나오는 이유).
-#    50,812 의 자릿수 오기로 보이나 단정하지 않는다.
+# ⚠️ 반면 **22~25 성과표에 있는 15점은 원장보다 최신**이다. 원장과 크게
+# 어긋나는 세 건은 **주소부터 다르므로 실제 이설**이다 — 원장으로 덮으면 안 된다:
 #
-# 서산의 참 좌표는 이 저장소의 어느 자료에도 없다(파생 파일들은 전부 같은
-# 오류를 물려받았다). 소재지로 추정하면 **약 36.78N / 126.44E**(잠홍저수지)
-# 이나 **추정값을 자료에 넣지 않는다** — 지리원 원장에서 확인해 채울 것.
+#   포천 10.3 km (동두천시 보산동 → 연천군 청산면) · 여주 7.0 km (여주시 대신면
+#   → 양평군 개군면) · 양산 21.3 km (미호리 산89-2 → 산59-2)
 #
-# ⚠️ 그때까지 서산은 **공간 계산에서 빠진다** — 관측망은 명목 30점이나
-# 공간적으로는 **29점**이다. 밀도 정규화에 30 을 쓰면 없는 측점을 세는 것이다.
-BAD_COORDS = {
-    "서산": ("남양 좌표와 동일(126°54′46″/37°06′53″). 그 좌표는 화성시·남양 "
-             "도엽 안이고 서산시에서 57 km 밖이며, 서산 실측 복각도 잠홍저수지 "
-             "쪽에 맞는다(−16.4′ vs −35.4′) → 서산 쪽이 오기. "
-             "추정 36.78N/126.44E, 지리원 원장 확인 필요"),
-}
+# → **규칙: 22~25 성과표에 있으면 성과표 좌표, 없으면 원장 좌표.**
+REGISTER_CSV = "data/geomag_network_30.csv"
+
+
+def load_register(root=None):
+    """
+    관측망 원장 30점을 DataFrame 으로. 컬럼: 지점명·지점코드·도엽번호·
+    위도·경도(십진도)·소재지.
+    """
+    import pandas as pd
+
+    base = Path(root) if root else Path(__file__).parent
+    df = pd.read_csv(base / REGISTER_CSV)
+    df["위도"] = df.위도_도 + df.위도_분 / 60 + df.위도_초 / 3600
+    df["경도"] = df.경도_도 + df.경도_분 / 60 + df.경도_초 / 3600
+    return df[["지점명", "지점코드", "도엽번호", "위도", "경도", "소재지"]]
+
+
+def apply_register(df, name_col="도엽명", lat_col="위도", lon_col="경도",
+                   only_names=None, root=None):
+    """
+    측점표의 좌표를 원장 값으로 교정한다.
+
+    `only_names` 를 주면 그 이름들만 손댄다 — **22~25 성과표에서 온 행은
+    최신 실측이므로 제외**해야 한다(포천·여주·양산의 실제 이설을 되돌리게 된다).
+
+    반환은 `(교정된 df, [(이름, 이동거리_km), ...])`.
+    """
+    import numpy as np
+    import pandas as pd
+
+    reg = load_register(root).set_index("지점명")
+    out = df.copy()
+    moved = []
+    for i, row in out.iterrows():
+        nm = str(row[name_col]).strip()
+        if nm not in reg.index:
+            continue
+        if only_names is not None and nm not in only_names:
+            continue
+        la0 = pd.to_numeric(row[lat_col], errors="coerce")
+        lo0 = pd.to_numeric(row[lon_col], errors="coerce")
+        la1, lo1 = float(reg.at[nm, "위도"]), float(reg.at[nm, "경도"])
+        if np.isfinite(la0) and np.isfinite(lo0):
+            m = np.radians((la0 + la1) / 2)
+            d = float(np.hypot((lo1 - lo0) * 111.320 * np.cos(m),
+                               (la1 - la0) * 110.574))
+            if d > 0.005:                     # 5 m 이상만 기록
+                moved.append((nm, round(d, 3)))
+        out.at[i, lat_col] = la1
+        out.at[i, lon_col] = lo1
+    return out, moved
 
 
 def drop_duplicate_coords(df, name_col: str = "도엽명",
@@ -102,21 +138,18 @@ def drop_duplicate_coords(df, name_col: str = "도엽명",
     같은 좌표의 두 점 중 하나는 담당 셀을 하나도 못 받아 조용히 사라지는데,
     정규화 분모에는 계속 세어져 밀도를 과대평가한다.
 
-    `BAD_COORDS` 에 사유가 적힌 이름을 우선 버리고, 없으면 뒤에 오는 행을
-    버린다. 반환은 `(정리된 df, 버린 이름 목록)`.
+    원장 좌표를 적용한 뒤에는 중복이 없어야 한다 — 걸리면 새 결함이므로
+    호출부에서 반드시 알릴 것.
     """
-    import pandas as pd  # 지연 import — 이 모듈은 명단만으로도 쓰인다
+    import pandas as pd
 
     d = df.copy()
     d["_la"] = pd.to_numeric(d[lat_col], errors="coerce").round(decimals)
     d["_lo"] = pd.to_numeric(d[lon_col], errors="coerce").round(decimals)
-    # 결함이 알려진 이름을 뒤로 보내 drop_duplicates(keep="first") 에서 탈락시킨다
-    d["_bad"] = d[name_col].astype(str).str.strip().isin(BAD_COORDS).astype(int)
-    d = d.sort_values("_bad", kind="stable")
     keep = d.drop_duplicates(["_la", "_lo"], keep="first")
     dropped = [str(n).strip() for n in
                d.loc[~d.index.isin(keep.index), name_col].tolist()]
-    keep = keep.sort_index().drop(columns=["_la", "_lo", "_bad"])
+    keep = keep.drop(columns=["_la", "_lo"])
     return keep, dropped
 
 
@@ -150,11 +183,14 @@ if __name__ == "__main__":
     print(f"관측망 {len(EXISTING_NETWORK)}점 · 선점 대상 {len(EXISTING_TARGET)}점")
     print(f"옛 이름 배제 {len(SUPERSEDED)}건: "
           + " · ".join(f"{k}→{v}" for k, v in SUPERSEDED.items()))
-    print(f"\n좌표 결함 {len(BAD_COORDS)}건 — 공간 계산에서 제외:")
-    for k, why in BAD_COORDS.items():
-        print(f"  {k}: {why}")
-    print(f"  → 명목 {len(EXISTING_NETWORK)}점 / 공간 "
-          f"{len(EXISTING_NETWORK) - len(BAD_COORDS)}점")
+    reg = load_register()
+    print(f"\n좌표 정본 원장 {len(reg)}점 ({REGISTER_CSV})")
+    dup = reg.round({"위도": 5, "경도": 5}).duplicated(["위도", "경도"]).sum()
+    print(f"  좌표 중복 {int(dup)}건")
+    miss = [n for n in EXISTING_NETWORK if n not in set(reg.지점명)]
+    extra = [n for n in reg.지점명 if n not in set(EXISTING_NETWORK)]
+    print(f"  명단에만 있음: {miss or '없음'}")
+    print(f"  원장에만 있음: {extra or '없음'}  (옛 이름 — SUPERSEDED 대응)")
     rest = [n for n in EXISTING_NETWORK if n not in EXISTING_TARGET]
     print(f"\n선점 대상 15: {' · '.join(EXISTING_TARGET)}")
     print(f"저수지 제외 {len(rest)}: {' · '.join(rest)}")

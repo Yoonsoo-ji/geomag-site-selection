@@ -24,7 +24,7 @@
 |---|---|---|
 | `geomag_site_selection.py` | 메인 분석·지도 생성 | `output/` |
 | `anomaly_gradient.py` | **항공자력 공간구배·권역 밀도 설계 (단일 출처)** | — (모듈) |
-| `existing_network.py` | **기존 1등 지자기점 관측망 30점 (단일 출처)** | — (모듈) |
+| `existing_network.py` | **기존 1등 지자기점 관측망 30점 + 좌표 정본 (단일 출처)** | — (모듈) |
 | `build_docs.py` | 배포 빌드 (GeoJSON 단순화) | `docs/` |
 | `create_methodology_doc.py` | 방법론 Word 문서 생성 | `docs/output/` |
 
@@ -260,10 +260,13 @@ git push origin HEAD:main
 - 권장 간격 `density_req_{dense,mid,coarse,sparse}.geojson` (35/50/65 km 경계)
 - 상대 부족도 `density_gap_{critical,short,mild,ok}.geojson` (0.7/1.0/1.4 경계)
 
-⚠️ **관측망은 명목 30점이나 공간적으로는 29점**이다 — 남양·서산이 같은 좌표라
-서산이 담당면적을 못 받는다(`existing_network.BAD_COORDS`). 목표도 79 = 29 + 50.
-서산 좌표가 복구되면 자동으로 30/80 으로 돌아간다. **행 수를 그대로 측점 수로
-쓰지 말 것.**
+⚠️ **좌표 정본은 `data/geomag_network_30.csv`**(지리원 관측망 원장 30점)다.
+구 파일('10~'19)에는 주소는 같은데 좌표만 틀린 전사 오류가 있어(서산 52.0 ·
+남양 3.6 · 와도 1.45 km) `existing_network.apply_register()` 로 교정한다.
+**22~25 성과표 15점은 그쪽이 최신이라 손대지 않는다** — 원장과 크게 어긋나는
+포천·여주·양산은 주소부터 다른 실제 이설이다. 목표는 80 = 30 + 50.
+**행 수를 그대로 측점 수로 쓰지 말 것** — 좌표 중복이 있으면 담당면적을 못 받는
+측점이 생긴다(`drop_duplicate_coords`).
 
 ### ③ [참고] 변동폭 P90-P10 — `gradient_{low,mid_low,optimal,caution}.geojson`
 종전 레이어. **이름만 「그레디언트」였고 실제로는 변동폭(nT)이다.** 점수에 쓰지 않는다.
