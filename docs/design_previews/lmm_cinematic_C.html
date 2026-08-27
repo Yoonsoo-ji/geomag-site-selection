@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>한반도 LMM — 관측망에서 국가 자기장 기준으로</title>
+<title>C · Aurora Spectral — 한반도 LMM</title>
 <style>
 :root{
   --ink:#eaf1f6;--muted:#9eacb9;--dim:#687887;--bg:#071018;--panel:#0d1822;
@@ -68,62 +68,100 @@ h3{font-size:clamp(20px,1.9vw,30px);line-height:1.25;letter-spacing:-.025em}
 @media(max-width:780px){html{scroll-snap-type:y proximity}.topbar{height:52px}.scene{align-items:flex-start;padding-top:82px;overflow:visible}.scene-nav{display:none}.grid2,.grid3,.perf-grid,.source-grid,.roadmap{grid-template-columns:1fr}.grid4{grid-template-columns:1fr}.flow-track{grid-template-columns:repeat(2,1fr)}.algo{grid-template-columns:1fr}.algo-step::after{display:none}.feedback{grid-template-columns:1fr}.map-shell{min-height:480px}.map-shell canvas{height:480px}.map-note{max-width:72%}.controls{bottom:12px}.controls button{padding:8px 11px}.ledger-row{grid-template-columns:72px 1fr}.ledger-row span:last-child{grid-column:2}.decision-strip{grid-template-columns:1fr}.hero-foot{align-items:flex-start;flex-direction:column}.layer{grid-template-columns:45px 1fr}.layer .status{display:none}.bar-row{grid-template-columns:90px 1fr 58px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}.scroll-cue i::after{animation:none}}
 
-/* BEGIN AURORA SPECTRAL */
-/* Aurora Spectral — 한글 조판·720p 밀도·지도 색 토큰 */
+
+/* ── A/B/C 공통: 한글 조판·720p 압축·지도 색 토큰 ─────────────── */
 :root{
-  --ink:#f8f5ff;--muted:#b5acd0;--dim:#786f98;--bg:#050515;--panel:#111026;
-  --line:rgba(189,171,255,.2);--cyan:#5af7f2;--blue:#7867ff;--orange:#ff5c9c;--gold:#ffd36a;
-  --map-bg:#09081d;--map-land:rgba(27,26,53,.46);--map-stroke:#82e8e4;
-  --inset-bg:#0d0b25;--inset-line:#655a9a;--inset-text:#f8f5ff;
+  --map-bg:#09141d;--map-land:#0d1b26;--map-stroke:#66869a;
+  --inset-bg:#071018;--inset-line:#355267;--inset-text:#dce9f1;
 }
 html,body{max-width:100%;overflow-x:hidden}
-body{word-break:keep-all;overflow-wrap:normal;line-break:strict;hyphens:none;background:radial-gradient(ellipse at 15% 20%,rgba(90,247,242,.12),transparent 31%),radial-gradient(ellipse at 82% 18%,rgba(120,103,255,.2),transparent 34%),radial-gradient(ellipse at 60% 84%,rgba(255,92,156,.12),transparent 32%),var(--bg)}
-body::before{opacity:.28;background-image:radial-gradient(rgba(255,255,255,.45) .55px,transparent .8px);background-size:7px 7px;mix-blend-mode:screen}
+body{word-break:keep-all;overflow-wrap:normal;line-break:strict;hyphens:none}
 h1,h2,h3,.loop-note,.warning,.decision{text-wrap:balance;word-break:keep-all;overflow-wrap:normal;line-break:strict}
-p,li,.lead,.axis-card p,.case p,.usecase p,.feedback-card p,.phase li,.flow-node span,.stat small,.layer small{text-wrap:pretty;word-break:keep-all;overflow-wrap:normal;line-break:strict}
+p,li,.lead,.axis-card p,.case p,.usecase p,.feedback-card p,.phase li,
+.flow-node span,.stat small,.layer small{text-wrap:pretty;word-break:keep-all;overflow-wrap:normal;line-break:strict}
 .no-break{white-space:nowrap}
 h1{font-size:clamp(44px,6.4vw,96px);line-height:.96;letter-spacing:-.055em}
 h2{font-size:clamp(34px,4.35vw,62px);line-height:1.08;letter-spacing:-.038em}
 h3{font-size:clamp(18px,1.55vw,24px);line-height:1.32}
 .lead{font-size:clamp(17px,1.55vw,23px);line-height:1.58}
-.grid2 h2{font-size:clamp(34px,3.65vw,52px);line-height:1.1}.grid2 .lead{font-size:clamp(17px,1.42vw,21px)}
-.axis-pair{margin-top:20px}.axis-card{padding:18px}.axis-card .symbol{font-size:30px}.axis-card h3{margin-bottom:10px}.axis-card p{font-size:14px;line-height:1.58;margin-bottom:0}
-.loop-note{font-size:14px;line-height:1.55}.warning{font-size:13.5px;line-height:1.55}.map-note{font-size:11.5px}.stat small{font-size:13px}.algo-step b{font-size:15px}.algo-step p{font-size:12.5px}.feedback-card p{font-size:13px}.case p{font-size:14px}
+.grid2 h2{font-size:clamp(34px,3.65vw,52px);line-height:1.1}
+.grid2 .lead{font-size:clamp(17px,1.42vw,21px)}
+.axis-pair{margin-top:20px}.axis-card{padding:18px}.axis-card .symbol{font-size:30px}
+.axis-card h3{margin-bottom:10px}.axis-card p{font-size:14px;line-height:1.58;margin-bottom:0}
+.loop-note{font-size:14px;line-height:1.55}.warning{font-size:13.5px;line-height:1.55}
+.map-note{font-size:11.5px}.stat small{font-size:13px}.algo-step b{font-size:15px}
+.algo-step p{font-size:12.5px}.feedback-card p{font-size:13px}.case p{font-size:14px}
+.theme-mark{font:800 10px/1.2 "IBM Plex Mono",Consolas,monospace;letter-spacing:.16em;
+  color:var(--orange);white-space:nowrap}
 .adaptive-scene .grid2{grid-template-columns:minmax(430px,.9fr) minmax(540px,1.1fr)}
 .adaptive-scene h2{font-size:clamp(32px,3.3vw,47px);margin-bottom:13px}.adaptive-scene .lead{margin-bottom:0}
-.adaptive-scene .axis-pair{gap:12px;margin-top:16px}.adaptive-scene .axis-card{padding:16px}.adaptive-scene .axis-card p{font-size:13.2px;line-height:1.52}
+.adaptive-scene .axis-pair{gap:12px;margin-top:16px}.adaptive-scene .axis-card{padding:16px}
+.adaptive-scene .axis-card p{font-size:13.2px;line-height:1.52}
 .adaptive-scene .loop-note{margin-top:9px!important;padding:11px 15px}.adaptive-scene .warning{margin-top:8px!important;padding:11px 15px}
+@media(min-width:781px) and (max-height:820px){
+  .scene{padding-top:64px;padding-bottom:12px}.eyebrow{margin-bottom:10px}
+  h2{margin-bottom:17px}.hero .kicker{margin-bottom:24px}.hero-foot{margin-top:30px}
+  .map-shell{min-height:510px}.map-shell canvas{height:510px}
+  .flow-track{margin-top:32px}.algo{margin-top:22px}.algo-step{min-height:156px}
+  .feedback{margin-top:28px}.feedback-card{min-height:148px}.roadmap{margin-top:22px}
+  .phase{min-height:238px}.case{min-height:300px}.usecase{min-height:190px}
+  .formula{margin:18px 0;padding:18px 22px}.ledger{margin-top:18px}
+  .perf-panel{padding:18px}.bar-row{margin:10px 0}.gate{margin-top:16px;padding:15px}
+  .adaptive-scene .map-shell,.adaptive-scene .map-shell canvas{height:500px;min-height:500px}
+  .closing h2{font-size:clamp(44px,5.2vw,70px)}
+  .source-grid{gap:28px}.sources-list{gap:6px}.source-item{padding:10px 13px;font-size:12px;line-height:1.42}
+  .source-item a{font-size:10px}.footnote{font-size:12px;line-height:1.5}
+}
+@media(max-width:1050px){.adaptive-scene .grid2{grid-template-columns:1fr}.adaptive-scene .map-shell{order:2}}
+@media(max-width:780px){
+  h1{font-size:clamp(38px,10vw,58px)}h2,.grid2 h2{font-size:clamp(31px,8.4vw,46px)}
+  .lead,.grid2 .lead{font-size:17px}.scene{padding-inline:22px}
+  .adaptive-scene .map-shell{order:2}.axis-pair{grid-template-columns:1fr}
+  .theme-mark{display:none}
+}
+@media(max-width:520px){.flow-track,.stat-grid{grid-template-columns:1fr}.flow-node{text-align:left;display:grid;grid-template-columns:56px 1fr;column-gap:14px;align-items:center}.flow-node .dot{grid-row:1/3;margin:0}.flow-node b{align-self:end;margin:0 0 3px}.flow-node span{align-self:start}.stat small{font-size:13.5px}}
+
+
+:root{--ink:#f8f5ff;--muted:#b5acd0;--dim:#786f98;--bg:#050515;--panel:#111026;
+  --line:rgba(189,171,255,.2);--cyan:#5af7f2;--blue:#7867ff;--orange:#ff5c9c;--gold:#ffd36a;
+  --map-bg:#09081d;--map-land:rgba(27,26,53,.46);--map-stroke:#82e8e4;
+  --inset-bg:#0d0b25;--inset-line:#655a9a;--inset-text:#f8f5ff}
+body{background:radial-gradient(ellipse at 15% 20%,rgba(90,247,242,.12),transparent 31%),
+  radial-gradient(ellipse at 82% 18%,rgba(120,103,255,.2),transparent 34%),
+  radial-gradient(ellipse at 60% 84%,rgba(255,92,156,.12),transparent 32%),var(--bg)}
+body::before{opacity:.28;background-image:radial-gradient(rgba(255,255,255,.45) .55px,transparent .8px);
+  background-size:7px 7px;mix-blend-mode:screen}
 .topbar{background:rgba(7,6,24,.62);border-color:rgba(184,164,255,.18);backdrop-filter:blur(22px) saturate(145%)}
 .progress{background:rgba(255,255,255,.08)}.progress span{background:linear-gradient(90deg,var(--cyan),var(--blue),var(--orange));box-shadow:0 0 18px var(--blue)}
-.scene::before{content:"";position:absolute;width:52vw;height:52vw;right:-20vw;top:-25vw;border-radius:50%;background:conic-gradient(from 80deg,transparent,rgba(90,247,242,.08),rgba(120,103,255,.13),rgba(255,92,156,.08),transparent);filter:blur(32px);animation:auroraSpin 22s linear infinite;pointer-events:none}
+.scene::before{content:"";position:absolute;width:52vw;height:52vw;right:-20vw;top:-25vw;border-radius:50%;
+  background:conic-gradient(from 80deg,transparent,rgba(90,247,242,.08),rgba(120,103,255,.13),rgba(255,92,156,.08),transparent);
+  filter:blur(32px);animation:auroraSpin 22s linear infinite;pointer-events:none}
 @keyframes auroraSpin{to{transform:rotate(360deg)}}
 .scene::after{color:rgba(185,166,255,.035);text-shadow:0 0 50px rgba(120,103,255,.2)}
 .eyebrow{color:var(--cyan)}h2 .accent,.accent{color:var(--orange)}
-.hero h1 .ghost{background:linear-gradient(90deg,var(--cyan),#9e8cff,var(--orange));-webkit-background-clip:text;color:transparent;-webkit-text-stroke:0}
-.tag,.axis-card,.stat,.layer,.algo-step,.perf-panel,.feedback-card,.case,.usecase,.phase,.source-item,.map-legend,.map-note{background:linear-gradient(145deg,rgba(31,28,65,.7),rgba(11,10,34,.58));border-color:rgba(203,188,255,.2);backdrop-filter:blur(18px) saturate(135%);box-shadow:inset 0 1px rgba(255,255,255,.06),0 22px 55px rgba(0,0,0,.18)}
+.hero h1 .ghost{background:linear-gradient(90deg,var(--cyan),#9e8cff,var(--orange));-webkit-background-clip:text;
+  color:transparent;-webkit-text-stroke:0}
+.tag,.axis-card,.stat,.layer,.algo-step,.perf-panel,.feedback-card,.case,.usecase,.phase,.source-item,
+.map-legend,.map-note{background:linear-gradient(145deg,rgba(31,28,65,.7),rgba(11,10,34,.58));
+  border-color:rgba(203,188,255,.2);backdrop-filter:blur(18px) saturate(135%);box-shadow:inset 0 1px rgba(255,255,255,.06),0 22px 55px rgba(0,0,0,.18)}
 .axis-card,.stat,.perf-panel,.feedback-card,.case,.usecase,.phase,.source-item,.warning,.loop-note,.gate{border-radius:18px}
-.map-shell{border-radius:26px;border-color:rgba(90,247,242,.25);box-shadow:0 35px 100px rgba(0,0,0,.48),0 0 80px rgba(120,103,255,.13)}.map-shell canvas{border-radius:26px}
-.chip,.controls button{border-radius:999px;background:rgba(20,17,52,.72)}
-.axis-card.point{box-shadow:inset 0 1px rgba(255,255,255,.08),0 0 48px rgba(90,247,242,.06)}.axis-card.region{box-shadow:inset 0 1px rgba(255,255,255,.08),0 0 48px rgba(255,92,156,.08)}
-.formula{border:1px solid rgba(185,166,255,.24);border-left:3px solid var(--cyan);border-radius:18px;background:linear-gradient(100deg,rgba(90,247,242,.08),rgba(120,103,255,.08),rgba(255,92,156,.06))}
-.bar-track{border-radius:8px;overflow:hidden}.bar-fill{background:linear-gradient(90deg,var(--blue),var(--cyan))}.bar-fill.orange{background:linear-gradient(90deg,var(--orange),var(--gold))}
-.warning{background:rgba(255,92,156,.09);color:#f2bfd7}.loop-note{background:rgba(120,103,255,.08);border-color:rgba(185,166,255,.28)}
-.closing{background:radial-gradient(circle at 50% 55%,rgba(90,247,242,.11),transparent 30%),radial-gradient(circle at 62% 45%,rgba(255,92,156,.1),transparent 28%),var(--bg)}
-@media(min-width:781px) and (max-height:820px){
-  .scene{padding-top:64px;padding-bottom:12px}.eyebrow{margin-bottom:10px}h2{margin-bottom:17px}.hero .kicker{margin-bottom:24px}.hero-foot{margin-top:30px}
-  .map-shell{min-height:510px}.map-shell canvas{height:510px}.flow-track{margin-top:32px}.algo{margin-top:22px}.algo-step{min-height:156px}.feedback{margin-top:28px}.feedback-card{min-height:148px}.roadmap{margin-top:22px}
-  .phase{min-height:238px}.case{min-height:300px}.usecase{min-height:190px}.formula{margin:18px 0;padding:18px 22px}.ledger{margin-top:18px}.perf-panel{padding:18px}.bar-row{margin:10px 0}.gate{margin-top:16px;padding:15px}
-  .adaptive-scene .map-shell,.adaptive-scene .map-shell canvas{height:500px;min-height:500px}.closing h2{font-size:clamp(44px,5.2vw,70px)}.source-grid{gap:28px}.sources-list{gap:6px}.source-item{padding:10px 13px;font-size:12px;line-height:1.42}.source-item a{font-size:10px}.footnote{font-size:12px;line-height:1.5}
-}
-@media(max-width:1050px){.adaptive-scene .grid2{grid-template-columns:1fr}.adaptive-scene .map-shell{order:2}}
-@media(max-width:780px){h1{font-size:clamp(38px,10vw,58px)}h2,.grid2 h2{font-size:clamp(31px,8.4vw,46px)}.lead,.grid2 .lead{font-size:17px}.scene{padding-inline:22px}.adaptive-scene .map-shell{order:2}.axis-pair{grid-template-columns:1fr}}
-@media(max-width:520px){.flow-track,.stat-grid{grid-template-columns:1fr}.flow-node{text-align:left;display:grid;grid-template-columns:56px 1fr;column-gap:14px;align-items:center}.flow-node .dot{grid-row:1/3;margin:0}.flow-node b{align-self:end;margin:0 0 3px}.flow-node span{align-self:start}.stat small{font-size:13.5px}}
+.map-shell{border-radius:26px;border-color:rgba(90,247,242,.25);box-shadow:0 35px 100px rgba(0,0,0,.48),0 0 80px rgba(120,103,255,.13)}
+.map-shell canvas{border-radius:26px}.chip,.controls button{border-radius:999px;background:rgba(20,17,52,.72)}
+.axis-card.point{box-shadow:inset 0 1px rgba(255,255,255,.08),0 0 48px rgba(90,247,242,.06)}
+.axis-card.region{box-shadow:inset 0 1px rgba(255,255,255,.08),0 0 48px rgba(255,92,156,.08)}
+.formula{border:1px solid rgba(185,166,255,.24);border-left:3px solid var(--cyan);border-radius:18px;
+  background:linear-gradient(100deg,rgba(90,247,242,.08),rgba(120,103,255,.08),rgba(255,92,156,.06))}
+.bar-track{border-radius:8px;overflow:hidden}.bar-fill{background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.bar-fill.orange{background:linear-gradient(90deg,var(--orange),var(--gold))}.warning{background:rgba(255,92,156,.09);color:#f2bfd7}
+.loop-note{background:rgba(120,103,255,.08);border-color:rgba(185,166,255,.28)}
+.closing{background:radial-gradient(circle at 50% 55%,rgba(90,247,242,.11),transparent 30%),
+  radial-gradient(circle at 62% 45%,rgba(255,92,156,.1),transparent 28%),var(--bg)}
 @media(prefers-reduced-motion:reduce){.scene::before{animation:none}}
-/* END AURORA SPECTRAL */
+
 </style>
 </head>
-<body>
-<header class="topbar"><div class="brand"><b>KOREA</b> LMM / AURORA SPECTRAL</div><div class="progress"><span id="progress"></span></div><div class="counter mono" id="counter">01 / 13</div></header>
+<body data-theme="C">
+<header class="topbar"><div class="brand"><b>KOREA</b> LMM / AURORA SPECTRAL</div><div class="theme-mark">C · Aurora Spectral</div><div class="progress"><span id="progress"></span></div><div class="counter mono" id="counter">01 / 13</div></header>
 <nav class="scene-nav" id="sceneNav" aria-label="장면 이동"></nav>
 <div class="controls"><button id="prev" aria-label="이전 장면">↑ 이전</button><button id="next" aria-label="다음 장면">다음 ↓</button></div>
 
@@ -261,7 +299,7 @@ h3{font-size:clamp(18px,1.55vw,24px);line-height:1.32}
 <section class="scene closing" data-no="12" data-title="결론"><div class="inner">
   <div class="eyebrow reveal" style="justify-content:center">THE ONE SENTENCE</div><h2 class="reveal">좋은 선점은 저구배 후보점을 찾고,<br><span class="accent">좋은 모델은 설명 못한 곳을 다시 찾습니다.</span></h2>
   <p class="lead reveal">관측망·항공자력·상시관측·IGRF를 하나로 묶어 검증하면, 새로 놓는 점 하나하나가 <strong>국가 자기장 기준을 얼마나 정밀하게 만드는지</strong> 숫자로 확인할 수 있습니다. 점을 늘리는 것 자체가 목표가 아니라, <strong>설명되지 않는 지역을 없애는 것</strong>이 목표입니다.</p>
-  <div class="link-row reveal" style="--delay:140ms"><a class="primary-link" href="index.html">입지 선정 지도 열기</a><a class="primary-link orange-link" href="lmm.html">LMM 계산기 열기</a></div>
+  <div class="link-row reveal" style="--delay:140ms"><a class="primary-link" href="../index.html">입지 선정 지도 열기</a><a class="primary-link orange-link" href="../lmm.html">LMM 계산기 열기</a></div>
   <p class="footnote reveal" style="--delay:210ms;margin:28px auto 0;max-width:760px">현재 모델은 시범 구축판이고 <b>정확도 목표는 아직 확정되지 않았습니다.</b> 이 브리핑은 연구설계와 의사결정을 위한 자료입니다.</p>
 </div></section>
 

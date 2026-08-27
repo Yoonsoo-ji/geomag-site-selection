@@ -904,7 +904,11 @@ python create_lmm_cinematic.py # → docs/lmm_cinematic.html (단일 파일)
 | 항목 | 내용 |
 |---|---|
 | 데이터 단일 출처 | `lmm_model.json`(수치·16측점) · `existing_pts.geojson`(30) · `survey_sites.geojson`(103) · `density_gap_*.geojson`(1,091셀) — **하드코딩 금지**, 재적합하면 따라간다 |
-| QA 기준 | 장면 13 · 콘솔 오류 0 · 1440×900 및 390×844 가로 넘침 0 · 지도 토글 4개 동작 · LOO D 0.499° · F 62.8 nT 표기 |
+| 운영 디자인 | **C안 `Aurora Spectral` 확정**(2026-08-27). 심청색 오로라·스펙트럴 강조색·글라스 패널. 비교본은 `create_lmm_cinematic_previews.py`로 생성 |
+| 항공자력 표기 | 후보점: KIGAM 1.5분(약 2.8 km) 격자 중앙차분 구배를 s5에 실제 반영. 권역: 반경 25 km 자기이상의 추세제거 σ를 공간복잡도로 사용. **1 km 해상도·요철·조용한 곳으로 표현하지 않음** |
+| 지도 범위 | 본도와 별도로 울릉도·독도 위치 인셋을 모든 캔버스 지도에 표시 |
+| 한글 줄바꿈 | `keep-all + overflow-wrap:normal + line-break:strict`. 본문 `pretty`, 제목 `balance`; 짧은 핵심 어절만 `.no-break`. `break-word` 금지 — 「만들 / 고」 같은 어절 분리 재발 방지 |
+| QA 기준 | 장면 13 · 콘솔 오류 0 · 1280×720 및 390×844 가로 넘침 0 · 지도 토글 4개 동작 · LOO D 0.499° · F 62.8 nT 표기 |
 | 표기 규약 | 목표 80점은 **확정값이 아니라 설계 시나리오** · 현재 LMM **KPI 미달 명시** · 해외 사례를 자동 밀도배분 선례로 **과장하지 않음** |
 
 ⚠️ 발표자료 본문에 「현재 JSON 설명이 구현과 불일치하니 정정해야 한다」는

@@ -134,6 +134,10 @@ def build_payload():
         "epoch": model["epoch"],
         "model_name": model["name"],
         "boundary": compact_boundary(boundary_doc),
+        "east_sea": [
+            {"name": "울릉도", "lat": 37.4845, "lon": 130.9057},
+            {"name": "독도", "lat": 37.2429, "lon": 131.8664},
+        ],
         "existing": existing,
         "model_sites": [
             {
@@ -206,12 +210,12 @@ def build_payload():
             {
                 "group": "Crustal",
                 "name": "KIGAM 항공자력이상 격자",
-                "detail": "1982–2018 · 1.5분(약 2.8 km) · F에 스칼라 적용",
+                "detail": "1982–2018 · 1.5분(약 2.8 km) · F에 적용",
             },
             {
                 "group": "External",
                 "name": "CYG·제주·강릉·이천 1분 자료",
-                "detail": "현재 subtract_DI: 상태=정상 세션의 D·I 환산 · QC=QUIET 전용 필터 아님 · 예측층 미적용",
+                "detail": "subtract_DI: 정상 세션 D·I 환산 · QUIET 전용 필터 아님 · 예측층 미적용",
             },
             {
                 "group": "Network",
@@ -221,7 +225,7 @@ def build_payload():
             {
                 "group": "Survey",
                 "name": "현장조사 일괄취합 103건",
-                "detail": "20260818_211750 · A 6 / B 35 / C 49 / D 13",
+                "detail": "20260818_211750 · A/B/C/D=6/35/49/13",
             },
         ],
     }
@@ -296,10 +300,63 @@ h3{font-size:clamp(20px,1.9vw,30px);line-height:1.25;letter-spacing:-.025em}
 @media(max-width:1050px){.grid4{grid-template-columns:repeat(2,1fr)}.flow-track{grid-template-columns:repeat(4,1fr);gap:22px}.flow-track::before{display:none}.algo{grid-template-columns:repeat(3,1fr)}.algo-step:nth-child(3)::after,.algo-step:last-child::after{display:none}.feedback{grid-template-columns:repeat(2,1fr)}.feedback-card::after{display:none!important}}
 @media(max-width:780px){html{scroll-snap-type:y proximity}.topbar{height:52px}.scene{align-items:flex-start;padding-top:82px;overflow:visible}.scene-nav{display:none}.grid2,.grid3,.perf-grid,.source-grid,.roadmap{grid-template-columns:1fr}.grid4{grid-template-columns:1fr}.flow-track{grid-template-columns:repeat(2,1fr)}.algo{grid-template-columns:1fr}.algo-step::after{display:none}.feedback{grid-template-columns:1fr}.map-shell{min-height:480px}.map-shell canvas{height:480px}.map-note{max-width:72%}.controls{bottom:12px}.controls button{padding:8px 11px}.ledger-row{grid-template-columns:72px 1fr}.ledger-row span:last-child{grid-column:2}.decision-strip{grid-template-columns:1fr}.hero-foot{align-items:flex-start;flex-direction:column}.layer{grid-template-columns:45px 1fr}.layer .status{display:none}.bar-row{grid-template-columns:90px 1fr 58px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}.scroll-cue i::after{animation:none}}
+
+/* BEGIN AURORA SPECTRAL */
+/* Aurora Spectral — 한글 조판·720p 밀도·지도 색 토큰 */
+:root{
+  --ink:#f8f5ff;--muted:#b5acd0;--dim:#786f98;--bg:#050515;--panel:#111026;
+  --line:rgba(189,171,255,.2);--cyan:#5af7f2;--blue:#7867ff;--orange:#ff5c9c;--gold:#ffd36a;
+  --map-bg:#09081d;--map-land:rgba(27,26,53,.46);--map-stroke:#82e8e4;
+  --inset-bg:#0d0b25;--inset-line:#655a9a;--inset-text:#f8f5ff;
+}
+html,body{max-width:100%;overflow-x:hidden}
+body{word-break:keep-all;overflow-wrap:normal;line-break:strict;hyphens:none;background:radial-gradient(ellipse at 15% 20%,rgba(90,247,242,.12),transparent 31%),radial-gradient(ellipse at 82% 18%,rgba(120,103,255,.2),transparent 34%),radial-gradient(ellipse at 60% 84%,rgba(255,92,156,.12),transparent 32%),var(--bg)}
+body::before{opacity:.28;background-image:radial-gradient(rgba(255,255,255,.45) .55px,transparent .8px);background-size:7px 7px;mix-blend-mode:screen}
+h1,h2,h3,.loop-note,.warning,.decision{text-wrap:balance;word-break:keep-all;overflow-wrap:normal;line-break:strict}
+p,li,.lead,.axis-card p,.case p,.usecase p,.feedback-card p,.phase li,.flow-node span,.stat small,.layer small{text-wrap:pretty;word-break:keep-all;overflow-wrap:normal;line-break:strict}
+.no-break{white-space:nowrap}
+h1{font-size:clamp(44px,6.4vw,96px);line-height:.96;letter-spacing:-.055em}
+h2{font-size:clamp(34px,4.35vw,62px);line-height:1.08;letter-spacing:-.038em}
+h3{font-size:clamp(18px,1.55vw,24px);line-height:1.32}
+.lead{font-size:clamp(17px,1.55vw,23px);line-height:1.58}
+.grid2 h2{font-size:clamp(34px,3.65vw,52px);line-height:1.1}.grid2 .lead{font-size:clamp(17px,1.42vw,21px)}
+.axis-pair{margin-top:20px}.axis-card{padding:18px}.axis-card .symbol{font-size:30px}.axis-card h3{margin-bottom:10px}.axis-card p{font-size:14px;line-height:1.58;margin-bottom:0}
+.loop-note{font-size:14px;line-height:1.55}.warning{font-size:13.5px;line-height:1.55}.map-note{font-size:11.5px}.stat small{font-size:13px}.algo-step b{font-size:15px}.algo-step p{font-size:12.5px}.feedback-card p{font-size:13px}.case p{font-size:14px}
+.adaptive-scene .grid2{grid-template-columns:minmax(430px,.9fr) minmax(540px,1.1fr)}
+.adaptive-scene h2{font-size:clamp(32px,3.3vw,47px);margin-bottom:13px}.adaptive-scene .lead{margin-bottom:0}
+.adaptive-scene .axis-pair{gap:12px;margin-top:16px}.adaptive-scene .axis-card{padding:16px}.adaptive-scene .axis-card p{font-size:13.2px;line-height:1.52}
+.adaptive-scene .loop-note{margin-top:9px!important;padding:11px 15px}.adaptive-scene .warning{margin-top:8px!important;padding:11px 15px}
+.topbar{background:rgba(7,6,24,.62);border-color:rgba(184,164,255,.18);backdrop-filter:blur(22px) saturate(145%)}
+.progress{background:rgba(255,255,255,.08)}.progress span{background:linear-gradient(90deg,var(--cyan),var(--blue),var(--orange));box-shadow:0 0 18px var(--blue)}
+.scene::before{content:"";position:absolute;width:52vw;height:52vw;right:-20vw;top:-25vw;border-radius:50%;background:conic-gradient(from 80deg,transparent,rgba(90,247,242,.08),rgba(120,103,255,.13),rgba(255,92,156,.08),transparent);filter:blur(32px);animation:auroraSpin 22s linear infinite;pointer-events:none}
+@keyframes auroraSpin{to{transform:rotate(360deg)}}
+.scene::after{color:rgba(185,166,255,.035);text-shadow:0 0 50px rgba(120,103,255,.2)}
+.eyebrow{color:var(--cyan)}h2 .accent,.accent{color:var(--orange)}
+.hero h1 .ghost{background:linear-gradient(90deg,var(--cyan),#9e8cff,var(--orange));-webkit-background-clip:text;color:transparent;-webkit-text-stroke:0}
+.tag,.axis-card,.stat,.layer,.algo-step,.perf-panel,.feedback-card,.case,.usecase,.phase,.source-item,.map-legend,.map-note{background:linear-gradient(145deg,rgba(31,28,65,.7),rgba(11,10,34,.58));border-color:rgba(203,188,255,.2);backdrop-filter:blur(18px) saturate(135%);box-shadow:inset 0 1px rgba(255,255,255,.06),0 22px 55px rgba(0,0,0,.18)}
+.axis-card,.stat,.perf-panel,.feedback-card,.case,.usecase,.phase,.source-item,.warning,.loop-note,.gate{border-radius:18px}
+.map-shell{border-radius:26px;border-color:rgba(90,247,242,.25);box-shadow:0 35px 100px rgba(0,0,0,.48),0 0 80px rgba(120,103,255,.13)}.map-shell canvas{border-radius:26px}
+.chip,.controls button{border-radius:999px;background:rgba(20,17,52,.72)}
+.axis-card.point{box-shadow:inset 0 1px rgba(255,255,255,.08),0 0 48px rgba(90,247,242,.06)}.axis-card.region{box-shadow:inset 0 1px rgba(255,255,255,.08),0 0 48px rgba(255,92,156,.08)}
+.formula{border:1px solid rgba(185,166,255,.24);border-left:3px solid var(--cyan);border-radius:18px;background:linear-gradient(100deg,rgba(90,247,242,.08),rgba(120,103,255,.08),rgba(255,92,156,.06))}
+.bar-track{border-radius:8px;overflow:hidden}.bar-fill{background:linear-gradient(90deg,var(--blue),var(--cyan))}.bar-fill.orange{background:linear-gradient(90deg,var(--orange),var(--gold))}
+.warning{background:rgba(255,92,156,.09);color:#f2bfd7}.loop-note{background:rgba(120,103,255,.08);border-color:rgba(185,166,255,.28)}
+.closing{background:radial-gradient(circle at 50% 55%,rgba(90,247,242,.11),transparent 30%),radial-gradient(circle at 62% 45%,rgba(255,92,156,.1),transparent 28%),var(--bg)}
+@media(min-width:781px) and (max-height:820px){
+  .scene{padding-top:64px;padding-bottom:12px}.eyebrow{margin-bottom:10px}h2{margin-bottom:17px}.hero .kicker{margin-bottom:24px}.hero-foot{margin-top:30px}
+  .map-shell{min-height:510px}.map-shell canvas{height:510px}.flow-track{margin-top:32px}.algo{margin-top:22px}.algo-step{min-height:156px}.feedback{margin-top:28px}.feedback-card{min-height:148px}.roadmap{margin-top:22px}
+  .phase{min-height:238px}.case{min-height:300px}.usecase{min-height:190px}.formula{margin:18px 0;padding:18px 22px}.ledger{margin-top:18px}.perf-panel{padding:18px}.bar-row{margin:10px 0}.gate{margin-top:16px;padding:15px}
+  .adaptive-scene .map-shell,.adaptive-scene .map-shell canvas{height:500px;min-height:500px}.closing h2{font-size:clamp(44px,5.2vw,70px)}.source-grid{gap:28px}.sources-list{gap:6px}.source-item{padding:10px 13px;font-size:12px;line-height:1.42}.source-item a{font-size:10px}.footnote{font-size:12px;line-height:1.5}
+}
+@media(max-width:1050px){.adaptive-scene .grid2{grid-template-columns:1fr}.adaptive-scene .map-shell{order:2}}
+@media(max-width:780px){h1{font-size:clamp(38px,10vw,58px)}h2,.grid2 h2{font-size:clamp(31px,8.4vw,46px)}.lead,.grid2 .lead{font-size:17px}.scene{padding-inline:22px}.adaptive-scene .map-shell{order:2}.axis-pair{grid-template-columns:1fr}}
+@media(max-width:520px){.flow-track,.stat-grid{grid-template-columns:1fr}.flow-node{text-align:left;display:grid;grid-template-columns:56px 1fr;column-gap:14px;align-items:center}.flow-node .dot{grid-row:1/3;margin:0}.flow-node b{align-self:end;margin:0 0 3px}.flow-node span{align-self:start}.stat small{font-size:13.5px}}
+@media(prefers-reduced-motion:reduce){.scene::before{animation:none}}
+/* END AURORA SPECTRAL */
 </style>
 </head>
 <body>
-<header class="topbar"><div class="brand"><b>KOREA</b> LMM / DECISION BRIEF</div><div class="progress"><span id="progress"></span></div><div class="counter mono" id="counter">01 / 13</div></header>
+<header class="topbar"><div class="brand"><b>KOREA</b> LMM / AURORA SPECTRAL</div><div class="progress"><span id="progress"></span></div><div class="counter mono" id="counter">01 / 13</div></header>
 <nav class="scene-nav" id="sceneNav" aria-label="장면 이동"></nav>
 <div class="controls"><button id="prev" aria-label="이전 장면">↑ 이전</button><button id="next" aria-label="다음 장면">다음 ↓</button></div>
 
@@ -307,7 +364,7 @@ h3{font-size:clamp(20px,1.9vw,30px);line-height:1.25;letter-spacing:-.025em}
 <section class="scene hero" data-no="01" data-title="표지"><canvas id="fieldCanvas" aria-hidden="true"></canvas><div class="inner hero-copy">
   <div class="kicker reveal"><span class="tag">전문가·발주자 브리핑</span><span class="tag">단일 파일 · 오프라인</span><span class="tag" id="modelStamp">MODEL —</span></div>
   <h1 class="reveal" style="--delay:80ms"><span>30개의 점을</span><span class="ghost">하나의 국가 자기장 기준으로.</span></h1>
-  <p class="lead reveal" style="--delay:160ms">선점의 목표는 점을 늘리는 일이 아닙니다. <strong>전국 어디서나 설명 가능한 자기장</strong>을 만들고, 설명하지 못하는 곳을 다음 관측으로 되돌려 보내는 일입니다.</p>
+  <p class="lead reveal" style="--delay:160ms">선점의 목표는 점을 늘리는 일이 아닙니다. <strong><span class="no-break">전국 어디서나</span> 설명 가능한 </strong><span class="no-break"><strong>자기장</strong>을</span> <span class="no-break">만들고,</span> 설명하지 못하는 곳을 다음 관측으로 되돌려 보내는 일입니다.</p>
   <div class="hero-foot reveal" style="--delay:240ms"><div class="scroll-cue"><i></i><span>스크롤 · 화살표 키로 진행</span></div><span class="mono">LMM = LOCAL MAGNETIC MODEL</span></div>
 </div></section>
 
@@ -333,7 +390,7 @@ h3{font-size:clamp(20px,1.9vw,30px);line-height:1.25;letter-spacing:-.025em}
     <div class="stat-grid reveal" style="--delay:120ms">
       <div class="stat cyanline"><span class="num" data-bind="network_sites">30</span><span class="unit">점</span><small>1등 지자기점 공간망<br>전국에 이미 설치된 표석</small></div>
       <div class="stat orange"><span class="num" data-bind="model_sites">16</span><span class="unit">점</span><small>현재 LMM 품질감사 통과 입력<br>2019·2022–2025</small></div>
-      <div class="stat"><span class="num" data-bind="survey_sites">103</span><span class="unit">개소</span><small><b>선점 전 사전 현장조사</b><br>접근·자기교란·방위표지 확인<br>적합 A 6 · 조건부 B 35 · 확인필요 C 49 · 부적합 D 13</small></div>
+      <div class="stat"><span class="num" data-bind="survey_sites">103</span><span class="unit">개소</span><small><b>선점 전 사전 현장조사</b><br>접근·자기교란·방위표지<br>등급 A/B/C/D<br>6 / 35 / 49 / 13</small></div>
       <div class="stat"><span class="num" data-bind="candidate_sites">178</span><span class="unit">후보</span><small>도상선점 후보<br>P1 62 · P2 57 · P3 59</small></div>
     </div>
   </div>
@@ -342,16 +399,16 @@ h3{font-size:clamp(20px,1.9vw,30px);line-height:1.25;letter-spacing:-.025em}
   </div><div class="map-legend"><div class="legend-row"><i class="swatch" style="background:#eaf1f6"></i>기존망</div><div class="legend-row"><i class="swatch" style="background:#ff7048"></i>LMM 입력</div><div class="legend-row"><i class="swatch" style="background:#51d2d7"></i>현장조사</div></div><div class="map-note">버튼으로 레이어를 켜고 끌 수 있습니다.</div></div>
 </div></section>
 
-<section class="scene" data-no="04" data-title="적응형 선점"><div class="inner grid2">
-  <div class="map-shell reveal"><canvas id="densityMap" aria-label="항공자력 복잡도 대비 상대 부족도 지도"></canvas><div class="map-legend"><div class="legend-row"><i class="swatch" style="background:#ff7048"></i>보강 1순위</div><div class="legend-row"><i class="swatch" style="background:#f0bc54"></i>평균보다 부족</div><div class="legend-row"><i class="swatch" style="background:#427df4"></i>평균보다 양호</div><div class="legend-row"><i class="swatch" style="background:#244257"></i>충분</div></div><div class="map-note"><span data-bind="land_cells">1,091</span> 국토셀 · 보강 1순위 <span data-bind="critical_cells">76</span> · σ 대체 <span data-bind="sigma_missing">57</span></div></div>
+<section class="scene adaptive-scene" data-no="04" data-title="적응형 선점"><div class="inner grid2">
+  <div class="map-shell reveal"><canvas id="densityMap" aria-label="자기이상 공간복잡도 대비 상대 부족도 지도"></canvas><div class="map-legend"><div class="legend-row"><i class="swatch" style="background:#ff7048"></i>보강 1순위</div><div class="legend-row"><i class="swatch" style="background:#f0bc54"></i>평균보다 부족</div><div class="legend-row"><i class="swatch" style="background:#427df4"></i>평균보다 양호</div><div class="legend-row"><i class="swatch" style="background:#244257"></i>충분</div></div><div class="map-note"><span data-bind="land_cells">1,091</span> 국토셀 · 보강 1순위 <span data-bind="critical_cells">76</span> · σ 대체 <span data-bind="sigma_missing">57</span><br>울릉도·독도 위치 인셋 포함</div></div>
   <div>
-    <div class="eyebrow reveal">TWO SCALES, ONE RULE</div><h2 class="reveal">복잡한 권역에 더 두고, 각 점은 조용한 곳에 둡니다.</h2>
-    <p class="lead reveal">항공자력 자료로 <strong>서로 다른 두 질문</strong>에 답합니다. <strong>“이 자리에 표석을 놓아도 되나”</strong>와 <strong>“이 지역에는 점이 몇 개나 필요한가”</strong>입니다.</p>
+    <div class="eyebrow reveal">TWO SCALES, ONE RULE</div><h2 class="reveal">권역 밀도는 공간복잡도로,<br>후보점은 국소 구배로 설계합니다.</h2>
+    <p class="lead reveal">항공자력 자료를 <strong>점 대표성</strong>과 <strong>권역 밀도</strong>라는 서로 다른 질문에 사용합니다.</p>
     <div class="axis-pair reveal" style="--delay:120ms">
-      <article class="axis-card point"><div class="symbol">|∇ΔT|</div><h3>① 자리를 고를 때 — <b>조용한 곳</b></h3><p>표석 바로 옆에서 자기장이 급하게 변하면, 그 점에서 잰 값이 주변을 대표하지 못합니다. <b>1 km 이동할 때 자기장이 얼마나 변하는가</b>(nT/km)를 재서 <b>변화가 완만한 자리</b>에 높은 점수를 줍니다. 최종 판단은 현장 정밀 자력측량입니다.</p></article>
-      <article class="axis-card region"><div class="symbol">σ<sub>25 km</sub></div><h3>② 지역을 볼 때 — <b>복잡할수록 촘촘히</b></h3><p>지각 자기장이 울퉁불퉁한 지역일수록 점 하나가 대표할 수 있는 범위가 좁아집니다. <b>반경 25 km 안의 자기장 요철 정도</b>를 재서, 요철이 큰 지역일수록 같은 정확도를 내는 데 점이 더 필요하다고 보고 권장 간격을 계산합니다.</p></article>
+      <article class="axis-card point"><div class="symbol">|∇ΔT|</div><h3>① 후보점 대표성 · <b>저구배 우대</b></h3><p>KIGAM 1.5분(약 2.8 km) 격자를 중앙차분한 수평 공간구배(nT/km)를 후보 178점의 s5에 실제 반영했습니다. <b>1 km 해상도 분석은 아니며</b>, 최종 확정은 현장 정밀 자력측량으로 합니다.</p></article>
+      <article class="axis-card region"><div class="symbol">σ<sub>25 km</sub></div><h3>② 권역 밀도 · <b>고복잡도 보강</b></h3><p>반경 25 km 자기이상에서 1차 지역추세를 제거한 표준편차 σ를 <b>자기이상 공간복잡도</b>로 사용합니다. σ가 클수록 권장 간격을 줄입니다.</p></article>
     </div>
-    <div class="loop-note reveal" style="--delay:190ms;margin-top:16px"><b>두 기준은 모순이 아닙니다.</b> 복잡한 지역에 점을 더 두되, 그 안에서는 가장 조용한 자리를 고르는 <b>하나의 설계</b>입니다.</div><div class="warning reveal" style="--delay:230ms;margin-top:14px">이 배분 규칙과 점수 곡선은 이 연구의 <strong>잠정 설계안</strong>입니다. σ 결측 셀과 소표본 검증 한계가 있어 최종 규칙으로 확정하지 않았습니다.</div>
+    <div class="loop-note reveal" style="--delay:190ms"><b>고복잡도 권역을 보강하되, 그 안에서는 저구배 후보점을 고릅니다.</b></div><div class="warning reveal" style="--delay:230ms">Neyman 배분과 s5 곡선은 결측·소표본 한계가 있는 <strong>잠정 설계안</strong>입니다.</div>
   </div>
 </div></section>
 
@@ -365,8 +422,8 @@ h3{font-size:clamp(20px,1.9vw,30px);line-height:1.25;letter-spacing:-.025em}
   <div class="layer-stack reveal" style="--delay:80ms">
     <div class="layer"><span class="n">01</span><div><b>Core · 전 지구 핵 기원장</b><small>IGRF-14, 구면조화 degree 13</small></div><span class="status">기준장</span></div>
     <div class="layer"><span class="n">02</span><div><b>Regional · 한반도 장파장 잔차</b><small>16측점 · LOO 선택 결과 현재 0차(상수)</small></div><span class="status">D·I·F</span></div>
-    <div class="layer"><span class="n">03</span><div><b>Crustal · 지각 단파장 이상</b><small>KIGAM 1.5분 격자 · 현재 F에만 스칼라 적용</small></div><span class="status">F only</span></div>
-    <div class="layer"><span class="n">04</span><div><b>External · 시간 변화 환산</b><small>CYG·제주·강릉·이천 1분 자료 · D·I 전처리</small></div><span class="status">전처리</span></div>
+    <div class="layer"><span class="n">03</span><div><b>Crustal · 지각 단파장 이상</b><small>KIGAM 1.5분 격자 · F 전용</small></div><span class="status">F only</span></div>
+    <div class="layer"><span class="n">04</span><div><b>External · 시간 변화 환산</b><small>4개 관측소 1분 자료 · D·I 전처리</small></div><span class="status">전처리</span></div>
   </div>
 </div></section>
 
@@ -392,11 +449,11 @@ h3{font-size:clamp(20px,1.9vw,30px);line-height:1.25;letter-spacing:-.025em}
 
 <section class="scene" data-no="08" data-title="LMM과 선점의 되먹임"><div class="inner">
   <div class="eyebrow reveal">THE FEEDBACK LOOP</div><h2 class="reveal">첫 후보는 모델 없이 고르고, <b>다음 후보는 모델이 알려줍니다.</b></h2>
-  <p class="lead reveal">처음에는 모델을 쓰지 않습니다 — 전국 공백·인공 간섭원·자기장이 조용한 자리만 보고 고릅니다. 관측을 마친 뒤에야 LMM이 <strong>“아직 설명하지 못하는 지역”</strong>을 알려주고, 거기가 다음 관측 대상이 됩니다. 이 순서를 지켜야 <strong>모델이 고른 점으로 그 모델을 검증하는 순환논리</strong>를 피할 수 있습니다.</p>
+  <p class="lead reveal">처음에는 모델을 쓰지 않습니다 — 전국 공백·인공 간섭원·국소 자기이상 구배가 작은 자리만 보고 고릅니다. 관측을 마친 뒤에야 LMM이 <strong>“아직 설명하지 못하는 지역”</strong>을 알려주고, 거기가 다음 관측 대상이 됩니다. 이 순서를 지켜야 <strong>모델이 고른 점으로 그 모델을 검증하는 순환논리</strong>를 피할 수 있습니다.</p>
   <div class="feedback reveal" style="--delay:120ms">
     <div class="feedback-card"><div class="k">1단계</div><b>전국 공백 메우기</b><p>모델을 쓰지 않습니다. 도엽·담당면적·접근성만 보고 비어 있는 곳부터 채웁니다.</p></div>
-    <div class="feedback-card"><div class="k">2단계</div><b>어느 지역을 촘촘히</b><p>자기장 요철이 큰 지역을 항공자력으로 골라 더 촘촘한 배치를 검토합니다.</p></div>
-    <div class="feedback-card"><div class="k">3단계</div><b>그 안에서 어느 자리</b><p>고른 지역 안에서 자기장 변화가 완만하고 인공 교란이 없는 자리를 찾습니다.</p></div>
+    <div class="feedback-card"><div class="k">2단계</div><b>어느 지역을 촘촘히</b><p>자기이상 공간복잡도가 큰 권역을 항공자력으로 골라 더 촘촘한 배치를 검토합니다.</p></div>
+    <div class="feedback-card"><div class="k">3단계</div><b>그 안에서 어느 자리</b><p>고른 권역 안에서 국소 자기이상 구배가 작고 인공 교란이 없는 자리를 찾습니다.</p></div>
     <div class="feedback-card"><div class="k">4단계</div><b>관측하고 다시 맞추기</b><p>새로 잰 D·I·F를 모델에 넣고, 독립 검증으로 실제로 좋아졌는지 확인합니다.</p></div>
     <div class="feedback-card"><div class="k">5단계</div><b>남은 곳만 다시</b><p>그래도 모델이 설명하지 못한 지역만 골라 1단계로 돌아갑니다.</p></div>
   </div>
@@ -431,11 +488,11 @@ h3{font-size:clamp(20px,1.9vw,30px);line-height:1.25;letter-spacing:-.025em}
     <article class="phase"><div class="year">GATE 02 / CAMPAIGN</div><h3>가치가 큰 점부터 관측합니다.</h3><ul><li>기본 공간 공백 + 항공자력 복잡권역을 단계 배치</li><li>각 점은 저구배·저인공교란 현장 검증</li><li>신규점 수는 순차 LOO 개선량으로 재결정</li></ul></article>
     <article class="phase"><div class="year">GATE 03 / RELEASE</div><h3>독립 검증 뒤 공개합니다.</h3><ul><li>외부장 D·I·F 전 성분 환산 체계 확정</li><li>항공자력 결측·벡터 지각장 개선</li><li>달성 가능한 정확도 목표를 먼저 확정</li><li>독립 검증 통과 후 공식 서비스</li></ul></article>
   </div>
-  <div class="decision-strip reveal" style="--delay:190ms"><div class="decision"><b>연구과제 1</b><br>신규점 수를 먼저 정할 것인가, 적응형 보강 원칙을 먼저 세울 것인가</div><div class="decision"><b>연구과제 2</b><br>관측시각·상시관측소 연계를 필수 성과로 둘 것인가</div><div class="decision"><b>연구과제 3</b><br>고복잡도 권역의 정밀 항공·지상 자력자료를 추가 확보할 것인가</div></div>
+  <div class="decision-strip reveal" style="--delay:190ms"><div class="decision"><b>연구과제 1</b><br>신규점 수와 적응형 보강 원칙의 <span class="no-break">확정 순서</span></div><div class="decision"><b>연구과제 2</b><br>관측시각·상시관측소 연계의 필수 성과 <span class="no-break">지정 여부</span></div><div class="decision"><b>연구과제 3</b><br>고복잡도 권역 정밀 항공·지상 자력자료의 추가 <span class="no-break">확보 여부</span></div></div>
 </div></section>
 
 <section class="scene closing" data-no="12" data-title="결론"><div class="inner">
-  <div class="eyebrow reveal" style="justify-content:center">THE ONE SENTENCE</div><h2 class="reveal">좋은 선점은 조용한 점을 찾고,<br><span class="accent">좋은 모델은 설명 못한 곳을 다시 찾습니다.</span></h2>
+  <div class="eyebrow reveal" style="justify-content:center">THE ONE SENTENCE</div><h2 class="reveal">좋은 선점은 저구배 후보점을 찾고,<br><span class="accent">좋은 모델은 설명 못한 곳을 다시 찾습니다.</span></h2>
   <p class="lead reveal">관측망·항공자력·상시관측·IGRF를 하나로 묶어 검증하면, 새로 놓는 점 하나하나가 <strong>국가 자기장 기준을 얼마나 정밀하게 만드는지</strong> 숫자로 확인할 수 있습니다. 점을 늘리는 것 자체가 목표가 아니라, <strong>설명되지 않는 지역을 없애는 것</strong>이 목표입니다.</p>
   <div class="link-row reveal" style="--delay:140ms"><a class="primary-link" href="index.html">입지 선정 지도 열기</a><a class="primary-link orange-link" href="lmm.html">LMM 계산기 열기</a></div>
   <p class="footnote reveal" style="--delay:210ms;margin:28px auto 0;max-width:760px">현재 모델은 시범 구축판이고 <b>정확도 목표는 아직 확정되지 않았습니다.</b> 이 브리핑은 연구설계와 의사결정을 위한 자료입니다.</p>
@@ -481,15 +538,35 @@ function drawGeometry(ctx,geom,project){ctx.beginPath();
   const ring=r=>{r.forEach((p,i)=>{const [x,y]=project(p[0],p[1]);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)});ctx.closePath()};
   if(geom.type==='Polygon')geom.coordinates.forEach(ring);else if(geom.type==='MultiPolygon')geom.coordinates.forEach(p=>p.forEach(ring));
 }
+const css=(name,fallback)=>getComputedStyle(document.documentElement).getPropertyValue(name).trim()||fallback;
+function drawEastSeaInset(ctx,W,H){
+  const iw=Math.min(184,Math.max(142,W*.34)),ih=112,x=W-iw-14,y=14;
+  const b={w:130.62,e:132.08,s:37.05,n:37.68},pad=10;
+  const scale=Math.min((iw-pad*2)/(b.e-b.w),(ih-pad*2)/(b.n-b.s));
+  const ox=x+(iw-(b.e-b.w)*scale)/2,oy=y+(ih-(b.n-b.s)*scale)/2;
+  const project=(lon,lat)=>[ox+(lon-b.w)*scale,oy+(b.n-lat)*scale];
+  ctx.save();ctx.fillStyle=css('--inset-bg','#071018');ctx.fillRect(x,y,iw,ih);
+  ctx.strokeStyle=css('--inset-line','#355267');ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,iw-1,ih-1);
+  ctx.beginPath();ctx.rect(x+1,y+1,iw-2,ih-2);ctx.clip();
+  drawGeometry(ctx,DATA.boundary,project);ctx.fillStyle=css('--map-land','#0d1b26');ctx.fill('evenodd');
+  ctx.strokeStyle=css('--map-stroke','#66869a');ctx.lineWidth=.8;ctx.stroke();
+  DATA.east_sea.forEach(site=>{const [px,py]=project(site.lon,site.lat);ctx.beginPath();ctx.arc(px,py,site.name==='독도'?3.2:2.6,0,Math.PI*2);
+    ctx.fillStyle=site.name==='독도'?css('--orange','#ff7048'):css('--cyan','#51d2d7');ctx.fill();
+    if(site.name==='독도'){ctx.beginPath();ctx.arc(px,py,7,0,Math.PI*2);ctx.strokeStyle=css('--orange','#ff7048');ctx.lineWidth=.8;ctx.stroke()}
+    ctx.font='700 10px "Noto Sans KR","Malgun Gothic",sans-serif';ctx.fillStyle=css('--inset-text','#dce9f1');
+    ctx.textAlign=site.name==='독도'?'right':'left';ctx.textBaseline='middle';ctx.fillText(site.name,px+(site.name==='독도'?-7:7),py-1)});
+  ctx.restore();ctx.font='700 8px Consolas,monospace';ctx.fillStyle=css('--inset-text','#dce9f1');ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText('EAST SEA ISLANDS',x+8,y+7);
+}
 const colors={critical:'#ff7048',short:'#f0bc54',mild:'#427df4',ok:'#244257'};
 function makeMap(canvas,mode){const ctx=canvas.getContext('2d');const state={existing:true,model:true,survey:false,density:mode==='density'};
-  function render(){const rect=canvas.getBoundingClientRect(),dpr=Math.min(2,devicePixelRatio||1);canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);const W=rect.width,H=rect.height;ctx.clearRect(0,0,W,H);ctx.fillStyle='#09141d';ctx.fillRect(0,0,W,H);
+  function render(){const rect=canvas.getBoundingClientRect(),dpr=Math.min(2,devicePixelRatio||1);canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);const W=rect.width,H=rect.height;ctx.clearRect(0,0,W,H);ctx.fillStyle=css('--map-bg','#09141d');ctx.fillRect(0,0,W,H);
     const b={w:124.25,e:130.15,s:32.9,n:38.9},pad=32,scale=Math.min((W-pad*2)/(b.e-b.w),(H-pad*2)/(b.n-b.s)),ox=(W-(b.e-b.w)*scale)/2,oy=(H-(b.n-b.s)*scale)/2;const project=(lon,lat)=>[ox+(lon-b.w)*scale,oy+(b.n-lat)*scale];
     if(state.density){DATA.density.forEach(c=>{const [x,y]=project(c.lon,c.lat);ctx.globalAlpha=c.observed?.62:.22;ctx.fillStyle=colors[c.tier];const s=Math.max(3.2,scale*.095);ctx.fillRect(x-s/2,y-s/2,s,s);if(!c.observed){ctx.strokeStyle='#b8c3cb';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(x-s/2,y-s/2);ctx.lineTo(x+s/2,y+s/2);ctx.stroke()}});ctx.globalAlpha=1}
-    drawGeometry(ctx,DATA.boundary,project);ctx.fillStyle='rgba(13,27,38,.46)';ctx.fill('evenodd');ctx.strokeStyle='#5d798b';ctx.lineWidth=1.1;ctx.stroke();
+    drawGeometry(ctx,DATA.boundary,project);ctx.fillStyle=css('--map-land','rgba(13,27,38,.46)');ctx.fill('evenodd');ctx.strokeStyle=css('--map-stroke','#5d798b');ctx.lineWidth=1.1;ctx.stroke();
     if(state.survey)drawPoints(DATA.survey,'#51d2d7',2.3,.52);
     if(state.existing)drawPoints(DATA.existing,'#eaf1f6',3.2,.9,true);
     if(state.model)drawPoints(DATA.model_sites,'#ff7048',4.4,1);
+    drawEastSeaInset(ctx,W,H);
     function drawPoints(rows,color,r,alpha,ring=false){ctx.globalAlpha=alpha;rows.forEach(p=>{const [x,y]=project(p.lon,p.lat);ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ring?(ctx.strokeStyle=color,ctx.lineWidth=1.4,ctx.stroke()):(ctx.fillStyle=color,ctx.fill())});ctx.globalAlpha=1}
   }
   new ResizeObserver(render).observe(canvas);render();return{state,render};
