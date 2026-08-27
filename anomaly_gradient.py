@@ -476,6 +476,55 @@ def uniform_spacing(area_km2_total, n_target: int = N_TARGET_SITES):
     return float(np.sqrt(area_km2_total / n_target))
 
 
+DENSITY_CELL_DEG = 0.10        # 권역 밀도 격자 (약 11 km)
+
+
+def land_grid(korea_geojson=None, cell_deg: float = DENSITY_CELL_DEG):
+    """
+    국토 내부 평가 격자 (clat, clon, area_km2) — **밀도 설계의 단일 격자**.
+
+    ⚠️ 자기점검과 본 분석이 서로 다른 격자를 쓰면 셀 수·등급 수가 갈라져
+    「같은 정의를 쓴다」는 말이 성립하지 않는다(2026-08-27 검토 지적:
+    자기점검 1,088셀 vs 배포 1,090셀). 두 곳이 이 함수를 함께 쓴다.
+
+    격자 원점·범위는 **경계 bbox 를 cell_deg 로 내림**해 잡는다 —
+    `np.arange(33.1, ...)` 처럼 손으로 적으면 경계가 바뀔 때 갈라진다.
+    """
+    import json as _json
+
+    from matplotlib.path import Path as _MPath
+
+    # 원본(data/)을 먼저 본다 — docs/ 는 배포 사본이라 빌드 전후로 갈릴 수 있다
+    path = korea_geojson
+    if path is None:
+        for cand in (ROOT / "data" / "korea_boundary.geojson",
+                     ROOT / "docs" / "data" / "korea_boundary.geojson"):
+            if cand.exists():
+                path = cand
+                break
+    gj = _json.load(open(path, encoding="utf-8"))
+    polys = []
+    for f in gj["features"]:
+        g = f["geometry"]
+        for poly in ([g["coordinates"]] if g["type"] == "Polygon"
+                     else g["coordinates"]):
+            polys.append(_MPath(np.asarray(poly[0])))
+
+    xs = np.concatenate([p.vertices[:, 0] for p in polys])
+    ys = np.concatenate([p.vertices[:, 1] for p in polys])
+    glon = np.arange(np.floor(xs.min() / cell_deg) * cell_deg,
+                     xs.max() + cell_deg, cell_deg)
+    glat = np.arange(np.floor(ys.min() / cell_deg) * cell_deg,
+                     ys.max() + cell_deg, cell_deg)
+    LO, LA = np.meshgrid(glon, glat)
+    pts = np.column_stack([LO.ravel(), LA.ravel()])
+    m = np.zeros(len(pts), bool)
+    for pp in polys:
+        m |= pp.contains_points(pts)
+    clat, clon = LA.ravel()[m], LO.ravel()[m]
+    return clat, clon, cell_area_km2(clat, cell_deg, cell_deg)
+
+
 def cell_area_km2(lat, dlat_deg, dlon_deg):
     """경위도 셀의 근사 면적 (km²)."""
     lat = np.asarray(lat, float)
@@ -567,28 +616,11 @@ def _self_check():
         print(f"   {g:>4} nT/km → {float(representativeness_score(g)):5.2f} / 10"
               f"   [{TIER_LABEL[grad_tier(g)]}]")
 
-    # 국토 격자에서 Neyman 배분
+    # 국토 격자에서 Neyman 배분 — **본 분석과 같은 격자**를 쓴다
     data = ROOT / "docs" / "data"
-    gj = json.load(open(data / "korea_boundary.geojson", encoding="utf-8"))
-    from matplotlib.path import Path as MPath
-    polys = []
-    for f in gj["features"]:
-        g = f["geometry"]
-        for poly in ([g["coordinates"]] if g["type"] == "Polygon"
-                     else g["coordinates"]):
-            polys.append(MPath(np.asarray(poly[0])))
-    la = np.arange(33.1, 38.7, 0.1)
-    lo = np.arange(125.0, 129.7, 0.1)
-    LO, LA = np.meshgrid(lo, la)
-    pts = np.column_stack([LO.ravel(), LA.ravel()])
-    m = np.zeros(len(pts), bool)
-    for pp in polys:
-        m |= pp.contains_points(pts)
-    m = m.reshape(LA.shape)
-    gn, gl = LA[m], LO[m]
+    gn, gl, A = land_grid()
 
     sg = ag.sigma(gn, gl)
-    A = cell_area_km2(gn, 0.1, 0.1)
     dens, spac, _ = neyman_density(sg, A)
     print(f"\n국토 격자 {gn.size}점 · σ(R={SIGMA_RADIUS_KM:.0f}km) "
           f"결측 {int(np.isnan(sg).sum())}")

@@ -1419,26 +1419,15 @@ def compute_density_design(
           f"Neyman 배분 산출 중...")
 
     # ── 국토 내부 격자 ────────────────────────────────────────
-    minx, miny, maxx, maxy = korea_gdf.total_bounds
-    glon = np.arange(np.floor(minx / cell_deg) * cell_deg,
-                     maxx + cell_deg, cell_deg)
-    glat = np.arange(np.floor(miny / cell_deg) * cell_deg,
-                     maxy + cell_deg, cell_deg)
-    LO, LA = np.meshgrid(glon, glat)
-    cen = gpd.GeoDataFrame(
-        geometry=[Point(x, y) for x, y in zip(LO.ravel(), LA.ravel())],
-        crs=WGS84_CRS,
-    )
-    land = unary_union(korea_gdf.geometry)
-    inside = cen.geometry.within(land).values
-    clon = LO.ravel()[inside]
-    clat = LA.ravel()[inside]
+    # ⚠️ `AG.land_grid()` 하나만 쓴다 — 자기점검(`python anomaly_gradient.py`)이
+    #    다른 격자를 만들면 셀 수·등급 수가 갈라져 대조가 성립하지 않는다.
+    clat, clon, _area_ag = AG.land_grid(cell_deg=cell_deg)
     if clon.size == 0:
         print("    ⚠ 국토 내부 격자 없음")
         return None, {}
     print(f"      국토 격자 {clon.size}개 (셀 {cell_deg}° ≈ {cell_deg*111:.0f} km)")
 
-    area = AG.cell_area_km2(clat, cell_deg, cell_deg)
+    area = _area_ag
 
     # ── 현 관측망 간격 ────────────────────────────────────────
     spacing_now = np.full(clon.size, np.nan)
@@ -3298,7 +3287,32 @@ def create_folium_map(
     n_net_oth = n_net_all - n_net_tgt
     n_net_old = len(EN.SUPERSEDED)
     n_new = AG.N_NEW_SITES
+
+    # ⚠️ 검정값을 손으로 적지 말 것 — σ 창을 원형으로 바꿨을 때 패널만 옛 값
+    #    (r=+0.47)으로 남아 있었다. 실측에서 뽑아 자동으로 따라가게 한다.
+    def _fmt_rp(d):
+        if not d or d.get("r") is None:
+            return "검정 불가"
+        return f"r={d['r']:+.2f}, p={d['p']:.2f}"
+
+    try:
+        _val = AG.validate_against_lmm(verbose=False)
+        _val_grad = _fmt_rp(_val.get("rD", {}).get("grad"))
+        _val_sigma = _fmt_rp(_val.get("rD", {}).get("sigma"))
+    except Exception:
+        _val_grad = _val_sigma = "검정 불가"
+
     n_bad = (n_net_all - n_net) if isinstance(n_net, int) else 0
+    # [8] 자기이상 하드 제외는 2026-08-19 에 해제됐다(구배 가중치로만 반영).
+    # zones["anomaly"] 가 None 이면 그 레이어 자체가 없으므로 범례에서도 뺀다 —
+    # 남겨 두면 「>800 nT 후보가 제거됐다」고 오해한다.
+    _anom_on = zones.get("anomaly") is not None and not zones["anomaly"].is_empty
+    _anomaly_excl_row = (
+        _swatch('#0044FF', '[8] 자기이상 P90-P10&gt;800nT 조건부 제외 *')
+        if _anom_on else
+        '<span style="color:#666;font-size:10.5px;">[8] 자기이상 하드 제외 '
+        '<b>해제</b> — 구배 점수로만 반영 *</span><br>')
+
     _coord_note = (
         f'<span style="color:#a00;">⚠ 밀도 계산은 <b>{n_net}점</b> — '
         f'좌표 중복 {n_bad}점 제외</span><br>' if n_bad > 0 else
@@ -3334,7 +3348,7 @@ def create_folium_map(
       {_swatch('#0088FF','[5] 통신탑·기지국 0.5 km')}
       {_swatch('#00CCAA','[6] 풍력발전기 0.5 km')}
       {_swatch('#AA6600','[7] 채석장·광산 1.0 km')}
-      {_swatch('#0044FF','[8] 자기이상 P90-P10&gt;800nT 조건부 제외 *')}
+      {_anomaly_excl_row}
       {_swatch('#8B0000','[지질] 자성 암종 직접 제외 †')}
       {_swatch('#CC4400','[지질] 단층 0.5 km 버퍼 †')}
       <hr style="margin:6px 0;border-color:#ccc;">
@@ -3378,9 +3392,11 @@ def create_folium_map(
       <small style="color:#555;">
         격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/EPSG:5179<br>
         데이터: OpenStreetMap (Overpass API)<br>
-        * KIGAM P90-P10 &gt;800 nT (극단값 약 1%) 조건부 제외<br>
-        &nbsp;&nbsp;(또는 현장 정밀조사 대상). 나머지는<br>
-        &nbsp;&nbsp;자기이상·지질경계 모델 기여도 기준 점수화<br>
+        * <b>종전의 「P90-P10 &gt;800 nT 조건부 제외」는 2026-08-19</b><br>
+        &nbsp;&nbsp;<b>해제됐다.</b> 후보를 걸러내지 않고 ⑤ 구배 점수로만<br>
+        &nbsp;&nbsp;반영하며, 배제 판단은 현장 정밀 자력측량에 넘긴다.<br>
+        &nbsp;&nbsp;(재실행 결과 800 nT 초과 셀 20개에 애초에 후보가<br>
+        &nbsp;&nbsp;없어 하드 제외는 실제로 아무것도 걸러내지 않았다)<br>
         ‡ 구배가 크면 그 지점의 값이 주변을 대표하지<br>
         &nbsp;&nbsp;못하고 2.8 km 격자 기반 지각장 보정도<br>
         &nbsp;&nbsp;빗나간다 → 측점은 조용한 자리에.<br>
@@ -3505,9 +3521,9 @@ def create_folium_map(
       &nbsp;&nbsp;<b>저구배가 높은 점수</b> — 구배가 크면 측정값이 주변을<br>
       &nbsp;&nbsp;대표하지 못하고 2.8 km 격자 지각장 보정도 빗나감<br>
       &nbsp;&nbsp;<span style="color:#a00;">⚠ 근거는 물리 추론과 IAGA 관행이며,<br>
-      &nbsp;&nbsp;현 16측점 잔차로는 검증되지 않았다(r=−0.22, p=0.45).<br>
+      &nbsp;&nbsp;현 측점 잔차로는 검증되지 않았다({_val_grad}).<br>
       &nbsp;&nbsp;편각 잔차를 방위 기준 계통오차가 덮고 있어 검정력<br>
-      &nbsp;&nbsp;부족. 반면 권역 축은 r=+0.47(p=0.08)로 방향 일치.</span><br>
+      &nbsp;&nbsp;부족. 반면 권역 축은 {_val_sigma}로 방향 일치.</span><br>
       ⑥ 암상 적합성: 수치지질도(1:250,000)<br>
       &nbsp;&nbsp;🚫 사전 필터: 자성 암종 폴리곤 내부·단층 500m 이내 제외<br>
       &nbsp;&nbsp;✅ 점수화: log(자성암종 경계 거리) × 0.5<br>
