@@ -1395,9 +1395,14 @@ def compute_density_design(
         n_h ∝ A_h · σ_h        (Neyman allocation)
         ρ(x) ∝ σ(x)            →   권장 간격 L(x) = 1/√ρ(x)
 
-    ⚠️ 「현 간격」은 **기존 1등 지자기점 관측망 30점**(`existing_network.py`,
-    survey_review.html 과 같은 명단)의 최근접 측점 거리 × 2 다.
-    측점이 하나뿐인 방향에서는 과소평가되지만, 권역 단위 비교에는 충분하다.
+    「현 간격」은 **기존 1등 지자기점 관측망 30점**(`existing_network.py`,
+    survey_review.html 과 같은 명단)의 **담당면적 등가 간격**이다
+    (`AG.catchment_spacing` — 국토 격자 위 이산 보로노이 → √담당면적).
+
+    ⚠️ 종전의 「최근접 측점 거리 × 2」는 폐기했다 (2026-08-27). 측점 위에서
+    0 으로 무너져 측점 근처가 자동으로 「충족」으로 찍혔고, 권장 간격(밀도의
+    함수)과 나눌 수 있는 같은 종류의 양이 아니었다. 최근접 거리는 그 자체로
+    쓸모가 있으므로 `cover_km` 로 **이름을 나눠** 따로 싣는다.
 
     ⚠️ `load_existing_sites()` 가 주는 33행을 그대로 쓰면 안 된다 — 그것은
     성과표 두 개를 병합한 **자료 보유 목록**이라 폐지된 옛 위치가 섞여 있다
@@ -1446,6 +1451,8 @@ def compute_density_design(
 
     # ── 현 관측망 간격 ────────────────────────────────────────
     spacing_now = np.full(clon.size, np.nan)
+    cover_km = np.full(clon.size, np.nan)
+    site_area = np.full(clon.size, np.nan)
     n_sites = 0
     if existing_sites is not None and len(existing_sites) > 0:
         net = EN.select_rows(existing_sites)          # 30점 관측망만
@@ -1461,17 +1468,22 @@ def compute_density_design(
         slat, slon = slat[ok], slon[ok]
         n_sites = slat.size
         if n_sites:
-            d = np.full(clon.size, np.inf)
-            for la, lo in zip(slat, slon):
-                m = np.radians((clat + la) / 2)
-                d = np.minimum(d, np.hypot((clon - lo) * 111.320 * np.cos(m),
-                                           (clat - la) * 110.574))
-            spacing_now = 2.0 * d          # 최근접 거리 × 2 ≈ 유효 간격
-            print(f"      현 관측망 {n_sites}점(1등 지자기점) · 유효 간격 중앙 "
-                  f"{np.median(spacing_now):.0f} km")
+            spacing_now, cover_km, site_area = AG.catchment_spacing(
+                clat, clon, area, slat, slon)
+            print(f"      현 관측망 {n_sites}점(1등 지자기점) · 담당면적 등가 간격 "
+                  f"중앙 {np.median(spacing_now):.0f} km "
+                  f"(측점당 {np.mean(site_area):.0f} km²)")
+            print(f"      [별도 지표] 최근접 측점 거리 중앙 "
+                  f"{np.median(cover_km):.0f} km · 최대 {cover_km.max():.0f} km")
 
     with np.errstate(invalid="ignore", divide="ignore"):
-        deficit = spacing_now / spacing     # 1 초과 = 권장보다 성김
+        deficit = spacing_now / spacing            # raw — 권장 대비 몇 배 성긴가
+    # 등급은 **상대 부족도**에 매긴다 — raw 의 수준은 30점→80점이라는 산술이
+    # 정하므로(균일부족선 sqrt(80/30)=1.63) 그대로 등급화하면 「전국이 부족」
+    # 이라는 뻔한 결론만 나온다. 지도가 답해야 할 물음은 「어디가 더 부족한가」다.
+    uni_def = AG.uniform_deficit(n_sites, n_target) if n_sites else float("nan")
+    with np.errstate(invalid="ignore", divide="ignore"):
+        deficit_rel = deficit / uni_def
 
     # ── 셀 GeoDataFrame ──────────────────────────────────────
     h = cell_deg / 2
@@ -1482,9 +1494,12 @@ def compute_density_design(
             "sigma_obs":    np.where(np.isfinite(sigma), 1, 0),  # 0 = 대체값
             "spacing_req":  np.round(spacing, 1),
             "spacing_now":  np.round(spacing_now, 1),
+            "cover_km":     np.round(cover_km, 1),
+            "site_area":    np.round(site_area, 0),
             "deficit":      np.round(deficit, 2),
+            "deficit_rel":  np.round(deficit_rel, 2),
             "sp_tier":      [AG.spacing_tier(v) for v in spacing],
-            "df_tier":      [AG.deficit_tier(v) for v in deficit],
+            "df_tier":      [AG.deficit_tier(v) for v in deficit_rel],
         },
         geometry=geoms, crs=WGS84_CRS,
     )
@@ -1494,7 +1509,10 @@ def compute_density_design(
     print("      권장 간격 등급:",
           " · ".join(f"{AG.TIER_LABEL[k]} {n_sp.get(k,0)}"
                      for k, *_ in AG.SPACING_TIERS))
-    print("      밀도 충족도  :",
+    print(f"      균일부족선 sqrt({n_target}/{n_sites}) = {uni_def:.2f} "
+          f"· raw 충족도 중앙 {np.nanmedian(deficit):.2f} "
+          f"→ 상대 부족도 중앙 {np.nanmedian(deficit_rel):.2f}")
+    print("      상대 부족도  :",
           " · ".join(f"{AG.TIER_LABEL[k]} {n_df.get(k,0)}"
                      for k, *_ in AG.DEFICIT_TIERS))
 
@@ -1502,6 +1520,10 @@ def compute_density_design(
         "n_target":     n_target,
         "n_sites":      n_sites,
         "network":      "1등 지자기점 관측망 30점 (existing_network.py)",
+        "now_method":   "담당면적 등가 간격 (이산 보로노이)",
+        "cover_med":    float(np.nanmedian(cover_km)) if n_sites else None,
+        "cover_max":    float(np.nanmax(cover_km)) if n_sites else None,
+        "uniform_deficit": round(uni_def, 3) if n_sites else None,
         "uniform_km":   round(unif, 1),
         "sigma_median": float(np.nanmedian(sigma_filled)),
         "cells":        int(clon.size),
@@ -2754,6 +2776,7 @@ def save_map_data(
         "mag_grad_nT_km": "grad", "mag_p90p10_nT": "var",
         "reg_sigma_nT": "sig", "reg_sigma_obs": "sigo", "req_spacing_km": "lreq",
         "now_spacing_km": "lnow", "density_deficit": "dfc",
+        "density_deficit_rel": "dfr", "cover_km": "cov",
     }
     prop_cols = ["idx", "lat", "lon"]
     for c in ["priority", "score"] + list(rename_map.keys()):
@@ -3020,16 +3043,17 @@ def create_folium_map(
     }
     # 밀도 충족도 — 현 관측망 간격 / 권장 간격. 1 초과면 권장보다 성기다.
     _sgap = {
-        "critical": ("#54278F", "#331A56", "🚨 밀도 크게 부족 (권장의 2배 이상 성김)"),
-        "short":    ("#807DBA", "#524F80", "🟣 밀도 부족 (1.5~2배)"),
-        "mild":     ("#BCBDDC", "#8384A0", "🟪 다소 부족 (1~1.5배)"),
-        "ok":       ("#EFEDF5", "#B9B7C4", "⬜ 충족"),
+        "critical": ("#54278F", "#331A56",
+                     "🚨 크게 부족 — 보강 1순위 (전국 평균 부족의 1.4배 이상)"),
+        "short":    ("#807DBA", "#524F80", "🟣 평균보다 부족 (1.0~1.4배)"),
+        "mild":     ("#BCBDDC", "#8384A0", "🟪 평균보다 양호 (0.7~1.0배)"),
+        "ok":       ("#EFEDF5", "#B9B7C4", "⬜ 충분 — 평균보다 크게 양호 (<0.7배)"),
     }
     if density_available:
         _dens_specs = [("density_req", _sreq,
                         "권장 측점 간격 (Neyman 배분)"),
                        ("density_gap", _sgap,
-                        "밀도 충족도 (현 관측망 대비)")]
+                        "상대 밀도 부족도 (전국 평균 대비)")]
         for prefix, spec, _group in _dens_specs:
             for key, (fc, ec, lname) in spec.items():
                 layer = folium.FeatureGroup(name=lname, show=False)
@@ -3048,11 +3072,17 @@ def create_folium_map(
                     "var sg=(p.sigma_nT!=null)?p.sigma_nT.toFixed(0):'-';"
                     "var lr=(p.spacing_req!=null)?p.spacing_req.toFixed(0):'-';"
                     "var ln=(p.spacing_now!=null)?p.spacing_now.toFixed(0):'-';"
+                    "var ck=(p.cover_km!=null)?p.cover_km.toFixed(0):'-';"
+                    "var sa=(p.site_area!=null)?p.site_area.toFixed(0):'-';"
                     "var df=(p.deficit!=null)?p.deficit.toFixed(2):'-';"
+                    "var dr=(p.deficit_rel!=null)?p.deficit_rel.toFixed(2):'-';"
                     "var est=(p.sigma_obs===0)?' <i>(자료 공백 — 중앙값 대체)</i>':'';"
-                    "l.bindTooltip('%s<br>자기복잡도 σ = '+sg+' nT'+est+"
-                    "'<br>권장 간격 '+lr+' km &nbsp;|&nbsp; 현 간격 '+ln+' km'+"
-                    "'<br>충족도 '+df+' (1 이하면 충족)');"
+                    "l.bindTooltip('%s<br>자기복잡도 σ(반경 25 km) = '+sg+' nT'+est+"
+                    "'<br>권장 간격 '+lr+' km &nbsp;|&nbsp; 현 등가 간격 '+ln+' km'+"
+                    "'<br><span style=\"color:#888;\">(측점 담당면적 '+sa+' km² 의 제곱근)</span>'+"
+                    "'<br><b>상대 부족도 '+dr+'</b> (1.0 = 전국 평균만큼 부족)'+"
+                    "'<br><span style=\"color:#888;\">raw 충족도 '+df+' — 수준은 30점→80점 산술</span>'+"
+                    "'<br><span style=\"color:#888;\">최근접 측점 '+ck+' km — 별개 지표</span>');"
                     "}"
                     "}).addTo(%s);"
                     "}).catch(function(e){console.warn('%s_%s:',e.message);});"
@@ -3139,8 +3169,8 @@ def create_folium_map(
             "+'<span style=\"font-size:11.5px;color:#333;\">'"
             "+'&nbsp;권역 자기복잡도 σ: '+vn(p.sig)+' nT'"
             "+((p.sigo===0)?' <span style=\"color:#a00;\">(항공자력 공백 — 중앙값 대체)</span>':'')+'<br>'"
-            "+'&nbsp;권장 측점 간격: '+vn(p.lreq)+' km &nbsp;|&nbsp; 현 간격 '+vn(p.lnow)+' km<br>'"
-            "+'&nbsp;밀도 충족도: '+vn(p.dfc)+' <span style=\"color:#888;\">(1 이하면 충족)</span><br>'"
+            "+'&nbsp;권장 측점 간격: '+vn(p.lreq)+' km &nbsp;|&nbsp; 현 등가 간격 '+vn(p.lnow)+' km<br>'"
+            "+'&nbsp;상대 밀도 부족도: '+vn(p.dfr)+' <span style=\"color:#888;\">(1.0 = 전국 평균만큼 부족)</span><br>'"
             "+'&nbsp;<span style=\"color:#888;\">변동폭 P90-P10: '+vn(p.var)+' nT (참고)</span>'"
             "+'</span></div>';"
             "l.bindPopup(html,{maxWidth:270});"
@@ -3230,6 +3260,8 @@ def create_folium_map(
     n_net_tgt = len(EN.EXISTING_TARGET)
     n_net_oth = n_net_all - n_net_tgt
     n_net_old = len(EN.SUPERSEDED)
+    n_new = AG.N_NEW_SITES
+    uni_def = _ds.get("uniform_deficit", "—")
 
     def _swatch(color, label):
         return (f'<span style="background:{color};display:inline-block;'
@@ -3273,17 +3305,20 @@ def create_folium_map(
       {_swatch('#B2182B','≥100 → 극심 (정밀 자력측량)')}
       <hr style="margin:6px 0;border-color:#ccc;">
       <b>▸ 관측망 밀도 설계 (Neyman 배분)</b><br>
-      <span style="color:#666;font-size:10.5px;">권역 자기복잡도 σ(25 km) ∝ 권장 밀도 §<br>
-      총 {n_target_sites}점 배분 기준 · 균등 배치라면 {unif_km} km</span><br>
+      <span style="color:#666;font-size:10.5px;">권역 자기복잡도 σ(반경 25 km) ∝ 권장 밀도 §<br>
+      총 {n_target_sites}점(현 {n_net_all} + 신규 {n_new}) · 균등 배치라면 {unif_km} km<br>
+      <b>권역 간 비는 총점수와 무관</b> — 절대 km 는 잠정치 ‖</span><br>
       {_swatch('#67000D','권장 간격 &lt;35 km — 조밀 필요')}
       {_swatch('#CB181D','35~50 km')}
       {_swatch('#FB6A4A','50~65 km')}
       {_swatch('#FEE0D2','≥65 km — 성김 허용')}
-      <span style="color:#666;font-size:10.5px;">밀도 충족도 = 현 간격 ÷ 권장 간격<br>
-      현 간격 = 1등 지자기점 관측망 {n_net}점 최근접거리 × 2</span><br>
-      {_swatch('#54278F','2배 이상 성김 — 크게 부족')}
-      {_swatch('#807DBA','1.5~2배 — 부족')}
-      {_swatch('#BCBDDC','1~1.5배 — 다소 부족')}
+      <span style="color:#666;font-size:10.5px;">상대 부족도 = (현 등가 간격 ÷ 권장 간격)<br>
+      ÷ 균일부족선 √({n_target_sites}/{n_net}) = {uni_def} &nbsp;→&nbsp; <b>1.0 = 전국 평균만큼 부족</b><br>
+      현 등가 간격 = 관측망 {n_net}점의 √담당면적 (이산 보로노이) ‡‡</span><br>
+      {_swatch('#54278F','≥1.4 크게 부족 — 보강 1순위')}
+      {_swatch('#807DBA','1.0~1.4 평균보다 부족')}
+      {_swatch('#BCBDDC','0.7~1.0 평균보다 양호')}
+      {_swatch('#EFEDF5','&lt;0.7 충분')}
       <hr style="margin:6px 0;border-color:#ccc;">
       <b>▸ 측정 후보지 (총 {n_cands}개)</b><br>
       {_dot('#FF0000',f'1등급 최우선 (데이터 공백): {n_p1}개')}
@@ -3305,6 +3340,19 @@ def create_folium_map(
         ‡ 구배가 크면 그 지점의 값이 주변을 대표하지<br>
         &nbsp;&nbsp;못하고 2.8 km 격자 기반 지각장 보정도<br>
         &nbsp;&nbsp;빗나간다 → 측점은 조용한 자리에.<br>
+        ‡‡ 각 국토 격자셀을 가장 가까운 측점에 배정해<br>
+        &nbsp;&nbsp;&nbsp;담당면적을 구하고 그 제곱근을 간격으로 쓴다.<br>
+        &nbsp;&nbsp;&nbsp;종전 「최근접거리 × 2」는 측점 위에서 0 이 되어<br>
+        &nbsp;&nbsp;&nbsp;권장 간격과 나눌 수 없었다(2026-08-27 폐기).<br>
+        &nbsp;&nbsp;&nbsp;raw 충족도의 수준은 30점→80점이라는 산술이<br>
+        &nbsp;&nbsp;&nbsp;정하므로, 등급은 균일부족선으로 나눈 <b>상대</b><br>
+        &nbsp;&nbsp;&nbsp;<b>부족도</b>에 매긴다 — 지도의 물음은 「어디가 더<br>
+        &nbsp;&nbsp;&nbsp;부족한가」이지 「부족한가」가 아니다.<br>
+        ‖ 배분 밀도 ρ ∝ σ 이고 간격 L = 1/√ρ 이므로<br>
+        &nbsp;&nbsp;L ∝ 1/√N — 총 측점 수를 바꾸면 전국이 같은<br>
+        &nbsp;&nbsp;배율로 늘거나 줄 뿐 <b>권역 간 비는 불변</b>이다.<br>
+        &nbsp;&nbsp;「영남이 경기·강원북보다 약 3배 조밀」은 확정,<br>
+        &nbsp;&nbsp;절대 km·충족도는 N=80 가정에 딸린 잠정치.<br>
         ¶ 경주(2015)·임계(2016)·언양(2022)은 각각 영천·<br>
         &nbsp;&nbsp;삼척·양산으로 대체된 옛 위치다. 앞 둘은 현<br>
         &nbsp;&nbsp;측점에서 23·31 km 떨어져 있어 관측망에 세면<br>
@@ -3419,8 +3467,15 @@ def create_folium_map(
       <b>[별도 축] 관측망 밀도 설계 — Neyman 배분</b><br>
       &nbsp;&nbsp;권역 자기복잡도 σ(반경 25 km, 추세제거 표준편차)<br>
       &nbsp;&nbsp;n_h ∝ A_h·σ_h → 밀도 ρ ∝ σ → 권장 간격 L = 1/√ρ<br>
-      &nbsp;&nbsp;현 간격은 <b>1:50,000 도엽 기준 1등 지자기점 관측망 30점</b><br>
-      &nbsp;&nbsp;(survey_review.html 과 같은 명단)의 최근접거리 × 2<br>
+      &nbsp;&nbsp;현 등가 간격 = <b>1등 지자기점 관측망 30점</b>(survey_review<br>
+      &nbsp;&nbsp;.html 과 같은 명단)의 <b>√담당면적</b> — 국토 격자 위 이산<br>
+      &nbsp;&nbsp;보로노이. 최근접거리 × 2 는 측점 위에서 0 이 되어<br>
+      &nbsp;&nbsp;권장 간격과 나눌 수 없으므로 폐기(2026-08-27).<br>
+      &nbsp;&nbsp;목표 80점 = 현 관측망 30 + Track C 신규 50 — <b>분모와</b><br>
+      &nbsp;&nbsp;<b>분자를 같은 모집단</b>으로 맞춘 것. LMM 투입 16점은<br>
+      &nbsp;&nbsp;「그중 현재 모델에 들어간 자료」이지 관측망이 아니다.<br>
+      &nbsp;&nbsp;<span style="color:#a00;">⚠ 권역 간 비는 N 과 무관하나 절대 km·충족도는<br>
+      &nbsp;&nbsp;N=80 가정에 딸린 <b>잠정치</b>다.</span><br>
       &nbsp;&nbsp;점수에 합산하지 않는다 — <b>어디를 조밀하게</b>는<br>
       &nbsp;&nbsp;관측망 설계이고, <b>그 안 어디에</b>가 입지 점수다<br>
       &nbsp;&nbsp;⚠ 배분 규칙은 이 연구의 제안이며 선례 인용이 아님<br>
@@ -4065,8 +4120,11 @@ def main():
             req_v = density_gdf["spacing_req"].values
             now_v = density_gdf["spacing_now"].values
             dfc_v = density_gdf["deficit"].values
+            dfr_v = density_gdf["deficit_rel"].values
+            cov_v = density_gdf["cover_km"].values
             obs_v = density_gdf["sigma_obs"].values
-            sig_o, req_o, now_o, dfc_o = (np.full(len(cw), np.nan) for _ in range(4))
+            sig_o, req_o, now_o, dfc_o, dfr_o, cov_o = (
+                np.full(len(cw), np.nan) for _ in range(6))
             obs_o = np.ones(len(cw), int)
             for i, (la, lo) in enumerate(zip(c_lat, c_lon)):
                 mm = np.radians((d_lat + la) / 2)
@@ -4075,15 +4133,18 @@ def main():
                 k = int(np.argmin(dd))
                 sig_o[i], req_o[i] = sig_v[k], req_v[k]
                 now_o[i], dfc_o[i] = now_v[k], dfc_v[k]
+                dfr_o[i], cov_o[i] = dfr_v[k], cov_v[k]
                 obs_o[i] = int(obs_v[k])
             final_candidates["reg_sigma_obs"]  = obs_o
             final_candidates["reg_sigma_nT"]   = np.round(sig_o, 0)
             final_candidates["req_spacing_km"] = np.round(req_o, 1)
             final_candidates["now_spacing_km"] = np.round(now_o, 1)
+            final_candidates["cover_km"]       = np.round(cov_o, 1)
             final_candidates["density_deficit"] = np.round(dfc_o, 2)
-            n_short = int(np.nansum(dfc_o >= 1.5))
+            final_candidates["density_deficit_rel"] = np.round(dfr_o, 2)
+            n_short = int(np.nansum(dfr_o >= 1.4))
             n_est = int((obs_o == 0).sum())
-            print(f"  후보지 {len(cw)}개 중 밀도 부족(충족도 ≥1.5) 권역에 "
+            print(f"  후보지 {len(cw)}개 중 보강 1순위(상대 부족도 ≥1.4) 권역에 "
                   f"{n_short}개 위치"
                   + (f" · σ 대체값 {n_est}개(항공자력 공백)" if n_est else ""))
         except Exception as exc:
@@ -4132,7 +4193,7 @@ def main():
                   # 항공자력 공간구배 — 점 축 / 권역 축
                   "mag_grad_nT_km", "mag_p90p10_nT",
                   "reg_sigma_nT", "reg_sigma_obs", "req_spacing_km", "now_spacing_km",
-                  "density_deficit"]:
+                  "cover_km", "density_deficit", "density_deficit_rel"]:
             if c in result.columns:
                 cols.append(c)
 

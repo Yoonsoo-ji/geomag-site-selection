@@ -102,9 +102,35 @@ GRAD_TIERS = [
 SIGMA_RADIUS_KM = 25.0         # 복잡도 평가 반경 — 측점 간격 규모
 SIGMA_MIN_PTS = 8              # 반경 내 최소 유효점
 
-# 배분 대상 총 측점 수. 현 LMM 투입 16점 + 후반기 Track C 신규 50점.
-# ⚠ 이것은 설계 가정이다 — 사업 계획이 바뀌면 이 상수 하나만 고친다.
-N_TARGET_SITES = 66
+# ── 배분 대상 총 측점 수 ──────────────────────────────────────────────
+#
+# ⚠️ **분모와 분자는 같은 모집단이어야 한다** (2026-08-27 정정).
+# 종전에는 목표를 66 = 「현 LMM 투입 16 + 신규 50」으로 잡아 놓고, 충족도의
+# 「현 간격」은 **1등 지자기점 관측망 30점**으로 쟀다. 목표 모집단(LMM 투입망)과
+# 현황 모집단(관측망)이 달라 비율이 뜻을 갖지 못했다.
+#
+# 모집단을 **1등 지자기점 반복관측망** 하나로 통일한다:
+#     목표 = 현 관측망 30점 + Track C 신규 50점 = 80점
+# LMM 투입 16점은 「그중 현재 모델에 들어간 자료」이지 관측망이 아니다.
+#
+# ✅ **권역 간 비(比)는 N 과 무관하다.** ρ(x) ∝ σ(x) 이고 L = 1/√ρ 이므로
+#    L ∝ 1/√N — N 을 바꾸면 전국이 같은 배율로 늘거나 줄 뿐 **어느 권역이 몇 배
+#    조밀해야 하는가는 바뀌지 않는다.** 따라서 「영남이 경기·강원북보다 약 3배
+#    조밀」은 확정 결론이고, **절대 km 값과 충족도만 N 가정에 딸린 잠정치**다.
+#    산출물에 그렇게 구분해 쓸 것.
+N_NEW_SITES = 50               # Track C 신규 (35~40 구축용 + 10~15 검증 전용)
+
+
+def _network_size() -> int:
+    """현 1등 지자기점 관측망 크기. existing_network 를 못 읽으면 30 으로 폴백."""
+    try:
+        from existing_network import EXISTING_NETWORK
+        return len(EXISTING_NETWORK)
+    except Exception:
+        return 30
+
+
+N_TARGET_SITES = _network_size() + N_NEW_SITES      # = 80
 
 # 권장 측점 간격 등급 (km)
 SPACING_TIERS = [
@@ -114,12 +140,24 @@ SPACING_TIERS = [
     ("sparse", 65.0, np.inf, "성김 허용"),
 ]
 
-# 밀도 충족도 = 현 측점 간격 / 권장 간격 (1 미만이면 충족)
+# ── 밀도 부족도 ───────────────────────────────────────────────────────
+#
+#   충족도(raw)   = 현 관측망 등가 간격 / 권장 간격
+#   상대 부족도    = 충족도 / sqrt(N_target / N_now)
+#
+# ⚠️ **raw 충족도의 «수준»은 산술이 정한다** (2026-08-27 정정). 현 30점을
+# 목표 80점 설계와 견주면 전국이 평균 sqrt(80/30) = 1.63 배 성긴 것이 당연하고,
+# 「93 %가 부족」은 발견이 아니라 30→80 이라는 뺄셈이다. 지도가 실제로 말하는
+# 것은 **어디가 상대적으로 더 부족한가**이므로 등급은 그 균일부족선으로
+# 나눈 **상대 부족도**에 매긴다. 1.0 이 「전국 평균만큼 부족」이다.
+#
+# 이렇게 하면 등급이 N 가정에 딸리지 않는다 — N 을 바꿔도 raw 충족도와
+# 균일부족선이 같은 배율로 움직여 상대 부족도는 그대로다.
 DEFICIT_TIERS = [
-    ("ok",       0.0, 1.0, "충족"),
-    ("mild",     1.0, 1.5, "다소 부족"),
-    ("short",    1.5, 2.0, "부족"),
-    ("critical", 2.0, np.inf, "크게 부족"),
+    ("ok",       0.0, 0.7, "충분 — 평균보다 크게 양호"),
+    ("mild",     0.7, 1.0, "평균보다 양호"),
+    ("short",    1.0, 1.4, "평균보다 부족"),
+    ("critical", 1.4, np.inf, "크게 부족 — 보강 1순위"),
 ]
 
 
@@ -209,30 +247,43 @@ class AnomalyGradient:
     # ── ② 권역 복잡도 ────────────────────────────────────────────
     def sigma(self, lat, lon, r_km: float = SIGMA_RADIUS_KM, detrend: bool = True):
         """
-        반경 r_km 내 자기이상의 표준편차 (nT) — 권역 자기복잡도.
+        **반경 r_km 원 안**의 자기이상 표준편차 (nT) — 권역 자기복잡도.
 
         `detrend=True` 면 국소 1차 평면을 뺀다. 광역 추세는 Regional 층이
         담당하므로 밀도 설계의 근거에서 제외하는 것이 옳다(실측상 차이는
         3% 로 작지만 정의가 명확해진다).
+
+        ⚠️ **경위도 상자로 자르면 반경이 아니다** (2026-08-27 정정). 종전에는
+        |Δlat|·|Δlon| 을 각각 비교해 약 2r × 2r **사각창**을 썼고, 모서리가
+        중심에서 r·√2 = 35.4 km 나 떨어졌다. 실제 원형 창으로 바꾸면
+        σ 중앙값 88.2 → 84.5 nT, 결측 44 → 57셀, 권장간격 등급이 1,090셀 중
+        125셀(11.5 %) 바뀐다. 상자는 먼저 걸러 내는 용도로만 쓰고 반드시
+        원형 거리로 다시 자를 것.
         """
         lat = np.atleast_1d(np.asarray(lat, float))
         lon = np.atleast_1d(np.asarray(lon, float))
         out = np.full(lat.shape, np.nan)
 
         for k, (la, lo) in enumerate(zip(lat, lon)):
+            coslat = np.cos(np.radians(la))
             dlat = r_km / 110.574
-            dlon = r_km / (111.320 * np.cos(np.radians(la)))
-            msk = ((np.abs(self.plat - la) <= dlat) &
+            dlon = r_km / (111.320 * coslat)
+            # 1차: 상자로 후보를 줄인다(전수 거리계산 회피)
+            box = ((np.abs(self.plat - la) <= dlat) &
                    (np.abs(self.plon - lo) <= dlon))
-            v = self.panom[msk]
-            if v.size < SIGMA_MIN_PTS:
+            if not box.any():
                 continue
+            x = (self.plon[box] - lo) * 111.320 * coslat
+            y = (self.plat[box] - la) * 110.574
+            # 2차: 실제 원형 반경으로 자른다
+            inr = (x * x + y * y) <= (r_km * r_km)
+            if inr.sum() < SIGMA_MIN_PTS:
+                continue
+            v = self.panom[box][inr]
             if not detrend:
                 out[k] = float(np.std(v))
                 continue
-            x = (self.plon[msk] - lo) * 111.320 * np.cos(np.radians(la))
-            y = (self.plat[msk] - la) * 110.574
-            A = np.column_stack([np.ones_like(x), x, y])
+            A = np.column_stack([np.ones(inr.sum()), x[inr], y[inr]])
             try:
                 coef, *_ = np.linalg.lstsq(A, v, rcond=None)
                 out[k] = float(np.std(v - A @ coef))
@@ -324,6 +375,77 @@ def neyman_density(sigma_nt, area_km2, n_target: int = N_TARGET_SITES):
     density = n_target * filled / w.sum()        # = n·A·σ/Σ(Aσ) / A
     spacing = 1.0 / np.sqrt(density)
     return density, spacing, filled
+
+
+def catchment_spacing(qlat, qlon, area_km2, slat, slon):
+    """
+    기존 측점망의 **등가 측점 간격** L_now (km) — 권장 간격과 같은 정의.
+
+    ⚠️ **「최근접 측점 거리 × 2」를 쓰면 안 된다** (2026-08-27 정정).
+    그 값은 측점 위에서 0 으로 무너지고 측점 사이·외곽에서 성질이 달라져,
+    권장 간격과 나눠 「충족/부족」을 판정할 수 있는 양이 아니었다. 실제로
+    측점 근처 셀이 자동으로 「충족」으로 찍혔다.
+    ⚠️ k-최근접 밀도 추정도 쓰지 않는다 — 20 km 정사각 격자로 검산하면 셀
+    중심에서 14.4 km, 측점 위에서 20.5 km 로 **위치에 따라 ±28 % 흔들린다.**
+
+    권장 간격은 밀도의 함수 L_req = 1/√ρ_req 이므로, 현황도 **밀도**에서
+    같은 방식으로 유도해야 비율이 뜻을 갖는다. 여기서는 **담당 면적**을 쓴다
+    (국토 격자 위의 이산 보로노이):
+
+        각 격자셀을 가장 가까운 측점에 배정
+        → 측점 i 의 담당 면적 A_i = Σ(배정된 셀 면적)
+        → 그 셀의 등가 간격 L_now = √(A_i)
+
+    정규 격자 배치에서 정확히 L 을 돌려주고, 국토 경계로 자동으로 잘리며
+    (해상은 격자에 없다), 「이 측점이 실제로 담당하는 면적 대 담당해야 할
+    면적」이라는 Neyman 배분과 같은 물음이 된다.
+
+    ⚠️ 값은 **측점 담당구역 단위로 계단**이다(보로노이 경계에서 불연속).
+    격자 해상도만큼 면적이 양자화되므로 0.1° 격자에서 간격 오차는 약 1 %.
+
+    Returns
+    -------
+    (spacing_km, cover_km, area_km2_per_site)
+      spacing_km : 등가 측점 간격
+      cover_km   : **최근접 측점 거리**(coverage radius) — 「가장 가까운 측점이
+                   얼마나 먼가」라는 별개의 물음. 이름을 나눠 함께 돌려준다.
+      area_km2_per_site : 셀이 속한 측점의 담당 면적
+    """
+    qlat = np.atleast_1d(np.asarray(qlat, float))
+    qlon = np.atleast_1d(np.asarray(qlon, float))
+    area = np.atleast_1d(np.asarray(area_km2, float))
+    slat = np.asarray(slat, float)
+    slon = np.asarray(slon, float)
+    n = slat.size
+    if n == 0:
+        nan = np.full(qlat.shape, np.nan)
+        return nan, nan.copy(), nan.copy()
+
+    d = np.empty((qlat.size, n))
+    for j in range(n):
+        m = np.radians((qlat + slat[j]) / 2.0)
+        d[:, j] = np.hypot((qlon - slon[j]) * 111.320 * np.cos(m),
+                           (qlat - slat[j]) * 110.574)
+    owner = np.argmin(d, axis=1)
+    cover = d[np.arange(qlat.size), owner]
+
+    site_area = np.zeros(n)
+    np.add.at(site_area, owner, area)
+    a_of_cell = site_area[owner]
+    return np.sqrt(a_of_cell), cover, a_of_cell
+
+
+def uniform_deficit(n_now: int, n_target: int = N_TARGET_SITES) -> float:
+    """
+    **균일부족선** — 현 n_now 점이 목표 n_target 점 설계에 견줘 전국 평균으로
+    몇 배나 성긴가. 밀도가 N 에 비례하고 간격이 1/sqrt(밀도) 이므로
+    sqrt(n_target / n_now) 다.
+
+    상대 부족도 = 충족도 / 이 값. 1.0 이 「전국 평균만큼 부족」이다.
+    """
+    if n_now <= 0:
+        return float("nan")
+    return float(np.sqrt(n_target / n_now))
 
 
 def uniform_spacing(area_km2_total, n_target: int = N_TARGET_SITES):
@@ -450,6 +572,33 @@ def _self_check():
     print("σ nT  P10/50/90:", np.round(np.nanpercentile(sg, [10, 50, 90]), 0))
     print(f"권장 간격 km  P10/50/90: {np.round(np.percentile(spac,[10,50,90]),0)}"
           f"   (균등 배치 기준 {uniform_spacing(A.sum()):.0f} km)")
+    print(f"배분 총점수 N = {N_TARGET_SITES} "
+          f"(현 관측망 {_network_size()} + 신규 {N_NEW_SITES})")
+
+    # 현 관측망 등가 간격 — 담당면적(이산 보로노이) 방식
+    try:
+        import pandas as _pd
+
+        from existing_network import select_rows as _sel
+        ex = _pd.DataFrame(
+            [{"도엽명": f["properties"]["name"],
+              "위도": f["properties"]["lat"], "경도": f["properties"]["lon"]}
+             for f in json.load(open(data / "existing_sites.geojson",
+                                     encoding="utf-8"))["features"]])
+        net = _sel(ex)
+        sp_now, cover, sarea = catchment_spacing(
+            gn, gl, A, net["위도"].values, net["경도"].values)
+        dfc = sp_now / spac
+        print(f"\n현 관측망 {len(net)}점 · 담당면적 등가 간격 중앙 "
+              f"{np.median(sp_now):.0f} km (측점당 {np.mean(sarea):.0f} km2)")
+        print(f"  [별도] 최근접 측점 거리 중앙 {np.median(cover):.0f} km "
+              f"· 최대 {cover.max():.0f} km")
+        print("  충족도: " + " · ".join(
+            f"{TIER_LABEL[k]} {int(((dfc >= lo) & (dfc < hi)).sum())}"
+            for k, lo, hi, _lab in DEFICIT_TIERS))
+    except Exception as exc:
+        print(f"\n[건너뜀] 현 관측망 등가 간격: {exc}")
+
 
     def region(a, b):
         if a >= 37.4:
