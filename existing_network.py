@@ -246,7 +246,12 @@ def apply_register_obs(df, name_col="도엽명", year_col="관측연도",
         if got:
             why = "점조서가 최신" if newer else "결측 보충"
             filled.append((nm, why + "(" + ",".join(got) + ")", ry))
-            if newer and year_col in out.columns:
+            # ⚠️ 값을 가져왔으면 **연도도 그 값의 연도로** 맞춘다. 구 파일의
+            #    연도는 관측 «여부»(ㅇ) 표시라 방문 기록이지 성과의 연도가
+            #    아니다. 남양이 그랬다 — ㅇ 는 2016 인데 성과 칸은 비어 있어
+            #    점조서 2010연구성과 값을 채웠고, 그대로 두면 팝업이
+            #    「최신관측 2016년」 옆에 2010 값을 세운다.
+            if year_col in out.columns:
                 out.at[i, year_col] = ry
     return out, filled
 
