@@ -2697,6 +2697,13 @@ def load_existing_sites() -> "pd.DataFrame | None":
             #    대조표와 크게 어긋나는 포천·여주·양산은 주소부터 다른 실제 이설이다.
             try:
                 df_old, moved = EN.apply_register(df_old, name_col="도엽명")
+                # ⚠ 성과표 쪽에도 예외가 있다 — 여주(경도 1′ 오기)·언양(2024
+                #   재매설로 성과표보다 늦다). 그 둘만 점조서로 덮는다.
+                df_latest, moved2 = EN.apply_register(
+                    df_latest, name_col="도엽명",
+                    only_names=EN.FORCE_REGISTER)
+                for nm, dd in moved2:
+                    print(f"  ✅ 성과표보다 점조서 우선 — {nm} {dd:.2f} km 이동")
                 if moved:
                     big = [f"{n} {d:.2f}km" for n, d in moved if d >= 1.0]
                     print(f"  ✅ 구 파일 좌표를 30점 대조표로 교정: {len(moved)}점"
