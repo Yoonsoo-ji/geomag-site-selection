@@ -110,8 +110,12 @@ SIGMA_MIN_PTS = 8              # 반경 내 최소 유효점
 # 현황 모집단(관측망)이 달라 비율이 뜻을 갖지 못했다.
 #
 # 모집단을 **1등 지자기점 반복관측망** 하나로 통일한다:
-#     목표 = 현 관측망 30점 + Track C 신규 50점 = 80점
+#     목표 = 현 관측망 + Track C 신규 50점
 # LMM 투입 16점은 「그중 현재 모델에 들어간 자료」이지 관측망이 아니다.
+#
+# ⚠️ 「현 관측망」은 명단 길이 30 이 아니라 **좌표 결함을 뺀 29** 다 — 남양과
+#    서산이 같은 좌표라 서산은 담당면적을 못 받고 공간적으로 사라진다
+#    (`existing_network.BAD_COORDS`). 그래서 기본 목표는 **79** 다.
 #
 # ✅ **권역 간 비(比)는 N 과 무관하다.** ρ(x) ∝ σ(x) 이고 L = 1/√ρ 이므로
 #    L ∝ 1/√N — N 을 바꾸면 전국이 같은 배율로 늘거나 줄 뿐 **어느 권역이 몇 배
@@ -122,15 +126,22 @@ N_NEW_SITES = 50               # Track C 신규 (35~40 구축용 + 10~15 검증 
 
 
 def _network_size() -> int:
-    """현 1등 지자기점 관측망 크기. existing_network 를 못 읽으면 30 으로 폴백."""
+    """
+    **공간적으로 쓸 수 있는** 현 관측망 크기.
+
+    ⚠️ 명단 길이(30)가 아니라 **좌표 결함을 뺀 수**다. 좌표가 겹치는 측점은
+    담당면적을 하나도 못 받아 공간 계산에서 사라지는데, 목표 N 에는 계속
+    세어지면 분모·분자 모집단이 또 갈라진다(2026-08-27 검토 지적).
+    서산 좌표가 복구되면 `BAD_COORDS` 가 비고 자동으로 30 으로 돌아온다.
+    """
     try:
-        from existing_network import EXISTING_NETWORK
-        return len(EXISTING_NETWORK)
+        from existing_network import BAD_COORDS, EXISTING_NETWORK
+        return len(EXISTING_NETWORK) - len(BAD_COORDS)
     except Exception:
-        return 30
+        return 29
 
 
-N_TARGET_SITES = _network_size() + N_NEW_SITES      # = 80
+N_TARGET_SITES = _network_size() + N_NEW_SITES      # = 79 (서산 좌표 복구 시 80)
 
 # 권장 측점 간격 등급 (km)
 SPACING_TIERS = [
@@ -405,11 +416,18 @@ def catchment_spacing(qlat, qlon, area_km2, slat, slon):
 
     Returns
     -------
-    (spacing_km, cover_km, area_km2_per_site)
-      spacing_km : 등가 측점 간격
-      cover_km   : **최근접 측점 거리**(coverage radius) — 「가장 가까운 측점이
-                   얼마나 먼가」라는 별개의 물음. 이름을 나눠 함께 돌려준다.
-      area_km2_per_site : 셀이 속한 측점의 담당 면적
+    (spacing_km, cover_km, area_of_cell, area_by_site)
+      spacing_km   : 셀별 등가 측점 간격
+      cover_km     : **최근접 측점 거리**(coverage radius) — 「가장 가까운 측점이
+                     얼마나 먼가」라는 별개의 물음. 이름을 나눠 함께 돌려준다.
+      area_of_cell : 셀이 속한 측점의 담당 면적 (길이 = 격자 수)
+      area_by_site : **측점별** 담당 면적 (길이 = 측점 수)
+
+    ⚠️ **`area_of_cell` 로 평균을 내지 말 것** — 셀마다 소유 측점의 전체
+    담당면적이 반복돼 있어 `mean()` 이 **셀 수로 가중**된다(큰 담당구역이
+    과대 반영). 측점당 통계는 `area_by_site` 를 쓴다. 담당 셀을 하나도 못 받은
+    측점은 0 이므로 `area_by_site > 0` 으로 걸러야 한다 — 좌표가 겹치는 측점이
+    실제로 그렇게 된다(`existing_network.BAD_COORDS`).
     """
     qlat = np.atleast_1d(np.asarray(qlat, float))
     qlon = np.atleast_1d(np.asarray(qlon, float))
@@ -419,7 +437,7 @@ def catchment_spacing(qlat, qlon, area_km2, slat, slon):
     n = slat.size
     if n == 0:
         nan = np.full(qlat.shape, np.nan)
-        return nan, nan.copy(), nan.copy()
+        return nan, nan.copy(), nan.copy(), np.zeros(0)
 
     d = np.empty((qlat.size, n))
     for j in range(n):
@@ -432,7 +450,7 @@ def catchment_spacing(qlat, qlon, area_km2, slat, slon):
     site_area = np.zeros(n)
     np.add.at(site_area, owner, area)
     a_of_cell = site_area[owner]
-    return np.sqrt(a_of_cell), cover, a_of_cell
+    return np.sqrt(a_of_cell), cover, a_of_cell, site_area
 
 
 def uniform_deficit(n_now: int, n_target: int = N_TARGET_SITES) -> float:
@@ -573,7 +591,7 @@ def _self_check():
     print(f"권장 간격 km  P10/50/90: {np.round(np.percentile(spac,[10,50,90]),0)}"
           f"   (균등 배치 기준 {uniform_spacing(A.sum()):.0f} km)")
     print(f"배분 총점수 N = {N_TARGET_SITES} "
-          f"(현 관측망 {_network_size()} + 신규 {N_NEW_SITES})")
+          f"(공간 관측망 {_network_size()} + 신규 {N_NEW_SITES})")
 
     # 현 관측망 등가 간격 — 담당면적(이산 보로노이) 방식
     try:
@@ -585,16 +603,31 @@ def _self_check():
               "위도": f["properties"]["lat"], "경도": f["properties"]["lon"]}
              for f in json.load(open(data / "existing_sites.geojson",
                                      encoding="utf-8"))["features"]])
-        net = _sel(ex)
-        sp_now, cover, sarea = catchment_spacing(
+        from existing_network import drop_duplicate_coords as _dedup
+        net_all = _sel(ex)
+        net, dropped = _dedup(net_all)
+        if dropped:
+            print(f"  ⚠ 좌표 중복으로 제외: {' · '.join(dropped)} "
+                  f"(명목 {len(net_all)} → 공간 {len(net)}점)")
+        sp_now, cover, a_cell, a_site = catchment_spacing(
             gn, gl, A, net["위도"].values, net["경도"].values)
+        n_now = len(net)
+        n_tgt = n_now + N_NEW_SITES
+        # ⚠️ 등급은 **상대 부족도**에 매긴다 — raw 를 그대로 넣으면 「전국이
+        #    보강 1순위」라는 뻔한 결과가 나온다(수준은 n_now→n_tgt 산술이 정한다).
         dfc = sp_now / spac
-        print(f"\n현 관측망 {len(net)}점 · 담당면적 등가 간격 중앙 "
-              f"{np.median(sp_now):.0f} km (측점당 {np.mean(sarea):.0f} km2)")
+        dfr = dfc / uniform_deficit(n_now, n_tgt)
+        used = a_site > 0
+        print(f"\n현 관측망 {n_now}점 · 담당면적 등가 간격 중앙 "
+              f"{np.median(sp_now):.0f} km "
+              f"(측점당 {a_site[used].mean():.0f} km2 · 국토 {A.sum():.0f} km2)")
         print(f"  [별도] 최근접 측점 거리 중앙 {np.median(cover):.0f} km "
               f"· 최대 {cover.max():.0f} km")
-        print("  충족도: " + " · ".join(
-            f"{TIER_LABEL[k]} {int(((dfc >= lo) & (dfc < hi)).sum())}"
+        print(f"  균일부족선 sqrt({n_tgt}/{n_now}) = "
+              f"{uniform_deficit(n_now, n_tgt):.2f} · raw 중앙 "
+              f"{np.median(dfc):.2f} → 상대 부족도 중앙 {np.median(dfr):.2f}")
+        print("  상대 부족도: " + " · ".join(
+            f"{TIER_LABEL[k]} {int(((dfr >= lo) & (dfr < hi)).sum())}"
             for k, lo, hi, _lab in DEFICIT_TIERS))
     except Exception as exc:
         print(f"\n[건너뜀] 현 관측망 등가 간격: {exc}")

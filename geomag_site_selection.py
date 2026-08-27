@@ -1384,7 +1384,7 @@ def compute_density_design(
     korea_gdf: gpd.GeoDataFrame,
     existing_sites: "pd.DataFrame | None",
     cell_deg: float = DENSITY_CELL_DEG,
-    n_target: int = AG.N_TARGET_SITES,
+    n_target: "int | None" = None,
 ) -> tuple:
     """
     권역 자기복잡도 σ(R) → Neyman 배분 → 권장 측점 간격·밀도 충족도 (지도 레이어 ②).
@@ -1415,8 +1415,8 @@ def compute_density_design(
     """
     from shapely.geometry import box as _box
 
-    print(f"    권역 자기복잡도 σ(R={AG.SIGMA_RADIUS_KM:.0f} km) · "
-          f"Neyman 배분 (목표 {n_target}점) 산출 중...")
+    print(f"    권역 자기복잡도 σ(반경 {AG.SIGMA_RADIUS_KM:.0f} km) · "
+          f"Neyman 배분 산출 중...")
 
     # ── 국토 내부 격자 ────────────────────────────────────────
     minx, miny, maxx, maxy = korea_gdf.total_bounds
@@ -1438,16 +1438,7 @@ def compute_density_design(
         return None, {}
     print(f"      국토 격자 {clon.size}개 (셀 {cell_deg}° ≈ {cell_deg*111:.0f} km)")
 
-    # ── 자기복잡도 ────────────────────────────────────────────
-    sigma = agrad.sigma(clat, clon)
-    n_miss = int(np.isnan(sigma).sum())
     area = AG.cell_area_km2(clat, cell_deg, cell_deg)
-    density, spacing, sigma_filled = AG.neyman_density(sigma, area, n_target)
-    unif = AG.uniform_spacing(float(area.sum()), n_target)
-    print(f"      σ 결측 {n_miss}/{clon.size} (항공자력 미측선) → 중앙값 대체")
-    print(f"      권장 간격 P10/50/90: "
-          f"{np.percentile(spacing,10):.0f} / {np.percentile(spacing,50):.0f} / "
-          f"{np.percentile(spacing,90):.0f} km   (균등 배치라면 {unif:.0f} km)")
 
     # ── 현 관측망 간격 ────────────────────────────────────────
     spacing_now = np.full(clon.size, np.nan)
@@ -1455,32 +1446,63 @@ def compute_density_design(
     site_area = np.full(clon.size, np.nan)
     n_sites = 0
     if existing_sites is not None and len(existing_sites) > 0:
-        net = EN.select_rows(existing_sites)          # 30점 관측망만
+        net_all = EN.select_rows(existing_sites)      # 명목 관측망 (이름 기준)
         miss = EN.missing_from(existing_sites)
-        dropped = len(existing_sites) - len(net)
         print(f"      관측망 선별: {len(existing_sites)}행 → "
-              f"{len(net)}점 (제외 {dropped} — 옛 위치·명단 밖)")
+              f"{len(net_all)}점 (제외 {len(existing_sites) - len(net_all)} "
+              f"— 옛 위치·명단 밖)")
         if miss:
             print(f"      ⚠ 관측망 명단에 있으나 성과표에 없음: {' · '.join(miss)}")
+        # ⚠️ 좌표가 겹치는 측점은 담당면적을 하나도 못 받아 «공간적으로 사라진다».
+        #    행 수를 그대로 분모로 쓰면 없는 측점을 세어 밀도를 과대평가한다.
+        net, coord_dup = EN.drop_duplicate_coords(net_all)
+        if coord_dup:
+            for nm in coord_dup:
+                why = EN.BAD_COORDS.get(nm, "다른 측점과 좌표 동일")
+                print(f"      ⚠ 좌표 중복 제외 — {nm}: {why}")
+            print(f"      → 명목 {len(net_all)}점 / **공간 {len(net)}점** 으로 계산")
         slat = pd.to_numeric(net["위도"], errors="coerce").values
         slon = pd.to_numeric(net["경도"], errors="coerce").values
         ok = np.isfinite(slat) & np.isfinite(slon)
         slat, slon = slat[ok], slon[ok]
         n_sites = slat.size
         if n_sites:
-            spacing_now, cover_km, site_area = AG.catchment_spacing(
+            spacing_now, cover_km, site_area, area_by_site = AG.catchment_spacing(
                 clat, clon, area, slat, slon)
+            # ⚠️ site_area 는 셀별 배열이라 mean() 이 셀 수로 가중된다.
+            #    측점당 평균은 area_by_site(측점별)로 낸다.
+            used = area_by_site > 0
             print(f"      현 관측망 {n_sites}점(1등 지자기점) · 담당면적 등가 간격 "
                   f"중앙 {np.median(spacing_now):.0f} km "
-                  f"(측점당 {np.mean(site_area):.0f} km²)")
+                  f"(측점당 {area_by_site[used].mean():.0f} km² · "
+                  f"국토 {area.sum():.0f} km²)")
             print(f"      [별도 지표] 최근접 측점 거리 중앙 "
                   f"{np.median(cover_km):.0f} km · 최대 {cover_km.max():.0f} km")
 
+    # ── 목표 측점 수 — **분모와 분자를 같은 모집단으로** ──────
+    # ⚠️ 상수 80 을 쓰면 안 된다. 그 80 은 «명목» 30점을 전제한 값인데,
+    #    좌표 중복으로 공간 측점이 29 로 줄면 목표도 79 여야 한다.
+    #    호출부가 n_target 을 명시하면 그것을 존중한다.
+    if n_target is None:
+        n_target = (n_sites + AG.N_NEW_SITES) if n_sites else AG.N_TARGET_SITES
+    print(f"      목표 {n_target}점 = 현 관측망 {n_sites} + 신규 {AG.N_NEW_SITES}")
+
+    # ── 자기복잡도 → Neyman 배분 ──────────────────────────────
+    sigma = agrad.sigma(clat, clon)
+    n_miss = int(np.isnan(sigma).sum())
+    density, spacing, sigma_filled = AG.neyman_density(sigma, area, n_target)
+    unif = AG.uniform_spacing(float(area.sum()), n_target)
+    print(f"      σ 결측 {n_miss}/{clon.size} (항공자력 미측선) → 중앙값 대체")
+    print(f"      권장 간격 P10/50/90: "
+          f"{np.percentile(spacing,10):.0f} / {np.percentile(spacing,50):.0f} / "
+          f"{np.percentile(spacing,90):.0f} km   (균등 배치라면 {unif:.0f} km)")
+
     with np.errstate(invalid="ignore", divide="ignore"):
         deficit = spacing_now / spacing            # raw — 권장 대비 몇 배 성긴가
-    # 등급은 **상대 부족도**에 매긴다 — raw 의 수준은 30점→80점이라는 산술이
-    # 정하므로(균일부족선 sqrt(80/30)=1.63) 그대로 등급화하면 「전국이 부족」
-    # 이라는 뻔한 결론만 나온다. 지도가 답해야 할 물음은 「어디가 더 부족한가」다.
+    # 등급은 **상대 부족도**에 매긴다 — raw 의 수준은 n_sites→n_target 이라는
+    # 산술이 정하므로(균일부족선 = √(n_target/n_sites)) 그대로 등급화하면
+    # 「전국이 부족」이라는 뻔한 결론만 나온다. 지도가 답해야 할 물음은
+    # 「어디가 **더** 부족한가」다.
     uni_def = AG.uniform_deficit(n_sites, n_target) if n_sites else float("nan")
     with np.errstate(invalid="ignore", divide="ignore"):
         deficit_rel = deficit / uni_def
@@ -1519,7 +1541,8 @@ def compute_density_design(
     summary = {
         "n_target":     n_target,
         "n_sites":      n_sites,
-        "network":      "1등 지자기점 관측망 30점 (existing_network.py)",
+        "network":      f"1등 지자기점 관측망 (공간 {n_sites}점, existing_network.py)",
+        "n_new":        AG.N_NEW_SITES,
         "now_method":   "담당면적 등가 간격 (이산 보로노이)",
         "cover_med":    float(np.nanmedian(cover_km)) if n_sites else None,
         "cover_max":    float(np.nanmax(cover_km)) if n_sites else None,
@@ -3261,6 +3284,7 @@ def create_folium_map(
     n_net_oth = n_net_all - n_net_tgt
     n_net_old = len(EN.SUPERSEDED)
     n_new = AG.N_NEW_SITES
+    n_bad = n_net_all - n_net if isinstance(n_net, int) else len(EN.BAD_COORDS)
     uni_def = _ds.get("uniform_deficit", "—")
 
     def _swatch(color, label):
@@ -3306,8 +3330,8 @@ def create_folium_map(
       <hr style="margin:6px 0;border-color:#ccc;">
       <b>▸ 관측망 밀도 설계 (Neyman 배분)</b><br>
       <span style="color:#666;font-size:10.5px;">권역 자기복잡도 σ(반경 25 km) ∝ 권장 밀도 §<br>
-      총 {n_target_sites}점(현 {n_net_all} + 신규 {n_new}) · 균등 배치라면 {unif_km} km<br>
-      <b>권역 간 비는 총점수와 무관</b> — 절대 km 는 잠정치 ‖</span><br>
+      총 {n_target_sites}점(현 {n_net} + 신규 {n_new}) · 균등 배치라면 {unif_km} km<br>
+      <b>권역 간 비는 총점수와 무관</b> — 절대 km 는 잠정 설계비 ‖</span><br>
       {_swatch('#67000D','권장 간격 &lt;35 km — 조밀 필요')}
       {_swatch('#CB181D','35~50 km')}
       {_swatch('#FB6A4A','50~65 km')}
@@ -3330,6 +3354,7 @@ def create_folium_map(
       <span style="display:inline-block;vertical-align:middle;margin-right:4px;">🎯</span>선점 대상 {n_net_tgt}점<br>
       <span style="display:inline-block;vertical-align:middle;margin-right:4px;">⭐</span>기타 {n_net_oth}점 <span style="color:#666;">(저수지·제방 설치)</span><br>
       <span style="display:inline-block;vertical-align:middle;margin-right:4px;">▫️</span>옛 위치 {n_net_old}점 <span style="color:#666;">(관측망·밀도계산 제외) ¶</span><br>
+      <span style="color:#a00;">⚠ 밀도 계산은 <b>{n_net}점</b> — 좌표 결함 {n_bad}점 제외 ¶¶</span><br>
       <hr style="margin:6px 0;border-color:#ccc;">
       <small style="color:#555;">
         격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/EPSG:5179<br>
@@ -3340,19 +3365,26 @@ def create_folium_map(
         ‡ 구배가 크면 그 지점의 값이 주변을 대표하지<br>
         &nbsp;&nbsp;못하고 2.8 km 격자 기반 지각장 보정도<br>
         &nbsp;&nbsp;빗나간다 → 측점은 조용한 자리에.<br>
+        ¶¶ 원본 성과표에서 <b>남양과 서산이 같은 좌표</b>를 쓴다<br>
+        &nbsp;&nbsp;&nbsp;(126°54′46″/37°06′53″). 그 좌표는 <b>남양 도엽</b><br>
+        &nbsp;&nbsp;&nbsp;안이므로 서산 쪽이 오기다. 같은 좌표의 두 점 중<br>
+        &nbsp;&nbsp;&nbsp;하나는 담당면적을 못 받아 공간적으로 사라지므로<br>
+        &nbsp;&nbsp;&nbsp;밀도 계산에서 뺐다. <b>서산 참좌표는 지리원 원장</b><br>
+        &nbsp;&nbsp;&nbsp;<b>확인이 필요하다</b> — 복구되면 30점으로 돌아간다.<br>
         ‡‡ 각 국토 격자셀을 가장 가까운 측점에 배정해<br>
         &nbsp;&nbsp;&nbsp;담당면적을 구하고 그 제곱근을 간격으로 쓴다.<br>
         &nbsp;&nbsp;&nbsp;종전 「최근접거리 × 2」는 측점 위에서 0 이 되어<br>
         &nbsp;&nbsp;&nbsp;권장 간격과 나눌 수 없었다(2026-08-27 폐기).<br>
-        &nbsp;&nbsp;&nbsp;raw 충족도의 수준은 30점→80점이라는 산술이<br>
-        &nbsp;&nbsp;&nbsp;정하므로, 등급은 균일부족선으로 나눈 <b>상대</b><br>
+        &nbsp;&nbsp;&nbsp;raw 충족도의 수준은 {n_net}점→{n_target_sites}점이라는<br>
+        &nbsp;&nbsp;&nbsp;산술이 정하므로, 등급은 균일부족선으로 나눈 <b>상대</b><br>
         &nbsp;&nbsp;&nbsp;<b>부족도</b>에 매긴다 — 지도의 물음은 「어디가 더<br>
         &nbsp;&nbsp;&nbsp;부족한가」이지 「부족한가」가 아니다.<br>
         ‖ 배분 밀도 ρ ∝ σ 이고 간격 L = 1/√ρ 이므로<br>
         &nbsp;&nbsp;L ∝ 1/√N — 총 측점 수를 바꾸면 전국이 같은<br>
         &nbsp;&nbsp;배율로 늘거나 줄 뿐 <b>권역 간 비는 불변</b>이다.<br>
-        &nbsp;&nbsp;「영남이 경기·강원북보다 약 3배 조밀」은 확정,<br>
-        &nbsp;&nbsp;절대 km·충족도는 N=80 가정에 딸린 잠정치.<br>
+        &nbsp;&nbsp;다만 그것이 「확정 사실」을 뜻하지는 않는다 —<br>
+        &nbsp;&nbsp;자료 공백(σ 결측)과 미검증 Neyman 가정 위의<br>
+        &nbsp;&nbsp;<b>잠정 설계비</b>다. 절대 km·부족도는 더욱 잠정치.<br>
         ¶ 경주(2015)·임계(2016)·언양(2022)은 각각 영천·<br>
         &nbsp;&nbsp;삼척·양산으로 대체된 옛 위치다. 앞 둘은 현<br>
         &nbsp;&nbsp;측점에서 23·31 km 떨어져 있어 관측망에 세면<br>
@@ -3389,7 +3421,7 @@ def create_folium_map(
     """))
 
     # ── 입지 점수 산정 기준 패널 (지도 우측 하단 고정) ────────────
-    scoring_html = """
+    scoring_html = f"""
     <div id="scoring-panel" style="
         position:fixed; bottom:30px; right:20px; width:290px;
         background:rgba(255,255,255,0.96); border:2px solid #446;
@@ -3467,15 +3499,18 @@ def create_folium_map(
       <b>[별도 축] 관측망 밀도 설계 — Neyman 배분</b><br>
       &nbsp;&nbsp;권역 자기복잡도 σ(반경 25 km, 추세제거 표준편차)<br>
       &nbsp;&nbsp;n_h ∝ A_h·σ_h → 밀도 ρ ∝ σ → 권장 간격 L = 1/√ρ<br>
-      &nbsp;&nbsp;현 등가 간격 = <b>1등 지자기점 관측망 30점</b>(survey_review<br>
-      &nbsp;&nbsp;.html 과 같은 명단)의 <b>√담당면적</b> — 국토 격자 위 이산<br>
-      &nbsp;&nbsp;보로노이. 최근접거리 × 2 는 측점 위에서 0 이 되어<br>
-      &nbsp;&nbsp;권장 간격과 나눌 수 없으므로 폐기(2026-08-27).<br>
-      &nbsp;&nbsp;목표 80점 = 현 관측망 30 + Track C 신규 50 — <b>분모와</b><br>
-      &nbsp;&nbsp;<b>분자를 같은 모집단</b>으로 맞춘 것. LMM 투입 16점은<br>
+      &nbsp;&nbsp;현 등가 간격 = <b>1등 지자기점 관측망 {n_net}점</b>(명목 {n_net_all},<br>
+      &nbsp;&nbsp;survey_review.html 과 같은 명단)의 <b>√담당면적</b> — 국토<br>
+      &nbsp;&nbsp;격자 위 이산 보로노이. 최근접거리 × 2 는 측점 위에서 0 이<br>
+      &nbsp;&nbsp;되어 권장 간격과 나눌 수 없으므로 폐기(2026-08-27).<br>
+      &nbsp;&nbsp;목표 {n_target_sites}점 = 현 관측망 {n_net} + Track C 신규 {n_new} —<br>
+      &nbsp;&nbsp;<b>분모와 분자를 같은 모집단</b>으로 맞춘 것. LMM 투입 16점은<br>
       &nbsp;&nbsp;「그중 현재 모델에 들어간 자료」이지 관측망이 아니다.<br>
-      &nbsp;&nbsp;<span style="color:#a00;">⚠ 권역 간 비는 N 과 무관하나 절대 km·충족도는<br>
-      &nbsp;&nbsp;N=80 가정에 딸린 <b>잠정치</b>다.</span><br>
+      &nbsp;&nbsp;<span style="color:#a00;">⚠ 좌표 결함 {n_bad}점(서산) 제외 — 남양과 좌표가 같다.<br>
+      &nbsp;&nbsp;지리원 원장 확인 후 재산출 필요.</span><br>
+      &nbsp;&nbsp;<span style="color:#a00;">⚠ 권역 간 비는 N 과 무관하나, 그것이 「확정 사실」을<br>
+      &nbsp;&nbsp;뜻하지는 않는다 — 자료 공백과 미검증 Neyman 가정 위의<br>
+      &nbsp;&nbsp;<b>잠정 설계비</b>다. 절대 km·부족도는 더욱 잠정치.</span><br>
       &nbsp;&nbsp;점수에 합산하지 않는다 — <b>어디를 조밀하게</b>는<br>
       &nbsp;&nbsp;관측망 설계이고, <b>그 안 어디에</b>가 입지 점수다<br>
       &nbsp;&nbsp;⚠ 배분 규칙은 이 연구의 제안이며 선례 인용이 아님<br>

@@ -260,6 +260,11 @@ git push origin HEAD:main
 - 권장 간격 `density_req_{dense,mid,coarse,sparse}.geojson` (35/50/65 km 경계)
 - 상대 부족도 `density_gap_{critical,short,mild,ok}.geojson` (0.7/1.0/1.4 경계)
 
+⚠️ **관측망은 명목 30점이나 공간적으로는 29점**이다 — 남양·서산이 같은 좌표라
+서산이 담당면적을 못 받는다(`existing_network.BAD_COORDS`). 목표도 79 = 29 + 50.
+서산 좌표가 복구되면 자동으로 30/80 으로 돌아간다. **행 수를 그대로 측점 수로
+쓰지 말 것.**
+
 ### ③ [참고] 변동폭 P90-P10 — `gradient_{low,mid_low,optimal,caution}.geojson`
 종전 레이어. **이름만 「그레디언트」였고 실제로는 변동폭(nT)이다.** 점수에 쓰지 않는다.
 
