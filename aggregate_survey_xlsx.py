@@ -463,6 +463,198 @@ def parse_workbook(path, photo_dir=None):
 
 
 # ── 검토(선점 가능성) 파생 ────────────────────────────────────────────────────
+# ======================================================================
+# 평탄화 취합본에서 되읽기 — 카드 회신본이 없을 때의 재생성 경로
+# ======================================================================
+#
+# `parse_workbook()` 은 본부별 **카드형 회신본**을 읽는다. 그 원본이 없을 때
+# (배포 저장소에는 없다) `*_현장조사_일괄취합_103건.xlsx` 로 같은 레코드를
+# 되만들어 `make_survey_map.py` 를 재생성할 수 있다.
+#
+# ⚠️ 취합본에 **없는 것 둘**을 복원해야 한다:
+#   · 사진      — `docs/survey_photos/{관리번호}_{슬롯}.jpg` 파일 존재로 재구성
+#   · 기준점 좌표 — 방위표지 좌표 + 방위각 + 거리로 **역산**(표지에서 방위각+180°
+#                  방향으로 거리만큼). 표지1·표지2 두 해가 서로 맞는지 대조한다.
+#
+# ⚠️ 이것은 **카드 원본의 대체가 아니다.** 카드에만 있는 항목(원 기재 방위각의
+#    일부 맥락 등)은 취합 단계에서 이미 정규화된 값으로만 남는다. 회신본이
+#    확보되면 `parse_workbook()` 경로로 돌아가는 것이 옳다.
+
+AGG_SHEET = "일괄취합"
+AGG_HEADER_ROW = 1          # 0-based — 0행은 제목 띠
+
+# 취합본 열 → 레코드 키
+AGG_COLMAP = {
+    "관할 본부": "관할본부", "관리번호": "관리번호", "후보지명": "후보지명",
+    "도엽번호": "도엽번호기재", "도엽명": "도엽명기재",
+    "표고(m)": "표고", "유형": "유형",
+    "지번 주소": "지번주소", "도로명 주소": "도로명주소",
+    "연계 기존점": "연계기존점", "소유권": "소유권",
+    "조사대상": "조사대상", "조사일": "조사일", "조사자": "조사자",
+    "기상": "기상", "판정 의견": "판정의견",
+    "접근 경로": "접근경로", "차량 진입": "차량진입",
+    "유의사항": "유의사항", "도상 간섭요인": "도상간섭",
+}
+
+
+def _agg_backsolve_base(ll, az_deg, dist_m):
+    """표지 좌표 + (기준점→표지) 방위각·거리 → 기준점 (경도, 위도). 실패 시 None."""
+    import math
+
+    if ll is None:
+        return None
+    # ⚠ 취합본의 방위각은 DMS 문자열(`162° 55′ 36.41″`)이다 — float() 로는 못 읽는다
+    az = dms2dd(az_deg)
+    if az is None:
+        try:
+            az = float(str(az_deg).strip())
+        except (TypeError, ValueError):
+            return None
+    try:
+        d = float(str(dist_m).strip())
+    except (TypeError, ValueError):
+        return None
+    if d <= 0:
+        return None
+    lon, lat = ll
+    back = math.radians((az + 180.0) % 360.0)
+    dn = d * math.cos(back) / 110574.0
+    de = d * math.sin(back) / (111320.0 * math.cos(math.radians(lat)))
+    return (lon + de, lat + dn)
+
+
+def load_aggregate(path, photo_dir=None):
+    """
+    평탄화 취합본 → `parse_workbook()` 과 같은 레코드 리스트.
+
+    Parameters
+    ----------
+    path      : `*_현장조사_일괄취합_103건.xlsx`
+    photo_dir : `docs/survey_photos` — 있으면 파일명 규약으로 사진을 되붙인다.
+    """
+    import pandas as pd
+
+    df = pd.read_excel(path, sheet_name=AGG_SHEET,
+                       header=AGG_HEADER_ROW, engine="openpyxl")
+    photo_dir = Path(photo_dir) if photo_dir else None
+    have_ph = set(f.name for f in photo_dir.glob("*.jpg")) if photo_dir else set()
+
+    def S(v):
+        if v is None or (isinstance(v, float) and v != v):
+            return ""
+        return str(v).strip()
+
+    recs, base_gap = [], []
+    for _, r in df.iterrows():
+        if not S(r.get("관리번호")):
+            continue
+        d = {k2: S(r.get(k1)) for k1, k2 in AGG_COLMAP.items()}
+        d["위도"] = S(r.get("위도"))
+        d["경도"] = S(r.get("경도"))
+
+        # ── 자기교란 8항목 (존재 / 이격) ──
+        dist = {}
+        for lab, key in DIST_ITEMS:
+            dist[key] = (S(r.get(f"{key} 존재")), S(r.get(f"{key} 이격")))
+        d["자기교란"] = dist
+        d["방위표지"] = S(r.get("방위표지 가능"))
+
+        # ── 종합판정은 **규칙으로 재계산** (저장된 열을 믿지 않는다) ──
+        hits, missing = [], 0
+        for lab, key in DIST_ITEMS:
+            ex, gap = dist.get(key, ("", ""))
+            if ex == "":
+                missing += 1
+            elif ex == "있음":
+                hits.append((key, gap))
+        if d["방위표지"] == "":
+            missing += 1
+        bang_bad = d["방위표지"] == "불가"
+        nbad = len(hits) + (1 if bang_bad else 0)
+        d["종합판정"] = ("조사 미완료" if missing else
+                        "적합" if nbad == 0 else
+                        "조건부 적합" if nbad <= 2 else "부적합")
+        d["부적합수"] = nbad
+        d["교란hits"] = hits
+        d["방위불가"] = bang_bad
+
+        if d["관리번호"] in JUDGMENT_OVERRIDE:
+            v_ov, reason = JUDGMENT_OVERRIDE[d["관리번호"]]
+            d["종합판정"] = v_ov
+            d["재판정"] = reason
+            note = d["판정의견"].strip()
+            d["판정의견"] = (note + "  ※재판정: " + reason) if note else reason
+        else:
+            d["재판정"] = ""
+
+        # ── 방위표지 좌표·상세 ──
+        def ll_of(tag):
+            a, b = S(r.get(f"{tag} 경도")), S(r.get(f"{tag} 위도"))
+            a, b = dms2dd(a), dms2dd(b)
+            if a is None or b is None:
+                return None
+            if 124 <= a <= 132 and 33 <= b <= 40:
+                return (a, b)
+            if 124 <= b <= 132 and 33 <= a <= 40:
+                return (b, a)
+            return None
+
+        d["표지1ll"], d["표지2ll"] = ll_of("방위1"), ll_of("방위2")
+        detail = {}
+        for tag, key in (("방위1", "표지1"), ("방위2", "표지2")):
+            detail[key] = {
+                "경도": S(r.get(f"{tag} 경도")), "위도": S(r.get(f"{tag} 위도")),
+                "방위각": S(r.get(f"{tag} 방위각")), "거리": S(r.get(f"{tag} 거리(m)")),
+                "방위각기재": S(r.get(f"{tag} 방위각(카드)")),
+                "거리기재": S(r.get(f"{tag} 거리(카드)")),
+            }
+        detail["기준점"] = {"경도": "", "위도": "", "방위각": "", "거리": ""}
+        d["방위표지상세"] = detail
+        d["방위정정"] = S(r.get("방위 정정"))
+        d["방위표지좌표"] = ("입력" if detail["표지1"]["방위각"] not in ("", "-")
+                            else "미입력")
+
+        # ── 기준점 좌표는 취합본에 없다 → 방위표지에서 역산 ──
+        b1 = _agg_backsolve_base(d["표지1ll"], detail["표지1"]["방위각"],
+                                 detail["표지1"]["거리"])
+        b2 = _agg_backsolve_base(d["표지2ll"], detail["표지2"]["방위각"],
+                                 detail["표지2"]["거리"])
+        if b1 and b2:
+            base_gap.append((d["관리번호"], _geo_dist(b1, b2)))
+        d["기준점ll"] = b1 or b2
+        if d["기준점ll"]:
+            detail["기준점"] = {"경도": f"{d['기준점ll'][0]:.7f}",
+                                "위도": f"{d['기준점ll'][1]:.7f}",
+                                "방위각": "", "거리": ""}
+
+        # 수치로 둔다 — 팝업이 `gap >= 50` 로 비교한다
+        try:
+            d["후보지이격"] = float(r.get("후보지↔기준점(m)"))
+        except (TypeError, ValueError):
+            d["후보지이격"] = None
+
+        # ── 사진은 파일명 규약으로 ──
+        ph = {}
+        for slot in ("중심", "동", "서", "남", "북"):
+            fn = f"{d['관리번호']}_{slot}.jpg"
+            if fn in have_ph:
+                ph[slot] = fn
+        d["사진"] = ph
+
+        d["_src"] = S(r.get("회신 파일")) or Path(path).name
+        fix_sheet(d)        # 도엽을 후보지 좌표로 재판정 (카드값은 기재 열에 보존)
+        recs.append(d)
+
+    if base_gap:
+        import statistics as _st
+        g = [v for _, v in base_gap if v == v]
+        if g:
+            print(f"    기준점 역산 교차검증 {len(g)}건 — "
+                  f"표지1·2 해 차이 중앙 {_st.median(g):.1f} m · "
+                  f"최대 {max(g):.1f} m")
+    return recs
+
+
 def key_disturb(d):
     parts = []
     for key, gap in d["교란hits"]:

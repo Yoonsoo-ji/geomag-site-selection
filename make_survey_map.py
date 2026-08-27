@@ -24,7 +24,8 @@ from pathlib import Path
 
 import folium
 
-from aggregate_survey_xlsx import (parse_workbook, review, key_disturb, survey_files,
+from aggregate_survey_xlsx import (load_aggregate,
+                                   parse_workbook, review, key_disturb, survey_files,
                                    sheet_priority, mark_max_dist)
 
 ROOT = Path(__file__).parent
@@ -469,17 +470,31 @@ def build(records):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--dir", default=None)
+    ap = argparse.ArgumentParser(
+        description="현장조사 선점 검토 지도. 카드 회신본이 없으면 --aggregate 로 "
+                    "평탄화 취합본에서 재생성한다.")
+    ap.add_argument("--dir", default=None,
+                    help="카드형 회신본 폴더 (기본: survey_files() 탐색)")
+    ap.add_argument("--aggregate", default=None,
+                    help="*_현장조사_일괄취합_103건.xlsx — 카드 원본이 없을 때")
     a = ap.parse_args()
-    files = survey_files(a.dir)
     PHOTO_DIR.mkdir(parents=True, exist_ok=True)
     recs = []
-    for f in files:
-        cards = parse_workbook(f, photo_dir=PHOTO_DIR)
-        nph = sum(len(c.get("사진", {})) for c in cards)
-        print(f"  {f.name:28} 카드 {len(cards):3}건  사진 {nph:3}장")
-        recs += cards
+    if a.aggregate:
+        # ⚠️ 대체 경로다. 카드에만 있는 맥락은 취합 단계 정규화값으로만 남고,
+        #    기준점 좌표는 방위표지에서 역산한다. 회신본이 있으면 그쪽이 옳다.
+        src = Path(a.aggregate)
+        print(f"  [취합본 경로] {src.name}")
+        recs = load_aggregate(src, photo_dir=PHOTO_DIR)
+        nph = sum(len(c.get("사진", {})) for c in recs)
+        print(f"    레코드 {len(recs)}건 · 사진 {nph}장")
+    else:
+        files = survey_files(a.dir)
+        for f in files:
+            cards = parse_workbook(f, photo_dir=PHOTO_DIR)
+            nph = sum(len(c.get("사진", {})) for c in cards)
+            print(f"  {f.name:28} 카드 {len(cards):3}건  사진 {nph:3}장")
+            recs += cards
     recs.sort(key=lambda d: (d["관할본부"] or "", d["관리번호"] or ""))
     m, counts = build(recs)
     OUT.parent.mkdir(parents=True, exist_ok=True)

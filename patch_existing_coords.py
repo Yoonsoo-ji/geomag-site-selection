@@ -31,7 +31,7 @@ import existing_network as EN
 
 
 def load_truth():
-    """이름 → (lat, lon). `existing_sites.geojson` 이 정본(원장 교정 반영본)."""
+    """이름 → (lat, lon). `existing_sites.geojson` 이 기준(대조표 교정 반영본)."""
     gj = json.load(open(DATA / "existing_sites.geojson", encoding="utf-8"))
     return {f["properties"]["name"]: (float(f["properties"]["lat"]),
                                       float(f["properties"]["lon"]))
@@ -136,7 +136,7 @@ def rebuild_globe_pts(check_only=False):
 def main():
     check = "--check" in sys.argv
     truth = load_truth()
-    print(f"정본 {len(truth)}점 (docs/data/existing_sites.geojson)\n")
+    print(f"기준 {len(truth)}점 (docs/data/existing_sites.geojson)\n")
     a = patch_html(truth, check)
     b = rebuild_globe_pts(check)
     if check:

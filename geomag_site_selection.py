@@ -3316,8 +3316,8 @@ def create_folium_map(
     _coord_note = (
         f'<span style="color:#a00;">⚠ 밀도 계산은 <b>{n_net}점</b> — '
         f'좌표 중복 {n_bad}점 제외</span><br>' if n_bad > 0 else
-        '<span style="color:#666;font-size:10.5px;">좌표 정본: 지리원 관측망 '
-        '원장 30점 ¶¶</span><br>')
+        '<span style="color:#666;font-size:10.5px;">좌표: 30점 대조표 '
+        '<b>(출처 확인 필요)</b> ¶¶</span><br>')
     uni_def = _ds.get("uniform_deficit", "—")
 
     def _swatch(color, label):
@@ -3400,14 +3400,18 @@ def create_folium_map(
         ‡ 구배가 크면 그 지점의 값이 주변을 대표하지<br>
         &nbsp;&nbsp;못하고 2.8 km 격자 기반 지각장 보정도<br>
         &nbsp;&nbsp;빗나간다 → 측점은 조용한 자리에.<br>
-        ¶¶ 좌표 정본은 지리원 관측망 원장 30점<br>
-        &nbsp;&nbsp;&nbsp;(지점코드 1-1~1-30). 구 파일('10~'19)에는<br>
+        ¶¶ 좌표는 30점 대조표(지점코드 1-1~1-30)를 따랐다.<br>
+        &nbsp;&nbsp;&nbsp;<b>출처 3항목(원본파일명·작성일·문서번호)이</b><br>
+        &nbsp;&nbsp;&nbsp;<b>미기재</b>라 「원장·정본」으로 부르지 않는다.<br>
+        &nbsp;&nbsp;&nbsp;확인된 것은 내부 정합성과, 저장소의 '10~'19<br>
+        &nbsp;&nbsp;&nbsp;관측현황과 점의번호 30/30 일치(같은 문서계열)<br>
+        &nbsp;&nbsp;&nbsp;까지다. 구 파일('10~'19)에는<br>
         &nbsp;&nbsp;&nbsp;<b>주소는 같은데 좌표만 틀린</b> 전사 오류가 있어<br>
-        &nbsp;&nbsp;&nbsp;원장으로 교정했다 — 서산 52.0 km(남양 값이<br>
+        &nbsp;&nbsp;&nbsp;대조표로 교정했다 — 서산 52.0 km(남양 값이<br>
         &nbsp;&nbsp;&nbsp;복사돼 두 점이 겹쳐 있었다) · 남양 3.6 km ·<br>
         &nbsp;&nbsp;&nbsp;와도 1.45 km. 22~25 성과표 15점은 그쪽이<br>
         &nbsp;&nbsp;&nbsp;최신이라 손대지 않는다(포천·여주·양산의<br>
-        &nbsp;&nbsp;&nbsp;원장 대비 차이는 주소부터 다른 실제 이설).<br>
+        &nbsp;&nbsp;&nbsp;대조표 대비 차이는 주소부터 다른 실제 이설).<br>
         ‡‡ 각 국토 격자셀을 가장 가까운 측점에 배정해<br>
         &nbsp;&nbsp;&nbsp;담당면적을 구하고 그 제곱근을 간격으로 쓴다.<br>
         &nbsp;&nbsp;&nbsp;종전 「최근접거리 × 2」는 측점 위에서 0 이 되어<br>
@@ -3543,8 +3547,8 @@ def create_folium_map(
       &nbsp;&nbsp;목표 {n_target_sites}점 = 현 관측망 {n_net} + Track C 신규 {n_new} —<br>
       &nbsp;&nbsp;<b>분모와 분자를 같은 모집단</b>으로 맞춘 것. LMM 투입 16점은<br>
       &nbsp;&nbsp;「그중 현재 모델에 들어간 자료」이지 관측망이 아니다.<br>
-      &nbsp;&nbsp;좌표 정본은 <b>지리원 관측망 원장 30점</b>. 구 파일의 전사<br>
-      &nbsp;&nbsp;오류(서산 52.0 · 남양 3.6 · 와도 1.45 km)를 교정했다.<br>
+      &nbsp;&nbsp;좌표는 <b>30점 대조표(출처 확인 필요)</b>를 따랐다 — 구 파일의<br>
+      &nbsp;&nbsp;전사 오류(서산 52.0 · 남양 3.6 · 와도 1.45 km)를 교정.<br>
       &nbsp;&nbsp;<span style="color:#a00;">⚠ 권역 간 비는 N 과 무관하나, 그것이 「확정 사실」을<br>
       &nbsp;&nbsp;뜻하지는 않는다 — 자료 공백과 미검증 Neyman 가정 위의<br>
       &nbsp;&nbsp;<b>잠정 설계비</b>다. 절대 km·부족도는 더욱 잠정치.</span><br>

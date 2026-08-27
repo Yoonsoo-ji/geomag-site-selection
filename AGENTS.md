@@ -24,8 +24,12 @@
 |---|---|---|
 | `geomag_site_selection.py` | 메인 분석·지도 생성 | `output/` |
 | `anomaly_gradient.py` | **항공자력 공간구배·권역 밀도 설계 (단일 출처)** | — (모듈) |
-| `existing_network.py` | **기존 1등 지자기점 관측망 30점 + 좌표 정본 (단일 출처)** | — (모듈) |
-| `patch_existing_coords.py` | 재생성 불가한 산출물(survey_review.html·지구본)에 기존점 좌표 교정 반영 | `docs/` |
+| `existing_network.py` | **기존 1등 지자기점 관측망 30점 + 좌표 대조표 (단일 출처)** | — (모듈) |
+| `patch_existing_coords.py` | 좌표 전용 응급 패치(멱등) — 재생성 전 임시 경로 | `docs/` |
+
+⚠️ `survey_review.html` 은 **카드 회신본이 없어도 재생성된다** —
+`python make_survey_map.py --aggregate docs/output/*_일괄취합_103건.xlsx`.
+등급 분포 A 6 · B대표 28 · B예비 7 · C 49 · D 13 이 재현되면 정상이다.
 | `build_docs.py` | 배포 빌드 (GeoJSON 단순화) | `docs/` |
 | `create_methodology_doc.py` | 방법론 Word 문서 생성 | `docs/output/` |
 
@@ -261,7 +265,10 @@ git push origin HEAD:main
 - 권장 간격 `density_req_{dense,mid,coarse,sparse}.geojson` (35/50/65 km 경계)
 - 상대 부족도 `density_gap_{critical,short,mild,ok}.geojson` (0.7/1.0/1.4 경계)
 
-⚠️ **좌표 정본은 `data/geomag_network_30.csv`**(지리원 관측망 원장 30점)다.
+⚠️ **좌표는 `data/geomag_network_30.csv`**(지자기점 30점 좌표 대조표)를 따른다.
+**「원장」·「정본」으로 부르지 말 것** — 출처 3항목이 미기재라 원 문서 대조가 불가능하다
+(`geomag_network_30.meta.json`). 확인된 것은 내부 정합성과 `'10~'19 관측현황`과의
+점의번호 30/30 일치(같은 문서계열)까지다.
 구 파일('10~'19)에는 주소는 같은데 좌표만 틀린 전사 오류가 있어(서산 52.0 ·
 남양 3.6 · 와도 1.45 km) `existing_network.apply_register()` 로 교정한다.
 **22~25 성과표 15점은 그쪽이 최신이라 손대지 않는다** — 원장과 크게 어긋나는
