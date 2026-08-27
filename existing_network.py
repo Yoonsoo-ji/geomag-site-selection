@@ -84,6 +84,44 @@ SUPERSEDED = {"양산": "언양", "경주": "영천", "임계": "삼척"}
 # → **규칙: 22~25 성과표에 있으면 성과표 좌표, 없으면 대조표 좌표.**
 REGISTER_CSV = "data/geomag_network_30.csv"
 
+# ── 좌표 미확인 — 공간 계산에서 제외 ─────────────────────────────────
+#
+# ⚠️ **표석은 존재하지만 참 좌표를 특정하지 못한 측점**이다. 이름은 관측망
+# 명단에 남기되(성과·이력은 유효하다) **담당면적·밀도 계산에서는 뺀다** —
+# 잘못된 자리에 점을 세우면 그 권역의 공백을 없는 것처럼 만든다.
+#
+#   남양 — 점조서 시트 좌표(37.112417/126.953028)가 자기 소재지
+#          「화성시 장지동 287-9 장지저수지」에서 **14.5 km** 떨어져 있다.
+#          역지오코딩 결과도 저수지가 아니라 「발안양감로」(도로)다.
+#          2004 과거 야장(1-21)의 37.114722/126.912778 과도 3.58 km 다른
+#          **제3의 값**이라 어느 것이 참인지 이 자료들로는 가려지지 않는다.
+#          화성시에 장지저수지는 하나뿐이고(127.108°E) 향남·팔탄 일대에는
+#          해당 저수지가 검색되지 않는다.
+#          → 지리원에 점조서 남양 시트의 좌표·소재지 정정 확인 요청 중.
+#
+# ✅ 서산은 여기 들어가지 않는다 — 점조서 시트는 오기였으나 같은 파일
+#    성과고시 2013 행(36.789472/126.491083)이 잠홍저수지에서 0.55 km 로
+#    확인돼 **참 좌표가 특정됐다**.
+COORD_UNVERIFIED = {
+    "남양": ("점조서 좌표가 소재지(장지저수지)에서 14.5 km · 2004 야장과도 "
+             "3.58 km 상이 — 참 좌표 미특정. 지리원 확인 대기(2026-08-27)"),
+}
+
+
+def drop_unverified(df, name_col: str = "도엽명"):
+    """
+    좌표 미확인 측점을 공간 계산에서 뺀다.
+
+    반환은 `(정리된 df, 제외된 이름 목록)`. 이름은 관측망 명단에 그대로
+    남으므로 **명목 30점 / 공간 N점**으로 갈린다 — 정규화 분모에는 공간
+    측점 수를 쓸 것.
+    """
+    names = set(COORD_UNVERIFIED)
+    keep = df[~df[name_col].astype(str).str.strip().isin(names)]
+    dropped = [str(n).strip() for n in
+               df.loc[~df.index.isin(keep.index), name_col].tolist()]
+    return keep, dropped
+
 # ── 성과표보다 **점조서를 우선**하는 측점 ────────────────────────────
 #
 # 기본 규칙은 「22~25 성과표에 있으면 성과표 좌표」다. 그 성과표가 최신 실측이기
@@ -207,6 +245,13 @@ if __name__ == "__main__":
     print(f"관측망 {len(EXISTING_NETWORK)}점 · 선점 대상 {len(EXISTING_TARGET)}점")
     print(f"옛 이름 배제 {len(SUPERSEDED)}건: "
           + " · ".join(f"{k}→{v}" for k, v in SUPERSEDED.items()))
+    if COORD_UNVERIFIED:
+        print(f"\n좌표 미확인 {len(COORD_UNVERIFIED)}건 — 공간 계산 제외:")
+        for k, why in COORD_UNVERIFIED.items():
+            print(f"  {k}: {why}")
+        print(f"  → 명목 {len(EXISTING_NETWORK)}점 / 공간 "
+              f"{len(EXISTING_NETWORK) - len(COORD_UNVERIFIED)}점")
+
     reg = load_register()
     print(f"\n좌표 정본 {len(reg)}점 — 지자기 점조서 기준 ({REGISTER_CSV})")
     dup = reg.round({"위도": 5, "경도": 5}).duplicated(["위도", "경도"]).sum()

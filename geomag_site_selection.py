@@ -1445,6 +1445,11 @@ def compute_density_design(
         # ⚠️ 좌표가 겹치는 측점은 담당면적을 하나도 못 받아 «공간적으로 사라진다».
         #    행 수를 그대로 분모로 쓰면 없는 측점을 세어 밀도를 과대평가한다.
         #    대조표 좌표를 적용한 뒤에는 중복이 없어야 하므로, 걸리면 새 결함이다.
+        # ⚠️ 좌표를 특정하지 못한 측점은 담당면적 계산에서 뺀다 — 잘못된
+        #    자리에 세우면 그 권역의 공백을 없는 것처럼 만든다.
+        net_all, unver = EN.drop_unverified(net_all)
+        for nm in unver:
+            print(f"      ⚠ 좌표 미확인 제외 — {nm}: {EN.COORD_UNVERIFIED[nm]}")
         net, coord_dup = EN.drop_duplicate_coords(net_all)
         if coord_dup:
             print(f"      ⚠ 좌표 중복 — {' · '.join(coord_dup)} 제외 "
