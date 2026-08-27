@@ -143,7 +143,8 @@ def load_register(root=None):
     """
     지자기점 관측망 30점 좌표 정본(점조서 기준)을 DataFrame 으로.
     컬럼: 지점명·지점코드·도엽번호·
-    위도·경도(십진도)·소재지.
+    위도·경도(십진도)·소재지 · **최종관측 성과**(최종관측·관측횟수·
+    편각·복각·전자력·관측장비).
     """
     import pandas as pd
 
@@ -151,7 +152,9 @@ def load_register(root=None):
     df = pd.read_csv(base / REGISTER_CSV)
     df["위도"] = df.위도_도 + df.위도_분 / 60 + df.위도_초 / 3600
     df["경도"] = df.경도_도 + df.경도_분 / 60 + df.경도_초 / 3600
-    return df[["지점명", "지점코드", "도엽번호", "위도", "경도", "소재지"]]
+    keep = ["지점명", "지점코드", "도엽번호", "위도", "경도", "소재지",
+            "최종관측", "관측횟수", "편각", "복각", "전자력", "관측장비"]
+    return df[[c for c in keep if c in df.columns]]
 
 
 def apply_register(df, name_col="도엽명", lat_col="위도", lon_col="경도",
@@ -188,6 +191,64 @@ def apply_register(df, name_col="도엽명", lat_col="위도", lon_col="경도",
         out.at[i, lat_col] = la1
         out.at[i, lon_col] = lo1
     return out, moved
+
+
+def _obs_year(v):
+    """'2018.4.25' · '2010연구성과' · 2015 → 연도 정수."""
+    import re
+    m = re.search(r"(19|20)\d{2}", str(v))
+    return int(m.group(0)) if m else None
+
+
+def apply_register_obs(df, name_col="도엽명", year_col="관측연도",
+                       cols=("편각", "복각", "총자력"), root=None):
+    """
+    측점표의 관측 성과(편각·복각·총자력)를 **점조서 최종관측 행**으로 채운다.
+
+    ⚠️ **무조건 덮어쓰지 않는다.** 성과표(22~25)에서 온 행은 점조서보다 새로울
+    수 있으므로, 점조서 관측연도가 **더 새롭거나** 기존 값이 **비어 있을 때만**
+    손댄다. 서산이 후자였다 — 지도가 2007 행을 물고 있었고 그 전자력
+    60,812 nT 는 한반도 범위 밖이라 «-» 로 비어 있었다(점조서에는 2018.4.25 의
+    51,098.4 nT 가 있다).
+
+    반환은 `(채워진 df, [(이름, 사유, 연도), ...])`.
+    """
+    import pandas as pd
+
+    reg = load_register(root)
+    src = {"총자력": "전자력"}
+    reg = reg.set_index("지점명")
+    out, filled = df.copy(), []
+    for i, row in out.iterrows():
+        nm = str(row[name_col]).strip()
+        if nm not in reg.index:
+            continue
+        ry = _obs_year(reg.at[nm, "최종관측"])
+        if ry is None:
+            continue
+        cy = _obs_year(row[year_col]) if year_col in out.columns else None
+        # 같은 해면 점조서를 택한다 — 그쪽만 «일자»가 있고, 구 파일은
+        # 관측 «여부»(ㅇ) 로 연도를 세운 값이라 성과는 옛 행에 머문다.
+        # 서산이 그랬다: 연도는 2018 인데 편각·복각은 2007 행이었다.
+        newer = cy is None or ry >= cy
+        got = []
+        for c in cols:
+            if c not in out.columns:
+                continue
+            v = pd.to_numeric(reg.at[nm, src.get(c, c)], errors="coerce")
+            if pd.isna(v):
+                continue
+            cur = pd.to_numeric(row.get(c), errors="coerce")
+            if not (newer or pd.isna(cur)):
+                continue
+            out.at[i, c] = float(v)
+            got.append(c)
+        if got:
+            why = "점조서가 최신" if newer else "결측 보충"
+            filled.append((nm, why + "(" + ",".join(got) + ")", ry))
+            if newer and year_col in out.columns:
+                out.at[i, year_col] = ry
+    return out, filled
 
 
 def drop_duplicate_coords(df, name_col: str = "도엽명",

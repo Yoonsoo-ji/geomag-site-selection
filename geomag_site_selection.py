@@ -2717,6 +2717,11 @@ def load_existing_sites() -> "pd.DataFrame | None":
                 print(f"  ⚠ 대조표 좌표 교정 실패(구 파일 값 유지): {exc}")
             df_latest = pd.concat([df_latest, df_old], ignore_index=True)
 
+        # 점조서 최종관측 성과로 편각·복각·총자력을 갱신한다 —
+        # 서산은 지도가 2007 행을 물고 있어 총자력이 «-» 였다(2018 행 존재).
+        df_latest, obs_filled = EN.apply_register_obs(df_latest)
+        for nm, why, yr in obs_filled:
+            print(f"      · 점조서 성과 반영 {nm} → {yr} {why}")
         print(f"  ✅ 기존 측정점 총 {len(df_latest)}개 (22_25 + 구파일 병합)")
         return df_latest
     except Exception as exc:

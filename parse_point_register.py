@@ -120,18 +120,44 @@ def parse_sheet(ws):
     # ── 관측 이력 ────────────────────────────────────────────
     obs_rows = sorted(r for (r, c), v in grid.items()
                       if c == 1 and _s(v).replace(" ", "") == "관측일자")
-    dates = []
+    dates, recs = [], []
     if obs_rows:
         # ⚠️ 시트마다 «관측일자» 표가 두 벌이다 — 두 번째는 빈 양식이라
         #    거기까지 읽으면 최종관측이 1984 로 되돌아간다(실제로 그랬다).
         stop = obs_rows[1] if len(obs_rows) > 1 else min(ws.max_row, 70) + 1
         for rr in range(obs_rows[0] + 2, stop):
             t = _s(grid.get((rr, 1)))
-            if re.match(r"^(19|20)\d{2}", t):
-                dates.append(t)
+            if not re.match(r"^(19|20)\d{2}", t):
+                continue
+            dates.append(t)
+            # B/C/D=편각 도·분·초 · E/F/G=복각 · H=전자력 · K=장비
+            # ⚠️ 부호는 «도» 칸에만 붙는다 — 분·초는 크기이므로 절대값을
+            #    쓰고 도의 부호를 곱해야 한다(한국 편각은 서편각 = 음수).
+            rec = {"일자": t, "편각": None, "복각": None,
+                   "전자력": None, "장비": _s(grid.get((rr, 11)))}
+            for key, cols in (("편각", (2, 3, 4)), ("복각", (5, 6, 7))):
+                dg, mi, se = (_f(grid.get((rr, c))) for c in cols)
+                if dg is None:
+                    continue
+                sign = -1.0 if dg < 0 else 1.0
+                rec[key] = sign * (abs(dg) + abs(mi or 0) / 60
+                                   + abs(se or 0) / 3600)
+            f = _f(grid.get((rr, 8)))
+            # 한반도 총자력 범위 밖은 기재 오류로 본다(서산 2007 = 60,812).
+            rec["전자력"] = f if (f is not None and 40000 <= f <= 60000) else None
+            if any(rec[k] is not None for k in ("편각", "복각", "전자력")):
+                recs.append(rec)
     d["관측이력"] = dates
     d["관측횟수"] = len(dates)
     d["최종관측"] = dates[-1] if dates else ""
+    d["관측기록"] = recs
+    if recs:
+        last = recs[-1]
+        d["편각"] = last["편각"]
+        d["복각"] = last["복각"]
+        d["전자력"] = last["전자력"]
+        d["관측장비"] = last["장비"]
+        d["최종관측"] = last["일자"]
 
     # ── 비고성 문구(이설·망실·재설) 수집 ────────────────────
     notes = []
