@@ -232,6 +232,7 @@ ANOMALY_VARIATION_THRESHOLD  = ANOMALY_EXCLUDE_THRESHOLD_NT
 # 구현·상수는 anomaly_gradient.py 에 단일 출처로 둔다. 여기서 다시 정의하면
 # 두 곳이 조용히 갈라진다(§CLAUDE.md 의 디자인 시스템 사례와 같은 함정).
 import anomaly_gradient as AG
+import existing_network as EN   # 기존 1등 지자기점 관측망 30점 (단일 출처)
 
 USE_GRADIENT_SCORE = True   # False 면 종전 P90-P10 변동폭 점수로 복귀
 GRADIENT_CELL_DEG  = 0.05   # 구배 등급 셀 크기 (지도 레이어) — 기존 tier 와 동일
@@ -1394,8 +1395,14 @@ def compute_density_design(
         n_h ∝ A_h · σ_h        (Neyman allocation)
         ρ(x) ∝ σ(x)            →   권장 간격 L(x) = 1/√ρ(x)
 
-    ⚠️ 「현 간격」은 기존 지자기점 관측망의 최근접 측점 거리 × 2 다.
+    ⚠️ 「현 간격」은 **기존 1등 지자기점 관측망 30점**(`existing_network.py`,
+    survey_review.html 과 같은 명단)의 최근접 측점 거리 × 2 다.
     측점이 하나뿐인 방향에서는 과소평가되지만, 권역 단위 비교에는 충분하다.
+
+    ⚠️ `load_existing_sites()` 가 주는 33행을 그대로 쓰면 안 된다 — 그것은
+    성과표 두 개를 병합한 **자료 보유 목록**이라 폐지된 옛 위치가 섞여 있다
+    (경주 2015 는 영천 2024 에서 23 km · 임계 2016 은 삼척 2024 에서 31 km).
+    관측망에 없는 점을 세면 경북·강원 공백이 실제보다 작게 나온다.
 
     Returns
     -------
@@ -1441,8 +1448,15 @@ def compute_density_design(
     spacing_now = np.full(clon.size, np.nan)
     n_sites = 0
     if existing_sites is not None and len(existing_sites) > 0:
-        slat = pd.to_numeric(existing_sites["위도"], errors="coerce").values
-        slon = pd.to_numeric(existing_sites["경도"], errors="coerce").values
+        net = EN.select_rows(existing_sites)          # 30점 관측망만
+        miss = EN.missing_from(existing_sites)
+        dropped = len(existing_sites) - len(net)
+        print(f"      관측망 선별: {len(existing_sites)}행 → "
+              f"{len(net)}점 (제외 {dropped} — 옛 위치·명단 밖)")
+        if miss:
+            print(f"      ⚠ 관측망 명단에 있으나 성과표에 없음: {' · '.join(miss)}")
+        slat = pd.to_numeric(net["위도"], errors="coerce").values
+        slon = pd.to_numeric(net["경도"], errors="coerce").values
         ok = np.isfinite(slat) & np.isfinite(slon)
         slat, slon = slat[ok], slon[ok]
         n_sites = slat.size
@@ -1453,7 +1467,7 @@ def compute_density_design(
                 d = np.minimum(d, np.hypot((clon - lo) * 111.320 * np.cos(m),
                                            (clat - la) * 110.574))
             spacing_now = 2.0 * d          # 최근접 거리 × 2 ≈ 유효 간격
-            print(f"      현 관측망 {n_sites}점 · 유효 간격 중앙 "
+            print(f"      현 관측망 {n_sites}점(1등 지자기점) · 유효 간격 중앙 "
                   f"{np.median(spacing_now):.0f} km")
 
     with np.errstate(invalid="ignore", divide="ignore"):
@@ -1487,6 +1501,7 @@ def compute_density_design(
     summary = {
         "n_target":     n_target,
         "n_sites":      n_sites,
+        "network":      "1등 지자기점 관측망 30점 (existing_network.py)",
         "uniform_km":   round(unif, 1),
         "sigma_median": float(np.nanmedian(sigma_filled)),
         "cells":        int(clon.size),
@@ -3173,6 +3188,7 @@ def create_folium_map(
     _ds = density_summary or {}
     n_target_sites = _ds.get("n_target", AG.N_TARGET_SITES)
     unif_km = _ds.get("uniform_km", "—")
+    n_net = _ds.get("n_sites", len(EN.EXISTING_NETWORK))
 
     def _swatch(color, label):
         return (f'<span style="background:{color};display:inline-block;'
@@ -3222,7 +3238,8 @@ def create_folium_map(
       {_swatch('#CB181D','35~50 km')}
       {_swatch('#FB6A4A','50~65 km')}
       {_swatch('#FEE0D2','≥65 km — 성김 허용')}
-      <span style="color:#666;font-size:10.5px;">밀도 충족도 = 현 간격 ÷ 권장 간격</span><br>
+      <span style="color:#666;font-size:10.5px;">밀도 충족도 = 현 간격 ÷ 권장 간격<br>
+      현 간격 = 1등 지자기점 관측망 {n_net}점 최근접거리 × 2</span><br>
       {_swatch('#54278F','2배 이상 성김 — 크게 부족')}
       {_swatch('#807DBA','1.5~2배 — 부족')}
       {_swatch('#BCBDDC','1~1.5배 — 다소 부족')}
@@ -3354,6 +3371,8 @@ def create_folium_map(
       <b>[별도 축] 관측망 밀도 설계 — Neyman 배분</b><br>
       &nbsp;&nbsp;권역 자기복잡도 σ(반경 25 km, 추세제거 표준편차)<br>
       &nbsp;&nbsp;n_h ∝ A_h·σ_h → 밀도 ρ ∝ σ → 권장 간격 L = 1/√ρ<br>
+      &nbsp;&nbsp;현 간격은 <b>1:50,000 도엽 기준 1등 지자기점 관측망 30점</b><br>
+      &nbsp;&nbsp;(survey_review.html 과 같은 명단)의 최근접거리 × 2<br>
       &nbsp;&nbsp;점수에 합산하지 않는다 — <b>어디를 조밀하게</b>는<br>
       &nbsp;&nbsp;관측망 설계이고, <b>그 안 어디에</b>가 입지 점수다<br>
       &nbsp;&nbsp;⚠ 배분 규칙은 이 연구의 제안이며 선례 인용이 아님<br>
