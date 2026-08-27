@@ -37,23 +37,34 @@ Korea Geomagnetic Field Model — Measurement Site Selection Tool
   [6] 풍력발전기                           반경  0.5 km
   [7] 채석장·광산                          반경  1.0 km  (제14조③ 지하 자기발생원)
 
-━━━ 자기이상·지질경계 모델 기여도 ━━━━━━━━━━━━━━━━━━━━━━━━
-  [8] 후보지 주변 자기이상 변동폭 (KIGAM 1.5분 격자, 반경 0.05°≈5.5km, P90-P10)
-        ▸ 평가 목적: 단순 균등 배치에 따른 관측망 한계를 보완하기 위해
-          후보지 주변 자기이상 변동폭을 활용하여 로컬 지자기모델 구축 기여도를 평가
-        ▸ KIGAM 실측 P90-P10 분포 (한반도 bbox, n≈18,593 격자):
-            중앙값 126 nT / 평균 164 nT / 최대 1,159 nT
-            < 50 nT:  16%  │  50-150 nT: 42%  │  150-300 nT: 27%
-            300-600 nT: 13% │  600-800 nT:  1%  │  > 800 nT:  < 0.5%
-        ▸ 점수 체계 (지질경계·변화 구간 포괄 설계):
-            < 30 nT      → 5점  (변화 매우 작음 — 안정성 높으나 모델 보정 기여 제한적)
-            30~150 nT    → 8점  (저~중 그레디언트 — 측정 안정+일정 기여도)
-            150~400 nT   → 10점 (중간 그레디언트 — 지질경계·해안부·자기장 변화 구간 반영, 최고점)
-            400~800 nT   → 7점  (고그레디언트 — 자연기원+인공잡음 혼재 가능, 현장 검증 필수)
-            > 800 nT     → 조건부 제외 또는 현장 정밀조사 대상
-            데이터 미취득 → 6점 (중립값)
-        ▸ ※ 400 nT 이상 고그레디언트 지역은 자연기원 자기이상과 인공잡음 가능성이 혼재 →
-            현장 전자력 측정 및 주변 자기장 탐사를 통해 최종 적합성 확인
+━━━ 항공자력 공간구배 — 두 축으로 분리 (2026-08 개편) ━━━━━━━
+  [8] 후보지 국소 공간구배 |∇ΔT| (KIGAM 1.5분 격자, 중앙차분, nT/km)
+        ▸ 평가 목적: 그 측점이 **자기 주변을 대표하는가**. 구배가 클수록
+          측정값이 주변을 대표하지 못하고, 2.8 km 격자로 만든 Crustal 보정도
+          그 지점에서 빗나간다 → **저구배가 좋다** (IAGA 반복관측점 지침 방향)
+        ▸ KIGAM 실측 |∇ΔT| 분포 (한반도, n≈17,885 유효셀):
+            P10 4.2 │ 중앙 16.9 │ P75 34.6 │ P90 62.1 │ P99 145.6 nT/km
+        ▸ 점수: 로그 구배축 반쪽 정규곡선 — 5 nT/km 이하 만점, 이후 연속 감쇠
+            5→10.0 · 10→8.9 · 15→7.4 · 25→5.2 · 40→3.3 · 100→1.0 · 180→0.4
+            데이터 미취득 → 6점 (검증되지 않았으므로 중앙값보다 보수적)
+        ▸ ⚠ 종전 점수(변동폭 P90-P10 이 250 nT 일 때 최고점)와 **방향이 반대**다.
+            종전 곡선은 「변동이 큰 곳이 모델에 기여한다」는 **권역 논리**를
+            **점 점수** 자리에 넣은 것이었다. 권역 논리는 [8b] 로 옮겼다.
+  [8b] 권역 자기복잡도 σ(R=25km) → 권장 측점 밀도 (Neyman 배분)
+        ▸ 평가 목적: 그 권역이 **몇 점을 필요로 하는가**. 지각장이 복잡할수록
+          한 점의 대표성이 떨어지므로 더 많은 점으로 평균해야 한다
+        ▸ 층화표본 Neyman 배분 — 표본을 「층 면적 × 층 표준편차」에 비례 배분
+            n_h ∝ A_h·σ_h  →  밀도 ρ(x) ∝ σ(x)  →  권장 간격 L = 1/√ρ
+        ▸ 권역별 실측 (총 66점 = 현 16 + Track C 신규 50 기준):
+            영남 σ149 → 33 km (균등 대비 1.48배) │ 호남 σ107 → 39 km (1.16배)
+            충청·강원남 σ60 → 52 km (0.73배)     │ 경기·강원북 σ41 → 61 km (0.49배)
+        ▸ 근거: 일본 국토지리원이 2010.0 자기도 검증에서 야쓰가타케·홋카이도
+            동부의 큰 오차를 「자기구배의 크기에 비해 1·2등 자기점 배점밀도가
+            낮은 것」으로 판단한 실증, 국토지리정보원 2010 연구가 제주에 대해
+            「지자기이상이 복잡해 3개 지점으로는 지역 대표가 매우 어렵다」고
+            적은 판단.  ⚠ 두 선례 모두 **정량 배분 규칙까지는 가지 않았다** —
+            Neyman 배분은 그 빈자리를 메우려는 이 연구의 제안이지 선례가 아니다
+        ▸ 구현: anomaly_gradient.py (단일 출처)
   [9] 지질 — 자성 암종 (수치지질도 1:250,000, KIGAM)
         ▸ 현무암(Qb*, Tb, Jb), 반려암·휘록암(Jgb, Kgb, Jda, Kdi 등),
           화산암류(Kv*, Tav, Kav, bg, v 등), 각섬암(am) — 폴리곤 직접 제외
@@ -208,6 +219,23 @@ def anomaly_gradient_score(v, max_score=10.0):
     return out
 # 하위 호환성 유지
 ANOMALY_VARIATION_THRESHOLD  = ANOMALY_EXCLUDE_THRESHOLD_NT
+
+# ── 항공자력 공간구배 (2026-08 개편) ──────────────────────────────────
+#
+# 위 P90-P10 은 반경 0.05° 상자 안의 **변동폭**이지 공간구배가 아니다.
+# 이름만 「그레디언트」였을 뿐 단위가 nT 이고 거리로 나누지 않았다.
+# 실제 구배 |∇ΔT| (nT/km) 를 중앙차분으로 계산해 두 축으로 나눈다:
+#
+#   ① 점  — 국소 구배 → s5 자기환경 대표성 (저구배 우대)
+#   ② 권역 — 자기복잡도 σ(25 km) → 권장 측점 밀도 (고복잡 = 조밀)
+#
+# 구현·상수는 anomaly_gradient.py 에 단일 출처로 둔다. 여기서 다시 정의하면
+# 두 곳이 조용히 갈라진다(§CLAUDE.md 의 디자인 시스템 사례와 같은 함정).
+import anomaly_gradient as AG
+
+USE_GRADIENT_SCORE = True   # False 면 종전 P90-P10 변동폭 점수로 복귀
+GRADIENT_CELL_DEG  = 0.05   # 구배 등급 셀 크기 (지도 레이어) — 기존 tier 와 동일
+DENSITY_CELL_DEG   = 0.10   # 권역 밀도 셀 크기 (약 11 km)
 
 # ── 1:50,000 지형도 도엽 셰이프파일 (NGII 국가기본도) ────────────
 # 출처: 국토지리정보원 국가기본도_도엽인덱스50K (TN_MAPINDX_50K.shp)
@@ -1281,6 +1309,191 @@ def compute_anomaly_variation_zones(
     return exclude_gdf, tiers_gdf
 
 
+
+# ============================================================
+# 항공자력 공간구배 — 점 대표성 / 권역 밀도 설계
+# ============================================================
+
+def compute_gradient_cells(
+    agrad: "AG.AnomalyGradient",
+    cell_deg: float = GRADIENT_CELL_DEG,
+) -> "gpd.GeoDataFrame | None":
+    """
+    국소 공간구배 |∇ΔT| 를 지도 셀로 등급화한다 (지도 레이어 ①).
+
+    KIGAM 원격자(0.025°)를 그대로 셀로 내면 3만 개가 되어 배포가 무겁다.
+    cell_deg(기본 0.05°) 단위로 묶고 셀 안 구배의 **중앙값**을 대표로 쓴다
+    (평균은 자료 공백 경계의 튐값에 끌려간다).
+
+    Returns
+    -------
+    GeoDataFrame (WGS84) — grad_nT_km · tier · score
+    """
+    from shapely.geometry import box as _box
+
+    print(f"    항공자력 공간구배 |∇ΔT| 셀 산출 중 (셀 {cell_deg}° ≈ "
+          f"{cell_deg * 111:.1f} km)...")
+
+    G = agrad.G
+    lons, lats = agrad.lons, agrad.lats
+    step = agrad.step
+    k = max(1, int(round(cell_deg / step)))          # 셀당 원격자 수
+
+    geoms, tiers, grads, scores = [], [], [], []
+    n_by_tier = {t[0]: 0 for t in AG.GRAD_TIERS}
+
+    for j0 in range(0, lats.size - 1, k):
+        for i0 in range(0, lons.size - 1, k):
+            blk = G[j0:j0 + k, i0:i0 + k]
+            if not np.isfinite(blk).any():
+                continue
+            v = float(np.nanmedian(blk))
+            tier = AG.grad_tier(v)
+            if tier is None:
+                continue
+            lo_w = lons[i0] - step / 2
+            lo_e = lons[min(i0 + k, lons.size - 1)] - step / 2
+            la_s = lats[j0] - step / 2
+            la_n = lats[min(j0 + k, lats.size - 1)] - step / 2
+            geoms.append(_box(lo_w, la_s, lo_e, la_n))
+            grads.append(round(v, 1))
+            tiers.append(tier)
+            scores.append(round(float(AG.representativeness_score(v)), 1))
+            n_by_tier[tier] += 1
+
+    if not geoms:
+        print("    ⚠ 구배 셀 없음 — 항공자력 자료 확인 필요")
+        return None
+
+    total = len(geoms)
+    print(f"    구배 셀 {total}개 생성")
+    for key, lo, hi, label in AG.GRAD_TIERS:
+        hi_s = "∞" if not np.isfinite(hi) else f"{hi:.0f}"
+        print(f"      {lo:>5.0f}~{hi_s:>4s} nT/km ({label}) : "
+              f"{n_by_tier[key]:5d}개 ({n_by_tier[key]/total*100:4.1f}%)")
+
+    return gpd.GeoDataFrame(
+        {"grad_nT_km": grads, "tier": tiers, "score": scores},
+        geometry=geoms, crs=WGS84_CRS,
+    )
+
+
+def compute_density_design(
+    agrad: "AG.AnomalyGradient",
+    korea_gdf: gpd.GeoDataFrame,
+    existing_sites: "pd.DataFrame | None",
+    cell_deg: float = DENSITY_CELL_DEG,
+    n_target: int = AG.N_TARGET_SITES,
+) -> tuple:
+    """
+    권역 자기복잡도 σ(R) → Neyman 배분 → 권장 측점 간격·밀도 충족도 (지도 레이어 ②).
+
+    「구배가 크면 조밀하게」라는 정성 논리를, 총 측점 수 제약 아래에서
+    재현 가능한 수치로 바꾼다:
+
+        n_h ∝ A_h · σ_h        (Neyman allocation)
+        ρ(x) ∝ σ(x)            →   권장 간격 L(x) = 1/√ρ(x)
+
+    ⚠️ 「현 간격」은 기존 지자기점 관측망의 최근접 측점 거리 × 2 다.
+    측점이 하나뿐인 방향에서는 과소평가되지만, 권역 단위 비교에는 충분하다.
+
+    Returns
+    -------
+    (dens_gdf, summary) — GeoDataFrame(WGS84) 와 권역 요약 dict
+    """
+    from shapely.geometry import box as _box
+
+    print(f"    권역 자기복잡도 σ(R={AG.SIGMA_RADIUS_KM:.0f} km) · "
+          f"Neyman 배분 (목표 {n_target}점) 산출 중...")
+
+    # ── 국토 내부 격자 ────────────────────────────────────────
+    minx, miny, maxx, maxy = korea_gdf.total_bounds
+    glon = np.arange(np.floor(minx / cell_deg) * cell_deg,
+                     maxx + cell_deg, cell_deg)
+    glat = np.arange(np.floor(miny / cell_deg) * cell_deg,
+                     maxy + cell_deg, cell_deg)
+    LO, LA = np.meshgrid(glon, glat)
+    cen = gpd.GeoDataFrame(
+        geometry=[Point(x, y) for x, y in zip(LO.ravel(), LA.ravel())],
+        crs=WGS84_CRS,
+    )
+    land = unary_union(korea_gdf.geometry)
+    inside = cen.geometry.within(land).values
+    clon = LO.ravel()[inside]
+    clat = LA.ravel()[inside]
+    if clon.size == 0:
+        print("    ⚠ 국토 내부 격자 없음")
+        return None, {}
+    print(f"      국토 격자 {clon.size}개 (셀 {cell_deg}° ≈ {cell_deg*111:.0f} km)")
+
+    # ── 자기복잡도 ────────────────────────────────────────────
+    sigma = agrad.sigma(clat, clon)
+    n_miss = int(np.isnan(sigma).sum())
+    area = AG.cell_area_km2(clat, cell_deg, cell_deg)
+    density, spacing, sigma_filled = AG.neyman_density(sigma, area, n_target)
+    unif = AG.uniform_spacing(float(area.sum()), n_target)
+    print(f"      σ 결측 {n_miss}/{clon.size} (항공자력 미측선) → 중앙값 대체")
+    print(f"      권장 간격 P10/50/90: "
+          f"{np.percentile(spacing,10):.0f} / {np.percentile(spacing,50):.0f} / "
+          f"{np.percentile(spacing,90):.0f} km   (균등 배치라면 {unif:.0f} km)")
+
+    # ── 현 관측망 간격 ────────────────────────────────────────
+    spacing_now = np.full(clon.size, np.nan)
+    n_sites = 0
+    if existing_sites is not None and len(existing_sites) > 0:
+        slat = pd.to_numeric(existing_sites["위도"], errors="coerce").values
+        slon = pd.to_numeric(existing_sites["경도"], errors="coerce").values
+        ok = np.isfinite(slat) & np.isfinite(slon)
+        slat, slon = slat[ok], slon[ok]
+        n_sites = slat.size
+        if n_sites:
+            d = np.full(clon.size, np.inf)
+            for la, lo in zip(slat, slon):
+                m = np.radians((clat + la) / 2)
+                d = np.minimum(d, np.hypot((clon - lo) * 111.320 * np.cos(m),
+                                           (clat - la) * 110.574))
+            spacing_now = 2.0 * d          # 최근접 거리 × 2 ≈ 유효 간격
+            print(f"      현 관측망 {n_sites}점 · 유효 간격 중앙 "
+                  f"{np.median(spacing_now):.0f} km")
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        deficit = spacing_now / spacing     # 1 초과 = 권장보다 성김
+
+    # ── 셀 GeoDataFrame ──────────────────────────────────────
+    h = cell_deg / 2
+    geoms = [_box(lo - h, la - h, lo + h, la + h) for lo, la in zip(clon, clat)]
+    dens_gdf = gpd.GeoDataFrame(
+        {
+            "sigma_nT":     np.round(sigma_filled, 0),
+            "sigma_obs":    np.where(np.isfinite(sigma), 1, 0),  # 0 = 대체값
+            "spacing_req":  np.round(spacing, 1),
+            "spacing_now":  np.round(spacing_now, 1),
+            "deficit":      np.round(deficit, 2),
+            "sp_tier":      [AG.spacing_tier(v) for v in spacing],
+            "df_tier":      [AG.deficit_tier(v) for v in deficit],
+        },
+        geometry=geoms, crs=WGS84_CRS,
+    )
+
+    n_sp = dens_gdf["sp_tier"].value_counts().to_dict()
+    n_df = dens_gdf["df_tier"].value_counts().to_dict()
+    print("      권장 간격 등급:",
+          " · ".join(f"{AG.TIER_LABEL[k]} {n_sp.get(k,0)}"
+                     for k, *_ in AG.SPACING_TIERS))
+    print("      밀도 충족도  :",
+          " · ".join(f"{AG.TIER_LABEL[k]} {n_df.get(k,0)}"
+                     for k, *_ in AG.DEFICIT_TIERS))
+
+    summary = {
+        "n_target":     n_target,
+        "n_sites":      n_sites,
+        "uniform_km":   round(unif, 1),
+        "sigma_median": float(np.nanmedian(sigma_filled)),
+        "cells":        int(clon.size),
+        "sigma_missing": n_miss,
+    }
+    return dens_gdf, summary
+
 # ============================================================
 # 1:50,000 지형도 도엽 격자
 # ============================================================
@@ -1992,6 +2205,7 @@ def compute_priority(
     candidates:   gpd.GeoDataFrame,
     zones:        dict,
     emag2_data=None,
+    agrad: "AG.AnomalyGradient | None" = None,
 ) -> gpd.GeoDataFrame:
     """
     입지 점수 산정 (0~100점, UTM CRS 입력).
@@ -2003,8 +2217,8 @@ def compute_priority(
     │             │ 지형 경사도        │ 15 │ ⚠  Open-Elevation API        │
     │ 환경 정온도  │ 전력/철도 이격도   │ 15 │ ✅ OSM 데이터                 │
     │             │ 인구 밀집 이격도   │ 15 │ ✅ OSM 데이터                 │
-    │ 지질 안정성  │ 자기이상·지질경계  │ 10 │ ✅ KIGAM 1.5분 격자          │
-    │             │ 모델 기여도        │    │   (P90-P10 구간별 점수화)     │
+    │ 지질 안정성  │ 자기환경 대표성    │ 10 │ ✅ KIGAM 1.5분 격자          │
+    │             │ |∇ΔT| 국소 공간구배│    │   (저구배 우대 — 연속 곡선)   │
     │             │ 암상 적합성       │  5 │ ✅ 수치지질도 1:250,000 (이격도)│
     │ 운영 인프라  │ 부지 지속성       │ 10 │ ※ 최종 선정 후 육안 확인       │
     │             │ 관리 접근성       │  5 │ ※ 최종 선정 후 지도 확인       │
@@ -2097,31 +2311,62 @@ def compute_priority(
     result["d_urban_km"]  = np.round(d_urban / 1000, 1)
     print(f"    ④ 인구이격: 평균 {s4.mean():.1f} / 15점")
 
-    # ── ⑤ 자기이상·지질경계 모델 기여도 (10점) ────────────────────
-    # 기준: KIGAM 1.5분 격자, 반경 0.05°(≈5.5km) 내 P90-P10
-    # ■ 평가 목적: 단순 균등 배치에 따른 관측망 한계를 보완 — 후보지 주변
-    #   자기이상 변동폭을 활용한 로컬 지자기모델 구축 기여도 평가
-    # ■ 변화 매우 작은 지역(<30 nT)은 안정성은 높으나 모델 보정 기여 제한 → 중간 점수
-    # ■ 150~400 nT 중간 그레디언트는 지질경계·해안부·변화 구간 반영 가능성 → 최고점
-    # ■ 400 nT 이상은 자연기원+인공잡음 혼재 가능 → 현장 검증 필수
-    # 점수 체계:
-    #   < 30 nT      → 5점  (변화 매우 작음 — 안정성 높으나 모델 보정 기여 제한)
-    #   30~150 nT    → 8점  (저~중 그레디언트 — 안정 측정+일정 기여)
-    #   150~400 nT   → 10점 (중간 그레디언트 — 지질경계·변화 구간 반영, 최고점)
-    #   400~800 nT   → 7점  (고그레디언트 — 자연/인공 혼재, 현장 검증 필수)
-    #   > 800 nT     → 조건부 제외 (filter_candidates에서 이미 제거됨 / 현장 정밀조사 대상)
-    #   데이터 미취득 → 6점 (중립값)
+    # ── ⑤ 자기환경 대표성 (10점) — 국소 공간구배 |∇ΔT| ───────────────
+    # 기준: KIGAM 1.5분 격자의 중앙차분 수평구배 (nT/km)
+    #
+    # ■ 평가 목적: 그 측점이 **자기 주변을 대표하는가**.
+    #   구배가 크면 ① 측정값이 주변을 대표하지 못하고 ② 2.8 km 격자로 만든
+    #   Crustal 보정이 그 지점에서 빗나가 Regional 적합을 오염시킨다.
+    #   → **저구배가 좋다** (IAGA 반복관측점 입지 지침과 같은 방향)
+    #
+    # ■ 점수: 로그 구배축의 반쪽 정규곡선 (anomaly_gradient.py 단일 출처)
+    #     5 nT/km 이하 → 10.0 (평탄)   10 → 8.9   15 → 7.4   25 → 5.2
+    #     40 → 3.3   60 → 2.1   100 → 1.0   180 → 0.4
+    #     데이터 미취득 → 6.0 (검증되지 않았으므로 중앙값보다 보수적)
+    #
+    # ⚠️ 종전 점수는 **변동폭 P90-P10 이 250 nT 일 때 최고점**이었다. 방향이
+    #   반대인 이유는 그 곡선이 「변동이 큰 곳이 모델에 기여한다」는 **권역
+    #   논리**를 **점 점수** 자리에 넣었기 때문이다. 권역 논리는
+    #   compute_density_design() 의 Neyman 배분으로 옮겼다 — 두 축은
+    #   「복잡한 권역에 점을 더 두되, 각 점은 그 안의 조용한 자리에」로
+    #   합쳐진다. USE_GRADIENT_SCORE = False 면 종전 동작으로 복귀한다.
     s5 = np.full(n, np.nan)
     emag_available = False
+
+    cw = candidates.to_crs(WGS84_CRS)
+    c_lats = cw.geometry.y.values
+    c_lons = cw.geometry.x.values
+
+    if USE_GRADIENT_SCORE and agrad is not None:
+        try:
+            gval = agrad.grad(c_lats, c_lons)
+            valid = np.isfinite(gval)
+            if valid.sum() > 0:
+                s5[valid] = AG.representativeness_score(gval[valid])
+                s5[~valid] = AG.GRAD_NODATA_SCORE
+                emag_available = True
+                result["mag_grad_nT_km"] = np.round(gval, 1)
+                tiers = [AG.grad_tier(v) for v in gval]
+                cnt = {k: sum(1 for t in tiers if t == k)
+                       for k, *_ in AG.GRAD_TIERS}
+                print(f"    ⑤ 자기환경 대표성 |∇ΔT|: 평균 {np.nanmean(s5):.1f} / 10점  "
+                      f"(구배 중앙 {np.nanmedian(gval[valid]):.1f} nT/km, "
+                      f"자료없음 {int((~valid).sum())}개)")
+                print("       등급: " + " · ".join(
+                    f"{AG.TIER_LABEL[k]} {cnt[k]}" for k, *_ in AG.GRAD_TIERS))
+                print(f"    ⚠  KIGAM 1.5분(≈2.8 km) 격자 기반 예비선정 — "
+                      f"그보다 짧은 파장은 해상하지 못하므로 현장 정밀 자력측량 필요")
+        except Exception as exc:
+            print(f"    ⚠ 공간구배 점수 계산 실패: {exc}")
+
+    # ── 참고 지표 — 종전 변동폭 P90-P10 (점수에는 쓰지 않고 팝업에만) ──
+    # USE_GRADIENT_SCORE = False 면 이 값이 다시 점수가 된다.
     if emag2_data is not None:
         try:
             e_lons = emag2_data["lon"].values
             e_lats = emag2_data["lat"].values
             e_anom = emag2_data["anomaly_nT"].values
-            cw = candidates.to_crs(WGS84_CRS)
-            c_lats = cw.geometry.y.values
-            c_lons = cw.geometry.x.values
-            radius = ANOMALY_SITE_RADIUS_DEG  # 0.05° — 동일 스케일 통일
+            radius = ANOMALY_SITE_RADIUS_DEG  # 0.05° — 종전 스케일 유지
             p90p10 = np.full(n, np.nan)
             for i, (clat, clon) in enumerate(zip(c_lats, c_lons)):
                 mask = (np.abs(e_lats - clat) <= radius) & (np.abs(e_lons - clon) <= radius)
@@ -2129,10 +2374,11 @@ def compute_priority(
                 if len(anom_pts) >= 3:
                     p90p10[i] = np.percentile(anom_pts, 90) - np.percentile(anom_pts, 10)
             valid = ~np.isnan(p90p10)
-            if valid.sum() > 0:
-                # 지질경계·변화 구간 포괄 설계 — 중간 그레디언트(150~400 nT) 최고점
+            result["mag_p90p10_nT"] = np.round(p90p10, 1)
+
+            if not emag_available and valid.sum() > 0:
+                # 폴백 — 구배 산출이 불가할 때만 종전 점수 체계를 쓴다
                 if ANOMALY_GRADIENT_MODE == "weight":
-                    # 연속 가중치 (자문 권고) — 경계값 불연속 없음
                     s5[valid] = anomaly_gradient_score(p90p10[valid])
                 else:
                     def _score_contribution(v):
@@ -2143,18 +2389,12 @@ def compute_priority(
                         return 0.0
                     s5[valid] = np.array(
                         [_score_contribution(v) for v in p90p10[valid]])
-                s5[~valid] = 6.0   # 데이터 미취득 지점 → 중립값
+                s5[~valid] = 6.0
                 emag_available = True
-                result["mag_p90p10_nT"] = np.round(p90p10, 1)
-                n_low  = (p90p10[valid] < 30).sum()
-                n_lmid = ((p90p10[valid] >= 30) & (p90p10[valid] <= 150)).sum()
-                n_opt  = ((p90p10[valid] > 150) & (p90p10[valid] <= 400)).sum()
-                n_high = ((p90p10[valid] > 400) & (p90p10[valid] <= 800)).sum()
-                print(f"    ⑤ 자기이상·지질경계 모델 기여도: 평균 {np.nanmean(s5):.1f} / 10점  "
-                      f"(<30nT:{n_low}, 30-150:{n_lmid}, 최적150-400:{n_opt}, 고그레디언트400-800:{n_high})")
-                print(f"    ⚠  KIGAM 1.5분 광역 자력이상도 예비선정 — 최종 확정은 현장 정밀 자력측량 필요")
+                print(f"    ⑤ (폴백) 변동폭 P90-P10 점수: 평균 {np.nanmean(s5):.1f} / 10점")
         except Exception as exc:
-            print(f"    ⚠ 모델 기여도 계산 실패: {exc}")
+            print(f"    ⚠ 변동폭 참고지표 계산 실패: {exc}")
+
     result["s5_모델기여도"] = np.round(s5, 1)
 
     # ── ⑥ 암상 적합성 (5점) — 지질 이격도 기반 점수화 ────────
@@ -2416,6 +2656,8 @@ def save_map_data(
     korea_gdf:      "gpd.GeoDataFrame | None",
     data_dir:       Path,
     anomaly_tiers_gdf: "gpd.GeoDataFrame | None" = None,
+    grad_cells_gdf:    "gpd.GeoDataFrame | None" = None,
+    density_gdf:       "gpd.GeoDataFrame | None" = None,
 ) -> None:
     """
     지도 레이어 데이터를 output/data/ 에 GeoJSON/JSON 파일로 저장.
@@ -2445,6 +2687,31 @@ def save_map_data(
                 driver="GeoJSON",
             )
 
+    # ── ① 항공자력 국소 공간구배 |∇ΔT| 등급별 셀 (WGS84) ──────
+    if grad_cells_gdf is not None and len(grad_cells_gdf) > 0:
+        for key, *_ in AG.GRAD_TIERS:
+            sub = grad_cells_gdf[grad_cells_gdf["tier"] == key]
+            if len(sub) == 0:
+                continue
+            sub.to_file(str(data_dir / f"maggrad_{key}.geojson"),
+                        driver="GeoJSON")
+
+    # ── ② 권역 밀도 설계 (권장 간격 · 충족도) ─────────────────
+    # 같은 셀에 두 등급이 실려 있으므로 파일은 등급별로 나누되 속성은 전부 싣는다.
+    if density_gdf is not None and len(density_gdf) > 0:
+        for key, *_ in AG.SPACING_TIERS:
+            sub = density_gdf[density_gdf["sp_tier"] == key]
+            if len(sub) == 0:
+                continue
+            sub.to_file(str(data_dir / f"density_req_{key}.geojson"),
+                        driver="GeoJSON")
+        for key, *_ in AG.DEFICIT_TIERS:
+            sub = density_gdf[density_gdf["df_tier"] == key]
+            if len(sub) == 0:
+                continue
+            sub.to_file(str(data_dir / f"density_gap_{key}.geojson"),
+                        driver="GeoJSON")
+
     # ── 격자점 샘플 ─────────────────────────────────────────
     grid_wgs = grid.to_crs(WGS84_CRS)
     sample   = grid_wgs.sample(min(len(grid_wgs), 600), random_state=42)
@@ -2468,6 +2735,10 @@ def save_map_data(
         "s4_인구이격": "s4", "s5_모델기여도": "s5", "s6_암상": "s6",
         "d_power_km": "dp", "d_railway_km": "dr", "d_urban_km": "du",
         "dem_slope_deg": "dem", "d_public_km": "dpub", "d_road_km": "drd",
+        # 항공자력 공간구배 — 점 축(grad) / 권역 축(sig·lreq·lnow·dfc)
+        "mag_grad_nT_km": "grad", "mag_p90p10_nT": "var",
+        "reg_sigma_nT": "sig", "reg_sigma_obs": "sigo", "req_spacing_km": "lreq",
+        "now_spacing_km": "lnow", "density_deficit": "dfc",
     }
     prop_cols = ["idx", "lat", "lon"]
     for c in ["priority", "score"] + list(rename_map.keys()):
@@ -2555,6 +2826,9 @@ def create_folium_map(
     existing_sites: "pd.DataFrame | None" = None,
     data_subdir:    str = "data",
     anomaly_tiers_available: bool = False,
+    grad_tiers_available:    bool = False,
+    density_available:       bool = False,
+    density_summary:         dict | None = None,
 ) -> folium.Map:
     """대화형 Folium 지도 생성 (OSM 기반)"""
     print("\n지도 생성 중...")
@@ -2630,15 +2904,18 @@ def create_folium_map(
     #   optimal(10점): 청록 진 — 지질경계·변화 구간 (최고점)
     #   caution(7점) : 황색 — 고그레디언트, 현장 검증 필수
     # 기본 비표시(클러터 방지) — 사용자가 레이어 컨트롤에서 켜서 확인
+    # ⚠️ 이 네 레이어는 반경 0.05° 상자 안의 **변동폭(P90-P10, nT)** 이지
+    #    공간구배가 아니다. 이름만 「그레디언트」였다. 참고용으로 남기고,
+    #    실제 구배 |∇ΔT| (nT/km) 는 아래 「항공자력 공간구배」 레이어에 있다.
     _grad = {
         "low":      ("#B0B0B0", "#888888",
-                     "🟦 ⑤ 모델 기여도: <30 nT (5점, 변화 작음)"),
+                     "▫️ [참고] 변동폭 P90-P10: <30 nT"),
         "mid_low":  ("#88CCEE", "#3399CC",
-                     "🟦 ⑤ 모델 기여도: 30~150 nT (8점, 저~중 그레디언트)"),
+                     "▫️ [참고] 변동폭 P90-P10: 30~150 nT"),
         "optimal":  ("#2E8B57", "#1F6640",
-                     "🟢 ⑤ 모델 기여도: 150~400 nT (10점, 지질경계·최적)"),
+                     "▫️ [참고] 변동폭 P90-P10: 150~400 nT"),
         "caution":  ("#DDAA00", "#AA7700",
-                     "🟡 ⑤ 모델 기여도: 400~800 nT (7점, 현장 검증 필수)"),
+                     "▫️ [참고] 변동폭 P90-P10: 400~800 nT"),
     }
     if anomaly_tiers_available:
         for tier, (fc, ec, lname) in _grad.items():
@@ -2664,6 +2941,90 @@ def create_folium_map(
                 "})();</script>"
             ) % (data_subdir, tier, fc, ec, tip, lv, tier)
             m.get_root().html.add_child(folium.Element(js))
+
+    # ── ① 항공자력 국소 공간구배 |∇ΔT| (입지 점수 ⑤ 근거) ─────────
+    # 저구배 = 그 지점이 주변을 잘 대표한다 = 높은 점수. 색은 「조용함→요란함」.
+    _mgrad = {
+        "flat":     ("#1B7837", "#0E4720", "🟩 |∇ΔT| < 5 nT/km — 매우 평탄 (10점)"),
+        "gentle":   ("#A6DBA0", "#5AA55A", "🟩 |∇ΔT| 5~15 nT/km — 양호"),
+        "moderate": ("#F7F7B0", "#C9C96A", "🟨 |∇ΔT| 15~40 nT/km — 보통"),
+        "steep":    ("#E08214", "#A55A08", "🟧 |∇ΔT| 40~100 nT/km — 급변 (현장 검증)"),
+        "extreme":  ("#B2182B", "#7A0F1D", "🟥 |∇ΔT| ≥ 100 nT/km — 극심 (정밀 자력측량)"),
+    }
+    if grad_tiers_available:
+        for key, (fc, ec, lname) in _mgrad.items():
+            layer = folium.FeatureGroup(name=lname, show=False)
+            layer.add_to(m)
+            lv = layer.get_name()
+            tip = lname.replace("'", "\\'")
+            js = (
+                "<script>(function(){"
+                "fetch('%s/maggrad_%s.geojson')"
+                ".then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})"
+                ".then(function(d){"
+                "L.geoJSON(d,{"
+                "style:function(){return{fillColor:'%s',color:'%s',weight:0.3,fillOpacity:0.5}},"
+                "onEachFeature:function(f,l){"
+                "var p=f.properties||{};"
+                "var v=(p.grad_nT_km!=null)?p.grad_nT_km.toFixed(1):'-';"
+                "var s=(p.score!=null)?p.score:'-';"
+                "l.bindTooltip('%s<br>|∇ΔT| = '+v+' nT/km &nbsp;|&nbsp; ⑤ 대표성 '+s+'/10');"
+                "}"
+                "}).addTo(%s);"
+                "}).catch(function(e){console.warn('maggrad_%s:',e.message);});"
+                "})();</script>"
+            ) % (data_subdir, key, fc, ec, tip, lv, key)
+            m.get_root().html.add_child(folium.Element(js))
+
+    # ── ② 권역 밀도 설계 (Neyman 배분) ────────────────────────────
+    # 권장 간격 — 자기복잡도가 클수록 좁아진다. 색은 「조밀 필요→성김 허용」.
+    _sreq = {
+        "dense":  ("#67000D", "#3F0007", "🎯 권장 간격 < 35 km — 조밀 배치 필요"),
+        "mid":    ("#CB181D", "#8C1014", "🎯 권장 간격 35~50 km"),
+        "coarse": ("#FB6A4A", "#B04533", "🎯 권장 간격 50~65 km"),
+        "sparse": ("#FEE0D2", "#C9AFA6", "🎯 권장 간격 ≥ 65 km — 성김 허용"),
+    }
+    # 밀도 충족도 — 현 관측망 간격 / 권장 간격. 1 초과면 권장보다 성기다.
+    _sgap = {
+        "critical": ("#54278F", "#331A56", "🚨 밀도 크게 부족 (권장의 2배 이상 성김)"),
+        "short":    ("#807DBA", "#524F80", "🟣 밀도 부족 (1.5~2배)"),
+        "mild":     ("#BCBDDC", "#8384A0", "🟪 다소 부족 (1~1.5배)"),
+        "ok":       ("#EFEDF5", "#B9B7C4", "⬜ 충족"),
+    }
+    if density_available:
+        _dens_specs = [("density_req", _sreq,
+                        "권장 측점 간격 (Neyman 배분)"),
+                       ("density_gap", _sgap,
+                        "밀도 충족도 (현 관측망 대비)")]
+        for prefix, spec, _group in _dens_specs:
+            for key, (fc, ec, lname) in spec.items():
+                layer = folium.FeatureGroup(name=lname, show=False)
+                layer.add_to(m)
+                lv = layer.get_name()
+                tip = lname.replace("'", "\\'")
+                js = (
+                    "<script>(function(){"
+                    "fetch('%s/%s_%s.geojson')"
+                    ".then(function(r){if(!r.ok)throw new Error(r.status);return r.json();})"
+                    ".then(function(d){"
+                    "L.geoJSON(d,{"
+                    "style:function(){return{fillColor:'%s',color:'%s',weight:0.3,fillOpacity:0.45}},"
+                    "onEachFeature:function(f,l){"
+                    "var p=f.properties||{};"
+                    "var sg=(p.sigma_nT!=null)?p.sigma_nT.toFixed(0):'-';"
+                    "var lr=(p.spacing_req!=null)?p.spacing_req.toFixed(0):'-';"
+                    "var ln=(p.spacing_now!=null)?p.spacing_now.toFixed(0):'-';"
+                    "var df=(p.deficit!=null)?p.deficit.toFixed(2):'-';"
+                    "var est=(p.sigma_obs===0)?' <i>(자료 공백 — 중앙값 대체)</i>':'';"
+                    "l.bindTooltip('%s<br>자기복잡도 σ = '+sg+' nT'+est+"
+                    "'<br>권장 간격 '+lr+' km &nbsp;|&nbsp; 현 간격 '+ln+' km'+"
+                    "'<br>충족도 '+df+' (1 이하면 충족)');"
+                    "}"
+                    "}).addTo(%s);"
+                    "}).catch(function(e){console.warn('%s_%s:',e.message);});"
+                    "})();</script>"
+                ) % (data_subdir, prefix, key, fc, ec, tip, lv, prefix, key)
+                m.get_root().html.add_child(folium.Element(js))
 
     # ── 전체 격자점 (참고용, 외부 GeoJSON fetch) ─────────────
     grid_layer = folium.FeatureGroup(name="격자점 전체 (참고)", show=False)
@@ -2733,10 +3094,20 @@ def create_folium_map(
             "+'<span style=\"color:#888;\">(전력 '+vn(p.dp)+'km, 철도 '+vn(p.dr)+'km)</span><br>'"
             "+'&nbsp;④ 인구 이격: '+vn(p.s4)+' / 15 '"
             "+'<span style=\"color:#888;\">(도시 '+vn(p.du)+'km)</span><br>'"
-            "+'&nbsp;⑤ 자기이상·지질경계 모델 기여도: '+vn(p.s5)+' / 10<br>'"
+            "+'&nbsp;⑤ 자기환경 대표성: '+vn(p.s5)+' / 10 '"
+            "+'<span style=\"color:#888;\">(|∇ΔT| '+vn(p.grad)+' nT/km)</span><br>'"
             "+'&nbsp;⑥ 암상 적합성: '+vn(p.s6)+' / 5<br>'"
             "+'&nbsp;<span style=\"color:#999;\">⑦ 부지 지속성: 현장검토 / 10</span><br>'"
             "+'&nbsp;<span style=\"color:#999;\">⑧ 관리 접근성: 현장검토 / 5</span>'"
+            "+'</span>'"
+            "+'<hr style=\"margin:4px 0;border-color:#ddd;\">'"
+            "+'<b style=\"font-size:11.5px;\">관측망 밀도 설계 <span style=\"color:#888;font-weight:normal;\">(별도 축)</span></b><br>'"
+            "+'<span style=\"font-size:11.5px;color:#333;\">'"
+            "+'&nbsp;권역 자기복잡도 σ: '+vn(p.sig)+' nT'"
+            "+((p.sigo===0)?' <span style=\"color:#a00;\">(항공자력 공백 — 중앙값 대체)</span>':'')+'<br>'"
+            "+'&nbsp;권장 측점 간격: '+vn(p.lreq)+' km &nbsp;|&nbsp; 현 간격 '+vn(p.lnow)+' km<br>'"
+            "+'&nbsp;밀도 충족도: '+vn(p.dfc)+' <span style=\"color:#888;\">(1 이하면 충족)</span><br>'"
+            "+'&nbsp;<span style=\"color:#888;\">변동폭 P90-P10: '+vn(p.var)+' nT (참고)</span>'"
             "+'</span></div>';"
             "l.bindPopup(html,{maxWidth:270});"
             "l.bindTooltip('후보지 #'+p.idx+' P%d ('+lat.toFixed(4)+'°N, '+lon.toFixed(4)+'°E)');"
@@ -2799,6 +3170,9 @@ def create_folium_map(
     n_p2 = int((final_wgs["priority"] == 2).sum()) if has_priority else 0
     n_p3 = int((final_wgs["priority"] == 3).sum()) if has_priority else n_cands
     n_exist = len(existing_sites) if existing_sites is not None else 0
+    _ds = density_summary or {}
+    n_target_sites = _ds.get("n_target", AG.N_TARGET_SITES)
+    unif_km = _ds.get("uniform_km", "—")
 
     def _swatch(color, label):
         return (f'<span style="background:{color};display:inline-block;'
@@ -2832,12 +3206,26 @@ def create_folium_map(
       {_swatch('#8B0000','[지질] 자성 암종 직접 제외 †')}
       {_swatch('#CC4400','[지질] 단층 0.5 km 버퍼 †')}
       <hr style="margin:6px 0;border-color:#ccc;">
-      <b>▸ ⑤ 자기이상·지질경계 모델 기여도</b><br>
-      <span style="color:#666;font-size:10.5px;">(레이어 컨트롤에서 활성화)</span><br>
-      {_swatch('#B0B0B0','&lt;30 nT → 5점 (변화 작음)')}
-      {_swatch('#88CCEE','30~150 nT → 8점 (저~중)')}
-      {_swatch('#2E8B57','150~400 nT → 10점 (지질경계·최적) ★')}
-      {_swatch('#DDAA00','400~800 nT → 7점 (현장 검증 필수)')}
+      <b>▸ ⑤ 자기환경 대표성 — 국소 공간구배</b><br>
+      <span style="color:#666;font-size:10.5px;">|∇ΔT| (nT/km) · 저구배가 좋다 ‡<br>
+      (레이어 컨트롤에서 활성화)</span><br>
+      {_swatch('#1B7837','&lt;5 nT/km → 10점 (매우 평탄) ★')}
+      {_swatch('#A6DBA0','5~15 → 양호')}
+      {_swatch('#F7F7B0','15~40 → 보통')}
+      {_swatch('#E08214','40~100 → 급변 (현장 검증)')}
+      {_swatch('#B2182B','≥100 → 극심 (정밀 자력측량)')}
+      <hr style="margin:6px 0;border-color:#ccc;">
+      <b>▸ 관측망 밀도 설계 (Neyman 배분)</b><br>
+      <span style="color:#666;font-size:10.5px;">권역 자기복잡도 σ(25 km) ∝ 권장 밀도 §<br>
+      총 {n_target_sites}점 배분 기준 · 균등 배치라면 {unif_km} km</span><br>
+      {_swatch('#67000D','권장 간격 &lt;35 km — 조밀 필요')}
+      {_swatch('#CB181D','35~50 km')}
+      {_swatch('#FB6A4A','50~65 km')}
+      {_swatch('#FEE0D2','≥65 km — 성김 허용')}
+      <span style="color:#666;font-size:10.5px;">밀도 충족도 = 현 간격 ÷ 권장 간격</span><br>
+      {_swatch('#54278F','2배 이상 성김 — 크게 부족')}
+      {_swatch('#807DBA','1.5~2배 — 부족')}
+      {_swatch('#BCBDDC','1~1.5배 — 다소 부족')}
       <hr style="margin:6px 0;border-color:#ccc;">
       <b>▸ 측정 후보지 (총 {n_cands}개)</b><br>
       {_dot('#FF0000',f'1등급 최우선 (데이터 공백): {n_p1}개')}
@@ -2853,6 +3241,16 @@ def create_folium_map(
         * KIGAM P90-P10 &gt;800 nT (극단값 약 1%) 조건부 제외<br>
         &nbsp;&nbsp;(또는 현장 정밀조사 대상). 나머지는<br>
         &nbsp;&nbsp;자기이상·지질경계 모델 기여도 기준 점수화<br>
+        ‡ 구배가 크면 그 지점의 값이 주변을 대표하지<br>
+        &nbsp;&nbsp;못하고 2.8 km 격자 기반 지각장 보정도<br>
+        &nbsp;&nbsp;빗나간다 → 측점은 조용한 자리에.<br>
+        § 지각장이 복잡한 권역일수록 한 점의 대표성이<br>
+        &nbsp;&nbsp;낮아 더 많은 점으로 평균해야 한다 →<br>
+        &nbsp;&nbsp;권역은 조밀하게. 두 축은 「복잡한 권역에<br>
+        &nbsp;&nbsp;점을 더 두되 각 점은 그 안의 조용한<br>
+        &nbsp;&nbsp;자리에」로 합쳐진다.<br>
+        &nbsp;&nbsp;⚠ Neyman 배분은 이 연구의 제안이며<br>
+        &nbsp;&nbsp;해외 선례의 인용이 아니다.<br>
         † 수치지질도(1:250,000, KIGAM): 화산암류·<br>
         &nbsp;&nbsp;자성광물 분포지역·광화대·단층·관입암<br>
         &nbsp;&nbsp;경계부·전도성 퇴적층 — 국지 자기이상<br>
@@ -2911,7 +3309,7 @@ def create_folium_map(
             <td style="text-align:center;">✅</td></tr>
         <tr style="border-top:1px solid #eee;">
             <td rowspan="2">지질 안정성</td>
-            <td>⑤ 자기이상·지질경계<br>&nbsp;&nbsp;&nbsp;&nbsp;모델 기여도</td>
+            <td>⑤ 자기환경 대표성<br>&nbsp;&nbsp;&nbsp;&nbsp;|∇ΔT| 국소 공간구배</td>
             <td style="text-align:center;">10</td>
             <td style="text-align:center;">✅</td></tr>
         <tr><td>⑥ 암상 적합성</td>
@@ -2933,11 +3331,17 @@ def create_folium_map(
       ② 중심+4방향(5km) 표고 → 중앙차분 경사도(°) (Open-Elevation)<br>
       ③ log(전력·철도 이격 거리) 정규화<br>
       ④ log(도시·주거 이격 거리) 정규화<br>
-      ⑤ 자기이상·지질경계 모델 기여도 (반경 0.05° 내 P90-P10)<br>
-      &nbsp;&nbsp;&lt;30nT→5점 | 30~150→8점<br>
-      &nbsp;&nbsp;150~400→10점(최적, 지질경계·변화 구간)<br>
-      &nbsp;&nbsp;400~800→7점(현장 검증) | &gt;800→조건부 제외<br>
-      &nbsp;&nbsp;데이터 미취득→6점(중립값)<br>
+      ⑤ 자기환경 대표성 — 항공자력 국소 공간구배<br>
+      &nbsp;&nbsp;|∇ΔT| = KIGAM 1.5분 격자 중앙차분 (nT/km)<br>
+      &nbsp;&nbsp;&lt;5→10점(평탄) | 10→8.9 | 15→7.4 | 25→5.2<br>
+      &nbsp;&nbsp;40→3.3 | 100→1.0 | 180→0.4 (연속 곡선)<br>
+      &nbsp;&nbsp;데이터 미취득→6점(보수적 중립값)<br>
+      &nbsp;&nbsp;<b>저구배가 높은 점수</b> — 구배가 크면 측정값이 주변을<br>
+      &nbsp;&nbsp;대표하지 못하고 2.8 km 격자 지각장 보정도 빗나감<br>
+      &nbsp;&nbsp;<span style="color:#a00;">⚠ 근거는 물리 추론과 IAGA 관행이며,<br>
+      &nbsp;&nbsp;현 16측점 잔차로는 검증되지 않았다(r=−0.22, p=0.45).<br>
+      &nbsp;&nbsp;편각 잔차를 방위 기준 계통오차가 덮고 있어 검정력<br>
+      &nbsp;&nbsp;부족. 반면 권역 축은 r=+0.47(p=0.08)로 방향 일치.</span><br>
       ⑥ 암상 적합성: 수치지질도(1:250,000)<br>
       &nbsp;&nbsp;🚫 사전 필터: 자성 암종 폴리곤 내부·단층 500m 이내 제외<br>
       &nbsp;&nbsp;✅ 점수화: log(자성암종 경계 거리) × 0.5<br>
@@ -2946,6 +3350,13 @@ def create_folium_map(
       ⑧ 관리 접근성: 최종 선정 후 도로망 지도 확인<br>
       <br>
       가용 항목 합산 → 100점 정규화 (최대 85점)<br>
+      <br>
+      <b>[별도 축] 관측망 밀도 설계 — Neyman 배분</b><br>
+      &nbsp;&nbsp;권역 자기복잡도 σ(반경 25 km, 추세제거 표준편차)<br>
+      &nbsp;&nbsp;n_h ∝ A_h·σ_h → 밀도 ρ ∝ σ → 권장 간격 L = 1/√ρ<br>
+      &nbsp;&nbsp;점수에 합산하지 않는다 — <b>어디를 조밀하게</b>는<br>
+      &nbsp;&nbsp;관측망 설계이고, <b>그 안 어디에</b>가 입지 점수다<br>
+      &nbsp;&nbsp;⚠ 배분 규칙은 이 연구의 제안이며 선례 인용이 아님<br>
       </span>
       <hr style="margin:5px 0;border-color:#ccc;">
       <span style="color:#555;font-size:10.5px;">
@@ -3503,6 +3914,23 @@ def main():
         print(f"  ✅ 자기이상 조건부 제외 구역 생성 완료 (기준: {ANOMALY_VARIATION_THRESHOLD} nT)")
     else:
         print(f"  ℹ  {DATA_DIR}/mag_1982-2018_1.5min_ed.dat 필요")
+
+    # ── 3b. 항공자력 공간구배 (점 축) ─────────────────────────
+    # ⚠ 여기서 만든 agrad 하나를 점수·지도·밀도설계가 모두 공유한다.
+    #   여러 번 만들면 격자를 그만큼 다시 읽는다(약 0.5초 × n).
+    agrad = None
+    grad_cells_gdf = None
+    if KIGAM_MAG_DAT.exists():
+        try:
+            agrad = AG.AnomalyGradient()
+            gok = np.isfinite(agrad.G)
+            print(f"  ✅ 공간구배 |∇ΔT| 산출: 유효 {int(gok.sum()):,}셀 · "
+                  f"중앙 {np.nanmedian(agrad.G[gok]):.1f} nT/km · "
+                  f"P90 {np.nanpercentile(agrad.G[gok], 90):.0f}")
+            grad_cells_gdf = compute_gradient_cells(agrad)
+        except Exception as exc:
+            print(f"  ⚠ 공간구배 산출 실패 — 종전 변동폭 점수로 폴백: {exc}")
+            agrad = None
     print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
 
     # ── 4. 후보 격자 생성 ─────────────────────────────────────
@@ -3529,7 +3957,8 @@ def main():
     # ── 6. 입지 점수 산출 ──────────────────────────────────────
     t_step = time.time()
     print("\n▶ 입지 점수 산출 (다기준 평가)")
-    final_candidates = compute_priority(final_candidates, zones, mag_data)
+    final_candidates = compute_priority(final_candidates, zones, mag_data,
+                                        agrad=agrad)
     print(f"  [소요 {_fmt_time(time.time() - t_step)}]")
 
     # ── site_id 단일 출처 고정 ────────────────────────────────
@@ -3538,15 +3967,68 @@ def main():
     final_candidates = final_candidates.reset_index(drop=True)
     final_candidates["site_id"] = range(1, len(final_candidates) + 1)
 
-    # ── 7. 지도 생성 ─────────────────────────────────────────
+    # ── 7. 기존 측정점 ────────────────────────────────────────
     t_step = time.time()
     print("\n▶ 기존 측정점 로드")
     existing_sites = load_existing_sites()
 
+    # ── 7b. 권역 밀도 설계 (권역 축) ──────────────────────────
+    # ⚠ 기존 측정점이 있어야 「현 간격」을 잴 수 있으므로 여기서 한다.
+    #   점수(⑤)에는 합산하지 않는다 — 「어디를 조밀하게」는 관측망 설계이고
+    #   「그 안 어디에」가 입지 점수다. 두 축을 섞으면 결론이 뒤집힌다.
+    density_gdf, density_summary = None, {}
+    if agrad is not None:
+        print("\n▶ 관측망 밀도 설계 (항공자력 자기복잡도 → Neyman 배분)")
+        try:
+            density_gdf, density_summary = compute_density_design(
+                agrad, korea, existing_sites)
+        except Exception as exc:
+            print(f"  ⚠ 밀도 설계 실패: {exc}")
+
+    # 후보지에 권역 지표를 붙인다 (가장 가까운 밀도 셀에서 읽는다)
+    if density_gdf is not None and len(density_gdf) > 0:
+        try:
+            cw = final_candidates.to_crs(WGS84_CRS)
+            c_lat = cw.geometry.y.values
+            c_lon = cw.geometry.x.values
+            d_cen = density_gdf.geometry.centroid
+            d_lat = d_cen.y.values
+            d_lon = d_cen.x.values
+            sig_v = density_gdf["sigma_nT"].values
+            req_v = density_gdf["spacing_req"].values
+            now_v = density_gdf["spacing_now"].values
+            dfc_v = density_gdf["deficit"].values
+            obs_v = density_gdf["sigma_obs"].values
+            sig_o, req_o, now_o, dfc_o = (np.full(len(cw), np.nan) for _ in range(4))
+            obs_o = np.ones(len(cw), int)
+            for i, (la, lo) in enumerate(zip(c_lat, c_lon)):
+                mm = np.radians((d_lat + la) / 2)
+                dd = np.hypot((d_lon - lo) * 111.320 * np.cos(mm),
+                              (d_lat - la) * 110.574)
+                k = int(np.argmin(dd))
+                sig_o[i], req_o[i] = sig_v[k], req_v[k]
+                now_o[i], dfc_o[i] = now_v[k], dfc_v[k]
+                obs_o[i] = int(obs_v[k])
+            final_candidates["reg_sigma_obs"]  = obs_o
+            final_candidates["reg_sigma_nT"]   = np.round(sig_o, 0)
+            final_candidates["req_spacing_km"] = np.round(req_o, 1)
+            final_candidates["now_spacing_km"] = np.round(now_o, 1)
+            final_candidates["density_deficit"] = np.round(dfc_o, 2)
+            n_short = int(np.nansum(dfc_o >= 1.5))
+            n_est = int((obs_o == 0).sum())
+            print(f"  후보지 {len(cw)}개 중 밀도 부족(충족도 ≥1.5) 권역에 "
+                  f"{n_short}개 위치"
+                  + (f" · σ 대체값 {n_est}개(항공자력 공백)" if n_est else ""))
+        except Exception as exc:
+            print(f"  ⚠ 후보지 권역 지표 부착 실패: {exc}")
+
+    # ── 7c. 지도 생성 ─────────────────────────────────────────
     print("\n▶ 지도 데이터 파일 저장 (output/data/)")
     data_dir = OUTPUT_DIR / "data"
     save_map_data(zones, grid, final_candidates, existing_sites, korea, data_dir,
-                  anomaly_tiers_gdf=anomaly_tiers_gdf)
+                  anomaly_tiers_gdf=anomaly_tiers_gdf,
+                  grad_cells_gdf=grad_cells_gdf,
+                  density_gdf=density_gdf)
 
     m = create_folium_map(
         zones, grid, final_candidates,
@@ -3554,6 +4036,9 @@ def main():
         existing_sites=existing_sites,
         data_subdir="data",
         anomaly_tiers_available=(anomaly_tiers_gdf is not None and len(anomaly_tiers_gdf) > 0),
+        grad_tiers_available=(grad_cells_gdf is not None and len(grad_cells_gdf) > 0),
+        density_available=(density_gdf is not None and len(density_gdf) > 0),
+        density_summary=density_summary,
     )
 
     # ── 8. HTML 저장 ─────────────────────────────────────────
@@ -3576,7 +4061,11 @@ def main():
                   "s1_희소성", "s2_지형", "s3_전력철도", "s4_인구이격",
                   "s5_모델기여도", "s6_암상",
                   "dem_slope_deg", "d_power_km", "d_railway_km", "d_urban_km",
-                  "d_geo_rock_km", "d_geo_fault_km"]:
+                  "d_geo_rock_km", "d_geo_fault_km",
+                  # 항공자력 공간구배 — 점 축 / 권역 축
+                  "mag_grad_nT_km", "mag_p90p10_nT",
+                  "reg_sigma_nT", "reg_sigma_obs", "req_spacing_km", "now_spacing_km",
+                  "density_deficit"]:
             if c in result.columns:
                 cols.append(c)
 
