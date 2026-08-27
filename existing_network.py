@@ -63,31 +63,32 @@ SUPERSEDED = {"언양": "양산", "경주": "영천", "임계": "삼척"}
 # 것까지다. 출처 3항목은 `geomag_network_30.meta.json` 에 공란으로 남겨 뒀다.
 #
 # ⚠️ **`'10~'19년 지자기점 관측현황(최종).xls` 의 좌표에는 전사 오류가 있다.**
-# 원장과 대조하니 **주소는 같은데 좌표만 다른** 세 건이 나왔다 — 이설이 아니라
+# 대조표와 견주니 **주소는 같은데 좌표만 다른** 세 건이 나왔다 — 이설이 아니라
 # 옮겨 적으면서 틀린 것이다:
 #
 #   | 지점 | 차이 | 내용 |
 #   |---|---|---|
 #   | **서산** | **52.0 km** | 남양 좌표가 통째로 복사돼 있었다(중복). 참값은 서산시 잠홍저수지 |
-#   | **남양** | 3.6 km | 경도 분·초가 틀림(126°54′46″ vs 원장 126°57′10.9″) |
+#   | **남양** | 3.6 km | 경도 분·초가 틀림(126°54′46″ vs 대조표 126°57′10.9″) |
 #   | **와도** | 1.45 km | 경도 초 단위 오차 |
 #
 # 남양·서산이 같은 값이었던 것은 **두 행이 함께 오염**된 결과다. 서산은 남양의
-# (그것도 이미 틀린) 값을 물려받았다. 원장을 넣으면 둘 다 제자리로 간다.
+# (그것도 이미 틀린) 값을 물려받았다. 대조표를 넣으면 둘 다 제자리로 간다.
 #
-# ⚠️ 반면 **22~25 성과표에 있는 15점은 원장보다 최신**이다. 원장과 크게
-# 어긋나는 세 건은 **주소부터 다르므로 실제 이설**이다 — 원장으로 덮으면 안 된다:
+# ⚠️ 반면 **22~25 성과표에 있는 15점은 대조표보다 최신**이다. 대조표와 크게
+# 어긋나는 세 건은 **주소부터 다르므로 실제 이설**이다 — 대조표로 덮으면 안 된다:
 #
 #   포천 10.3 km (동두천시 보산동 → 연천군 청산면) · 여주 7.0 km (여주시 대신면
 #   → 양평군 개군면) · 양산 21.3 km (미호리 산89-2 → 산59-2)
 #
-# → **규칙: 22~25 성과표에 있으면 성과표 좌표, 없으면 원장 좌표.**
+# → **규칙: 22~25 성과표에 있으면 성과표 좌표, 없으면 대조표 좌표.**
 REGISTER_CSV = "data/geomag_network_30.csv"
 
 
 def load_register(root=None):
     """
-    관측망 원장 30점을 DataFrame 으로. 컬럼: 지점명·지점코드·도엽번호·
+    지자기점 30점 좌표 대조표(출처 확인 필요)를 DataFrame 으로.
+    컬럼: 지점명·지점코드·도엽번호·
     위도·경도(십진도)·소재지.
     """
     import pandas as pd
@@ -102,7 +103,7 @@ def load_register(root=None):
 def apply_register(df, name_col="도엽명", lat_col="위도", lon_col="경도",
                    only_names=None, root=None):
     """
-    측점표의 좌표를 원장 값으로 교정한다.
+    측점표의 좌표를 **대조표 값**으로 교정한다.
 
     `only_names` 를 주면 그 이름들만 손댄다 — **22~25 성과표에서 온 행은
     최신 실측이므로 제외**해야 한다(포천·여주·양산의 실제 이설을 되돌리게 된다).
@@ -145,7 +146,7 @@ def drop_duplicate_coords(df, name_col: str = "도엽명",
     같은 좌표의 두 점 중 하나는 담당 셀을 하나도 못 받아 조용히 사라지는데,
     정규화 분모에는 계속 세어져 밀도를 과대평가한다.
 
-    원장 좌표를 적용한 뒤에는 중복이 없어야 한다 — 걸리면 새 결함이므로
+    대조표 좌표를 적용한 뒤에는 중복이 없어야 한다 — 걸리면 새 결함이므로
     호출부에서 반드시 알릴 것.
     """
     import pandas as pd
@@ -191,13 +192,13 @@ if __name__ == "__main__":
     print(f"옛 이름 배제 {len(SUPERSEDED)}건: "
           + " · ".join(f"{k}→{v}" for k, v in SUPERSEDED.items()))
     reg = load_register()
-    print(f"\n좌표 정본 원장 {len(reg)}점 ({REGISTER_CSV})")
+    print(f"\n좌표 대조표 {len(reg)}점 — 출처 확인 필요 ({REGISTER_CSV})")
     dup = reg.round({"위도": 5, "경도": 5}).duplicated(["위도", "경도"]).sum()
     print(f"  좌표 중복 {int(dup)}건")
     miss = [n for n in EXISTING_NETWORK if n not in set(reg.지점명)]
     extra = [n for n in reg.지점명 if n not in set(EXISTING_NETWORK)]
     print(f"  명단에만 있음: {miss or '없음'}")
-    print(f"  원장에만 있음: {extra or '없음'}  (옛 이름 — SUPERSEDED 대응)")
+    print(f"  대조표에만 있음: {extra or '없음'}  (옛 이름 — SUPERSEDED 대응)")
     rest = [n for n in EXISTING_NETWORK if n not in EXISTING_TARGET]
     print(f"\n선점 대상 15: {' · '.join(EXISTING_TARGET)}")
     print(f"저수지 제외 {len(rest)}: {' · '.join(rest)}")

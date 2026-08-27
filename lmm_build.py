@@ -362,6 +362,55 @@ EXTERNAL_CSV = (EXTERNAL_CSV_MULTI
                 else EXTERNAL_CSV_CYG)
 
 
+def _external_layer_note() -> str:
+    """
+    `lmm_model.json` 의 External 층 설명. **현재 EXTERNAL_MODE 의 실제 동작**을
+    쓴다.
+
+    ⚠️ 2026-08-27 정정 — 종전 문구는 `subtract_D` 시절 그대로였다:
+      · "APPLIED TO DECLINATION ONLY"  → 실제로는 D 와 I 를 모두 보정한다
+      · "Storm sessions (Kp>2) are left uncorrected"
+        → `subtract_DI` 는 정온 필터를 걸지 않는다. Kp·QC 필터는
+          `subtract_quiet*` 모드에서만 작동한다(`apply_external_correction`).
+    두 문장 다 사실이 아니었다. 손으로 적으면 또 갈라지므로 모드에서 생성한다.
+    """
+    corrects_F = EXTERNAL_MODE not in ("subtract_D", "subtract_quiet_D",
+                                       "subtract_DI", "subtract_quiet_DI")
+    corrects_I = EXTERNAL_MODE in ("subtract_DI", "subtract_quiet_DI")
+    quiet_only = EXTERNAL_MODE in ("subtract_quiet", "subtract_quiet_D",
+                                   "subtract_quiet_DI")
+    comps = ["D"] + (["I"] if corrects_I else []) + (["F"] if corrects_F else [])
+
+    if EXTERNAL_MODE == "none":
+        return ("NOT APPLIED (mode=none). Survey values are used as recorded; "
+                "the model is a quiet-time baseline and no external term is "
+                "evaluated at prediction time.")
+    if EXTERNAL_MODE == "drop_storm":
+        return (f"NOT SUBTRACTED (mode=drop_storm, source={EXTERNAL_SOURCE}). "
+                f"Storm sessions (Kp>{FB2019_MAX_KP:g}) are dropped from the "
+                "fitting sample instead of being corrected.")
+
+    return (
+        f"PRE-PROCESSING CORRECTION OF THE SURVEY VALUES, applied to "
+        f"{' and '.join(comps)} (mode={EXTERNAL_MODE}, source={EXTERNAL_SOURCE}). "
+        "Session-time disturbance is estimated from four observatories "
+        "(Cheongyang CYG, Jeju, Gangneung, Icheon) by first-order spatial "
+        "interpolation of the quiet-night baseline deviation, then subtracted "
+        "from the observed values. D uses the declination window and I the "
+        "inclination window of the field book. "
+        + ("Only sessions flagged QC=QUIET (or Kp<=%g where QC is absent) are "
+           "used." % FB2019_MAX_KP if quiet_only else
+           "NO quiet-time filter is applied: every session row marked "
+           "\u0027\uc815\uc0c1\u0027 (valid) is used regardless of QC flag or Kp. "
+           "QC/Kp filtering is active only in the subtract_quiet* modes.")
+        + (" " if corrects_F else
+           " Total field F is NOT corrected: its residual is dominated by "
+           "crustal-field mismatch (~190 nT) rather than external field "
+           "(~38 nT), so a spatially smooth time correction only adds noise. ")
+        + "The model itself remains a quiet-time baseline - no external term "
+          "is evaluated at prediction time.")
+
+
 def apply_external_correction(df: pd.DataFrame) -> pd.DataFrame:
     """(측점, 연도) 세션 평균 외부장 편차를 성과값에서 뺀다."""
     if EXTERNAL_MODE == "none" or not EXTERNAL_CSV.exists():
@@ -1329,19 +1378,7 @@ def export_model(coef, lons, lats, grid, sites, val, cv, degree, rep, cd,
                            "Fourier potential-field inversion, applied to D and I"
                            if vec_out is not None else
                            " (scalar dF only, applied to F)")),
-            "external": (
-                f"APPLIED TO DECLINATION ONLY (mode={EXTERNAL_MODE}, "
-                f"source={EXTERNAL_SOURCE}). Session-time disturbance is estimated "
-                "from four observatories (Cheongyang CYG, Jeju, Gangneung, Icheon) "
-                "by first-order spatial interpolation of the quiet-night baseline "
-                "deviation, and subtracted from the survey declination. Storm "
-                "sessions (Kp>2) are left uncorrected because the spatial "
-                "approximation breaks down first under disturbance. Total field F "
-                "is NOT corrected: its residual is dominated by crustal-field "
-                "mismatch (~190 nT) rather than external field (~38 nT), so a "
-                "spatially smooth time correction only adds noise. The model "
-                "itself remains a quiet-time baseline - no external term is "
-                "evaluated at prediction time."),
+            "external": _external_layer_note(),
         },
         "observation_years": sorted(int(y) for y in years),
         "epoch_label": epoch_label,
@@ -1404,7 +1441,22 @@ def main():
         _ref = crustal_ref_dir(lats)
         print(f"[Layer 3] 지각 이상벡터 복원 (주자기장 D={_ref['D']:.2f}deg "
               f"I={_ref['I']:.2f}deg) -> 편각·복각에도 기여")
-    print("[Layer 4] CYG 1분 자료 없음 -> 외부장 보정 미적용 (정온시 baseline 모델)")
+    # ⚠️ 종전에는 실제 설정과 무관하게 "CYG 1분 자료 없음 -> 미적용" 을 항상
+    #    찍었다(2026-08-27 정정). 실제 모드·자료원·파일 존재를 반영한다.
+    if EXTERNAL_MODE == "none":
+        print("[Layer 4] 외부장 보정 미적용 (EXTERNAL_MODE=none, 정온시 baseline 모델)")
+    elif not EXTERNAL_CSV.exists():
+        print(f"[Layer 4] 외부장 보정량 파일 없음 -> 미적용 "
+              f"({EXTERNAL_CSV.name}, mode={EXTERNAL_MODE})")
+    else:
+        _comp = ("D·I" if EXTERNAL_MODE in ("subtract_DI", "subtract_quiet_DI")
+                 else "D" if EXTERNAL_MODE in ("subtract_D", "subtract_quiet_D")
+                 else "D·I·F")
+        _q = ("정온(QC=QUIET) 세션만"
+              if EXTERNAL_MODE.startswith("subtract_quiet") else "정온 필터 없음")
+        print(f"[Layer 4] 외부장 보정 적용 — mode={EXTERNAL_MODE} · "
+              f"source={EXTERNAL_SOURCE} · 성분 {_comp} · {_q} "
+              f"({EXTERNAL_CSV.name}). 예측 시점에는 미평가(정온시 baseline)")
 
     res = igrf_residuals(pts)
 

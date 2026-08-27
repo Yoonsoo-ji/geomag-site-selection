@@ -1444,12 +1444,12 @@ def compute_density_design(
             print(f"      ⚠ 관측망 명단에 있으나 성과표에 없음: {' · '.join(miss)}")
         # ⚠️ 좌표가 겹치는 측점은 담당면적을 하나도 못 받아 «공간적으로 사라진다».
         #    행 수를 그대로 분모로 쓰면 없는 측점을 세어 밀도를 과대평가한다.
-        #    원장 좌표를 적용한 뒤에는 중복이 없어야 하므로, 걸리면 새 결함이다.
+        #    대조표 좌표를 적용한 뒤에는 중복이 없어야 하므로, 걸리면 새 결함이다.
         net, coord_dup = EN.drop_duplicate_coords(net_all)
         if coord_dup:
             print(f"      ⚠ 좌표 중복 — {' · '.join(coord_dup)} 제외 "
                   f"(명목 {len(net_all)} → 공간 {len(net)}점). "
-                  f"원장 교정 후에도 남았다면 새 결함이니 확인할 것")
+                  f"대조표 교정 후에도 남았다면 새 결함이니 확인할 것")
         slat = pd.to_numeric(net["위도"], errors="coerce").values
         slon = pd.to_numeric(net["경도"], errors="coerce").values
         ok = np.isfinite(slat) & np.isfinite(slon)
@@ -2688,20 +2688,21 @@ def load_existing_sites() -> "pd.DataFrame | None":
         existing_names = set(df_latest["도엽명"].dropna().unique())
         df_old = _load_old_sites(existing_names)
         if not df_old.empty:
-            # ⚠️ 구 파일('10~'19)의 좌표에는 전사 오류가 있다 — 원장과 대조하면
+            # ⚠️ 구 파일('10~'19)의 좌표에는 전사 오류가 있다 — 30점 좌표
+            #    대조표(출처 확인 필요)와 견주면
             #    주소는 같은데 좌표만 다른 행이 있다(서산 52 km · 남양 3.6 km ·
             #    와도 1.45 km). 서산은 남양의 (이미 틀린) 값을 통째로 복사해
-            #    두 행이 같은 좌표였다. 원장으로 교정한다.
+            #    두 행이 같은 좌표였다. 대조표로 교정한다.
             #    22_25 성과표 행은 **손대지 않는다** — 그쪽이 최신 실측이고,
-            #    원장과 크게 어긋나는 포천·여주·양산은 주소부터 다른 실제 이설이다.
+            #    대조표와 크게 어긋나는 포천·여주·양산은 주소부터 다른 실제 이설이다.
             try:
                 df_old, moved = EN.apply_register(df_old, name_col="도엽명")
                 if moved:
                     big = [f"{n} {d:.2f}km" for n, d in moved if d >= 1.0]
-                    print(f"  ✅ 구 파일 좌표를 원장으로 교정: {len(moved)}점"
+                    print(f"  ✅ 구 파일 좌표를 30점 대조표로 교정: {len(moved)}점"
                           + (f" · 1 km 이상 {' · '.join(big)}" if big else ""))
             except Exception as exc:
-                print(f"  ⚠ 원장 좌표 교정 실패(구 파일 값 유지): {exc}")
+                print(f"  ⚠ 대조표 좌표 교정 실패(구 파일 값 유지): {exc}")
             df_latest = pd.concat([df_latest, df_old], ignore_index=True)
 
         print(f"  ✅ 기존 측정점 총 {len(df_latest)}개 (22_25 + 구파일 병합)")

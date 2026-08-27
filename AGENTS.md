@@ -26,6 +26,21 @@
 | `anomaly_gradient.py` | **항공자력 공간구배·권역 밀도 설계 (단일 출처)** | — (모듈) |
 | `existing_network.py` | **기존 1등 지자기점 관측망 30점 + 좌표 대조표 (단일 출처)** | — (모듈) |
 | `patch_existing_coords.py` | 좌표 전용 응급 패치(멱등) — 재생성 전 임시 경로 | `docs/` |
+| `create_lmm_cinematic.py` | **시네마틱 웹 브리핑 13장면 (단일 HTML)** | `docs/lmm_cinematic.html` |
+
+⚠️ 시네마틱은 `lmm_model.json` 등 배포 자료를 읽는다 — **`lmm_build.py` 를 먼저**
+돌리고 생성할 것. 외부 라이브러리·fetch 없음이 요건이다(검증 시 네트워크 요청이
+자기 자신 1건뿐이어야 한다).
+
+⚠️ **`data/geomag_network_30.csv` 를 「원장」·「정본」이라 부르지 말 것** —
+출처 3항목 미기재. 「지자기점 30점 좌표 대조표(출처 확인 필요)」로 표기한다.
+
+⚠️ **`EXTERNAL_MODE = "subtract_DI"` 의 실제 동작** — D·I 를 관측 성과에서
+**전처리 보정**하고 F 는 보정하지 않는다. `상태==정상` 행 전부를 쓰며
+**QC=QUIET·Kp≤2 필터가 아니다**(그 필터는 `subtract_quiet*` 전용). 예측 시점에는
+External 을 더하지 않는다. JSON 설명은 `_external_layer_note()` 가 모드에서
+생성하므로 **손으로 적지 말 것**.
+| `create_lmm_cinematic.py` | **전문가·발주자용 LMM 시네마틱 웹 브리핑 생성** | `docs/lmm_cinematic.html` |
 
 ⚠️ `survey_review.html` 은 **카드 회신본이 없어도 재생성된다** —
 `python make_survey_map.py --aggregate docs/output/*_일괄취합_103건.xlsx`.
@@ -48,6 +63,19 @@ CLAUDE.md 15-A 절을 읽고 작업할 것 — 이 문서만 보고 종전 방�
 
 ②③④ 는 모두 `lmm_build.py` 산출물을 소비하므로 **반드시 ① 먼저 실행**한다.
 보고서는 수치를 하드코딩하지 않고 `lmm_model.json` 에서 읽으므로 재적합 시 자동 갱신된다.
+
+시네마틱 웹 브리핑:
+```
+python create_lmm_cinematic.py  # → docs/lmm_cinematic.html (단일 파일, 오프라인)
+```
+`lmm_model.json`·`lmm_diagnosis.json`·기존망/현장조사/밀도 GeoJSON을 읽어 수치와
+지도를 인라인한다. **30점 공간망과 현재 모델 입력 16점, 목표 80점 설계 시나리오를
+서로 혼동하지 않는다.** 외부장은 현재 예측층이 아니라 관측 D·I 전처리임을 명시하고,
+LOO KPI 미달 상태를 숨기지 않는다. 자료 갱신 뒤에는 스크립트를 재실행하고 브라우저에서
+13개 장면·키보드 이동·지도 레이어·모바일 레이아웃을 확인한다.
+현재 `EXTERNAL_MODE="subtract_DI"` 는 `QC=QUIET` 전용 필터가 아니다. 따라서
+`lmm_model.json` 의 「편각만 보정·Kp>2 세션 미적용」 문구는 구현과 불일치하며,
+다음 모델 재생성 전에 `lmm_build.py:export_model()` 메타데이터를 정정해야 한다.
 
 보조 스크립트:
 ```
