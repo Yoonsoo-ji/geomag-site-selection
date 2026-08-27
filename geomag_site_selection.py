@@ -2772,11 +2772,27 @@ def save_map_data(
         out_gdf.to_file(str(data_dir / f"candidates_p{p}.geojson"), driver="GeoJSON")
 
     # ── 기존 측정점 ─────────────────────────────────────────
+    # `net` 속성으로 관측망 구분을 실어 지도에서 세 갈래로 나눈다.
+    #   target(15)     1등 지자기점 관측망 중 선점 대상
+    #   other(15)      관측망이나 저수지(제방) 설치라 선점 제외
+    #   superseded(3)  옛 이름·옛 위치 — 관측망에서 뺀다 (경주·임계·언양)
+    # ⚠ 파일명·기존 속성은 그대로 둔다 — make_survey_map·export_globe_sites 가
+    #   이 파일을 읽는다. 속성 추가는 안전하지만 제거·개명은 그들을 깨뜨린다.
     if existing_sites is not None and len(existing_sites) > 0:
+        _tgt = set(EN.EXISTING_TARGET)
+        _net = set(EN.EXISTING_NETWORK)
         features = []
+        n_net_kind = {"target": 0, "other": 0, "superseded": 0}
         for _, r in existing_sites.iterrows():
+            _nm = str(r["도엽명"]).strip()
+            _kind = ("target" if _nm in _tgt
+                     else "other" if _nm in _net
+                     else "superseded")
+            n_net_kind[_kind] += 1
             props = {
                 "name":      str(r["도엽명"]),
+                "net":       _kind,
+                "net_of":    EN.SUPERSEDED.get(_nm),
                 "address":   str(r["주소"])     if pd.notna(r["주소"])     else None,
                 "inst_year": int(r["최초설치"]) if pd.notna(r["최초설치"]) else None,
                 "obs_year":  int(r["관측연도"]),
@@ -2795,6 +2811,9 @@ def save_map_data(
         with open(str(data_dir / "existing_sites.geojson"), "w", encoding="utf-8") as fh:
             json.dump({"type": "FeatureCollection", "features": features}, fh,
                       ensure_ascii=False, indent=None)
+        print(f"    기존 측정점 {len(features)}개 — 관측망 선점대상 "
+              f"{n_net_kind['target']} · 기타 {n_net_kind['other']} · "
+              f"옛 위치 {n_net_kind['superseded']}")
 
     # ── 1:50,000 도엽 격자 ──────────────────────────────────
     if korea_gdf is not None:
@@ -3134,19 +3153,33 @@ def create_folium_map(
         m.get_root().html.add_child(folium.Element(js))
 
     # ── 기존 측정점 레이어 (외부 GeoJSON fetch) ──────────────
-    exist_layer = folium.FeatureGroup(name="⭐ 기존 측정점 (10~25년)", show=True)
-    exist_layer.add_to(m)
-    ev  = exist_layer.get_name()
-    js  = (
+    # survey_review.html 과 같은 갈래로 나눈다 — 두 지도가 같은 관측망을 봐야 한다.
+    #   🎯 선점 대상 15 · ⭐ 기타 15 (= 1등 지자기점 관측망 30점)
+    #   ▫️ 옛 위치 3 (기본 끔) — 자료는 있으나 관측망에서 뺀 점. 감추지 않는다.
+    _exist_layers = [
+        ("target",     "🎯", "#D4A017", 23, True,
+         f"🎯 기존 측정점 — 선점 대상 ({len(EN.EXISTING_TARGET)})"),
+        ("other",      "⭐", "#8B4513", 21, True,
+         f"⭐ 기존 측정점 — 기타·저수지 설치 "
+         f"({len(EN.EXISTING_NETWORK) - len(EN.EXISTING_TARGET)})"),
+        ("superseded", "▫️", "#888888", 17, False,
+         f"▫️ 기존 측정점 — 옛 위치 ({len(EN.SUPERSEDED)}, 관측망 제외)"),
+    ]
+    for _kind, _mk, _col, _sz, _show, _lname in _exist_layers:
+        exist_layer = folium.FeatureGroup(name=_lname, show=_show)
+        exist_layer.add_to(m)
+        ev = exist_layer.get_name()
+        js = (
         "<script>(function(){"
         "fetch('%s/existing_sites.geojson')"
         ".then(function(r){return r.json();})"
         ".then(function(d){"
         "L.geoJSON(d,{"
+        "filter:function(f){return (f.properties.net||'superseded')==='%s';},"
         "pointToLayer:function(f,ll){"
         "var icon=L.divIcon({"
-        "html:'<div style=\"font-size:22px;line-height:1;"
-              "text-shadow:1px 1px 2px rgba(0,0,0,0.4);\">⭐</div>',"
+        "html:'<div style=\"font-size:%dpx;line-height:1;"
+              "text-shadow:1px 1px 2px rgba(0,0,0,0.4);\">%s</div>',"
         "className:'',iconAnchor:[11,11]});"
         "return L.marker(ll,{icon:icon});"
         "},"
@@ -3154,7 +3187,11 @@ def create_folium_map(
         "var p=f.properties;"
         "var vf=function(x,fmt){return(x===null||x===undefined)?'-':fmt(x);};"
         "var html='<div style=\"font-family:sans-serif;font-size:12.5px;min-width:260px;\">'"
-        "+'<b style=\"color:#8B4513;\">⭐ 기존 측정점: '+p.name+'</b><br>'"
+        "+'<b style=\"color:%s;\">%s 기존 측정점: '+p.name+'</b>'"
+        "+((p.net==='superseded')?'<br><span style=\"color:#a00;font-size:11px;\">"
+        "옛 위치 — 현 관측망은 '+(p.net_of||'-')+' (밀도 계산에서 제외)</span>':'')"
+        "+((p.net==='other')?'<br><span style=\"color:#666;font-size:11px;\">"
+        "저수지(제방) 설치 — 선점 대상 제외</span>':'')"
         "+'<hr style=\"margin:4px 0;\">'"
         "+'<b>위도:</b> '+p.lat.toFixed(6)+'° N &nbsp; <b>경도:</b> '+p.lon.toFixed(6)+'° E<br>'"
         "+'<b>주소:</b> <span style=\"font-size:11px;\">'+(p.address||'-')+'</span><br>'"
@@ -3171,13 +3208,13 @@ def create_folium_map(
         "})"
         "+'</span></div>';"
         "l.bindPopup(html,{maxWidth:290});"
-        "l.bindTooltip('⭐ '+p.name+' ('+p.obs_year+'년 관측)');"
+        "l.bindTooltip('%s '+p.name+' ('+p.obs_year+'년 관측)');"
         "}"
         "}).addTo(%s);"
         "}).catch(function(e){console.warn('existing_sites:',e.message);});"
         "})();</script>"
-    ) % (data_subdir, ev)
-    m.get_root().html.add_child(folium.Element(js))
+        ) % (data_subdir, _kind, _sz, _mk, _col, _mk, _mk, ev)
+        m.get_root().html.add_child(folium.Element(js))
 
     # ── 범례 ─────────────────────────────────────────────────
     n_cands = len(final_wgs)
@@ -3189,6 +3226,10 @@ def create_folium_map(
     n_target_sites = _ds.get("n_target", AG.N_TARGET_SITES)
     unif_km = _ds.get("uniform_km", "—")
     n_net = _ds.get("n_sites", len(EN.EXISTING_NETWORK))
+    n_net_all = len(EN.EXISTING_NETWORK)
+    n_net_tgt = len(EN.EXISTING_TARGET)
+    n_net_oth = n_net_all - n_net_tgt
+    n_net_old = len(EN.SUPERSEDED)
 
     def _swatch(color, label):
         return (f'<span style="background:{color};display:inline-block;'
@@ -3249,8 +3290,11 @@ def create_folium_map(
       {_dot('#FF8800',f'2등급 우선: {n_p2}개')}
       {_dot('#00BB00',f'3등급 일반: {n_p3}개')}
       <hr style="margin:6px 0;border-color:#ccc;">
-      <b>▸ 기존 측정점</b><br>
-      <span style="display:inline-block;vertical-align:middle;margin-right:4px;">⭐</span>기존 측정점 {n_exist}개 (최신 관측연도)<br>
+      <b>▸ 기존 측정점 — 1등 지자기점 관측망 {n_net_all}점</b><br>
+      <span style="color:#666;font-size:10.5px;">survey_review.html 과 같은 명단</span><br>
+      <span style="display:inline-block;vertical-align:middle;margin-right:4px;">🎯</span>선점 대상 {n_net_tgt}점<br>
+      <span style="display:inline-block;vertical-align:middle;margin-right:4px;">⭐</span>기타 {n_net_oth}점 <span style="color:#666;">(저수지·제방 설치)</span><br>
+      <span style="display:inline-block;vertical-align:middle;margin-right:4px;">▫️</span>옛 위치 {n_net_old}점 <span style="color:#666;">(관측망·밀도계산 제외) ¶</span><br>
       <hr style="margin:6px 0;border-color:#ccc;">
       <small style="color:#555;">
         격자 간격: {GRID_SPACING_M//1000} km | 좌표계: WGS84/EPSG:5179<br>
@@ -3261,6 +3305,10 @@ def create_folium_map(
         ‡ 구배가 크면 그 지점의 값이 주변을 대표하지<br>
         &nbsp;&nbsp;못하고 2.8 km 격자 기반 지각장 보정도<br>
         &nbsp;&nbsp;빗나간다 → 측점은 조용한 자리에.<br>
+        ¶ 경주(2015)·임계(2016)·언양(2022)은 각각 영천·<br>
+        &nbsp;&nbsp;삼척·양산으로 대체된 옛 위치다. 앞 둘은 현<br>
+        &nbsp;&nbsp;측점에서 23·31 km 떨어져 있어 관측망에 세면<br>
+        &nbsp;&nbsp;경북·강원 공백이 실제보다 작게 나온다.<br>
         § 지각장이 복잡한 권역일수록 한 점의 대표성이<br>
         &nbsp;&nbsp;낮아 더 많은 점으로 평균해야 한다 →<br>
         &nbsp;&nbsp;권역은 조밀하게. 두 축은 「복잡한 권역에<br>
