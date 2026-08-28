@@ -7,7 +7,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 
@@ -30,6 +29,10 @@ h1,h2,h3,.loop-note,.warning,.decision{text-wrap:balance;word-break:keep-all;ove
 p,li,.lead,.axis-card p,.case p,.usecase p,.feedback-card p,.phase li,
 .flow-node span,.stat small,.layer small{text-wrap:pretty;word-break:keep-all;overflow-wrap:normal;line-break:strict}
 .no-break{white-space:nowrap}
+.webgl-toggle{margin-left:auto;flex:0 0 auto;border:1px solid var(--cyan);border-radius:999px;background:rgba(12,18,28,.72);color:var(--cyan);padding:7px 11px;font:800 10px/1 Consolas,monospace;letter-spacing:.08em}.webgl-toggle[hidden]{display:none}
+#heroWebGL{opacity:.9}.webgl-paused .webgl-surface{visibility:hidden}.webgl-badge{position:absolute;right:18px;top:18px;z-index:4;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(7,12,20,.65);color:var(--cyan);font:700 9px/1 Consolas,monospace;letter-spacing:.08em;pointer-events:none}
+.density-webgl{position:absolute;inset:0;z-index:2;opacity:0;visibility:hidden}.density-webgl canvas{width:100%!important;height:100%!important}.map-shell.webgl-view .density-webgl{opacity:1;visibility:visible}.map-shell.webgl-view>#densityMap{opacity:0}.map-view-label{display:none}.map-shell.webgl-view .map-view-label.webgl-copy,.map-shell:not(.webgl-view) .map-view-label.map-copy{display:inline}.webgl-unavailable [data-density-view="3d"]{display:none}
+.layer-composite{display:grid;gap:9px}.layer-webgl{height:238px;position:relative;overflow:hidden;border:1px solid var(--line);border-radius:18px;background:var(--panel)}.layer-webgl canvas{display:block;width:100%;height:100%}.layer-composite .layer-stack{gap:6px}.layer-composite .layer{padding:10px 14px;grid-template-columns:42px 1fr auto}.layer-composite .layer .n{font-size:16px}.layer-composite .layer b{font-size:14px}.layer-composite .layer small{font-size:11.5px}
 h1{font-size:clamp(44px,6.4vw,96px);line-height:.96;letter-spacing:-.055em}
 h2{font-size:clamp(34px,4.35vw,62px);line-height:1.08;letter-spacing:-.038em}
 h3{font-size:clamp(18px,1.55vw,24px);line-height:1.32}
@@ -263,9 +266,7 @@ def render_variant(theme_key: str, payload: dict) -> Path:
     )
     if theme_key == "B":
         text = text.replace('<meta name="color-scheme" content="dark">', '<meta name="color-scheme" content="light">')
-    text = text.replace(
-        "__PAYLOAD__", json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    )
+    text = base.render_template(text, payload)
     out = OUT_DIR / f"lmm_cinematic_{theme_key}.html"
     out.write_text(text, encoding="utf-8")
     return out

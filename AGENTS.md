@@ -28,6 +28,7 @@
 | `patch_existing_coords.py` | 좌표 전용 응급 패치(멱등) — 재생성 전 임시 경로 | `docs/` |
 | `create_lmm_cinematic.py` | **시네마틱 웹 브리핑 13장면 (단일 HTML)** | `docs/lmm_cinematic.html` |
 | `create_lmm_cinematic_previews.py` | **A/B/C 디자인 비교본 생성(배포본 미변경)** | `docs/design_previews/` |
+| `vendor/three.r149.min.js` | **시네마틱 오프라인 WebGL 런타임(MIT, SHA-256은 vendor/README.md)** | HTML에 인라인 |
 | `parse_point_register.py` | **지자기 점조서 → 관측망 30점 좌표 정본** | `data/geomag_network_30.csv` |
 
 ⚠️ 시네마틱은 `lmm_model.json` 등 배포 자료를 읽는다 — **`lmm_build.py` 를 먼저**
@@ -44,6 +45,22 @@
 반영하고, 권역 밀도는 반경 25 km 자기이상의 추세제거 표준편차 σ를 공간복잡도로 쓴다.
 **1 km 해상도 분석으로 표현하지 말 것.** 모든 캔버스 지도에는 울릉도·독도 위치
 인셋을 표시한다. 1280×720과 모바일 390 px에서 가로 넘침을 회귀검증할 것.
+
+✅ **시네마틱 WebGL 고도화**(2026-08-28) — 공식 Three.js r149(MIT)를
+`vendor/three.r149.min.js`에 고정하고 생성 시 HTML 안에 인라인한다. 런타임 CDN·모듈
+fetch를 추가하지 말 것. 표지는 한반도 경계·관측점·자기력선, 4번 장면은 상대 부족도
+기둥(색·높이)과 2D/3D 전환, 5번 장면은 Core–Regional–Crustal–External 4층 파장
+모식도를 WebGL로 그린다. 4번 3D 지도는 약 74초/회 속도로 360° 자동 회전하며,
+마우스·터치 드래그 궤도 회전과 `자동 회전 ON/OFF`를 제공한다. ±몇 도의 시차효과만
+주어 정지 화면처럼 보이게 되돌리지 말 것. 5번 4층 모식도는 같은 파형판 네 장을
+쌓지 않는다: **Core=지구 내부+전 지구 자기력선, Regional=한반도 전역 판+16측점,
+Crustal=국지 양·음 이상 기둥, External=상공 시간 펄스+하향 화살표**로 역할을 구분한다.
+아래 네 층 카드는 해당 층 단독 보기 토글이며 같은 카드를 다시 누르면 결합 보기로
+돌아간다. External은 예측 합산층이 아니라 현재 관측 D·I 전처리임을 포커스 문구에
+유지한다. 전문 설명과 수치는 DOM에 남겨 접근성을 보장한다.
+WebGL 미지원·사용자 OFF에는 기존 2D 캔버스로 폴백하며, 모바일은 2D가 기본이고
+`prefers-reduced-motion`에서는 정지 화면만 렌더한다. 브라우저 콘솔 오류 0,
+외부 script/fetch 0, 360–1600 px 가로 넘침 0을 확인할 것.
 
 한글 조판은 `word-break:keep-all` + `overflow-wrap:normal` + `line-break:strict`가
 기본이다. 본문은 `text-wrap:pretty`, 제목만 `balance`를 쓴다. `break-word`를 다시
