@@ -89,6 +89,7 @@ h3{font-size:clamp(18px,1.55vw,24px);line-height:1.32}
 .lead{font-size:clamp(17px,1.55vw,23px);line-height:1.58}
 .grid2 h2{font-size:clamp(34px,3.65vw,52px);line-height:1.1}.grid2 .lead{font-size:clamp(17px,1.42vw,21px)}
 .axis-pair{margin-top:20px}.axis-card{padding:18px}.axis-card .symbol{font-size:30px}.axis-card h3{margin-bottom:10px}.axis-card p{font-size:14px;line-height:1.58;margin-bottom:0}
+.axis-card{display:grid;grid-template-rows:48px auto 1fr}.axis-card .symbol{height:48px;margin-bottom:0;display:flex;align-items:center;gap:14px}.axis-card .symbol sub{display:inline-block;font-size:.52em;line-height:1;vertical-align:baseline;transform:translateY(.3em)}.axis-card .notation{flex:0 0 auto;line-height:1}.axis-card.point .notation{font-size:34px}.axis-card.region .notation{font-size:38px}.axis-card .symbol-meaning{padding-left:13px;border-left:1px solid currentColor;color:#eef2ff;font-family:"Pretendard","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;font-size:12px;font-weight:700;line-height:1.3;letter-spacing:-.01em;white-space:nowrap}.axis-card .symbol-meaning small{display:block;margin-top:2px;color:var(--muted);font-family:inherit;font-size:10.5px;font-weight:500;line-height:1.2}.axis-card h3{margin-top:10px}
 .loop-note{font-size:14px;line-height:1.55}.warning{font-size:13.5px;line-height:1.55}.map-note{font-size:11.5px}.stat small{font-size:13px}.algo-step b{font-size:15px}.algo-step p{font-size:12.5px}.feedback-card p{font-size:13px}.case p{font-size:14px}
 .adaptive-scene .grid2{grid-template-columns:minmax(430px,.9fr) minmax(540px,1.1fr)}
 .adaptive-scene h2{font-size:clamp(32px,3.3vw,47px);margin-bottom:13px}.adaptive-scene .lead{margin-bottom:0}
@@ -180,8 +181,8 @@ h3{font-size:clamp(18px,1.55vw,24px);line-height:1.32}
     <div class="eyebrow reveal">TWO SCALES, ONE RULE</div><h2 class="reveal">권역 밀도는 공간복잡도로,<br>후보점은 국소 구배로 설계합니다.</h2>
     <p class="lead reveal">항공자력 자료를 <strong>점 대표성</strong>과 <strong>권역 밀도</strong>라는 서로 다른 질문에 사용합니다.</p>
     <div class="axis-pair reveal" style="--delay:120ms">
-      <article class="axis-card point"><div class="symbol">|∇ΔT|</div><h3>① 후보점 대표성 · <b>저구배 우대</b></h3><p>KIGAM 1.5분(약 2.8 km) 격자를 중앙차분한 수평 공간구배(nT/km)를 후보 178점의 s5에 실제 반영했습니다. <b>1 km 해상도 분석은 아니며</b>, 최종 확정은 현장 정밀 자력측량으로 합니다.</p></article>
-      <article class="axis-card region"><div class="symbol">σ<sub>25 km</sub></div><h3>② 권역 밀도 · <b>고복잡도 보강</b></h3><p>반경 25 km 자기이상에서 1차 지역추세를 제거한 표준편차 σ를 <b>자기이상 공간복잡도</b>로 사용합니다. σ가 클수록 권장 간격을 줄입니다.</p></article>
+      <article class="axis-card point"><div class="symbol"><span class="notation">|∇ΔT|</span><span class="symbol-meaning">자기이상 공간구배의 크기<small>단위: nT/km</small></span></div><h3>① 후보점 대표성 · <b>저구배 우대</b></h3><p>KIGAM 1.5분(약 2.8 km) 격자를 중앙차분한 수평 공간구배(nT/km)를 후보 178점의 s5에 실제 반영했습니다. <b>1 km 해상도 분석은 아니며</b>, 최종 확정은 현장 정밀 자력측량으로 합니다.</p></article>
+      <article class="axis-card region"><div class="symbol"><span class="notation">σ<sub>25 km</sub></span><span class="symbol-meaning">자기이상 추세 제거 표준편차<small>반경 25 km · 단위: nT</small></span></div><h3>② 권역 밀도 · <b>고복잡도 보강</b></h3><p>반경 25 km 자기이상에서 1차 지역추세를 제거한 표준편차 σ를 <b>자기이상 공간복잡도</b>로 사용합니다. σ가 클수록 권장 간격을 줄입니다.</p></article>
     </div>
     <div class="loop-note reveal" style="--delay:190ms"><b>고복잡도 권역을 보강하되, 그 안에서는 저구배 후보점을 고릅니다.</b></div><div class="warning reveal" style="--delay:230ms">Neyman 배분과 s5 곡선은 결측·소표본 한계가 있는 <strong>잠정 설계안</strong>입니다.</div>
   </div>
