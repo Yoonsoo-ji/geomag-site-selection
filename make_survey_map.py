@@ -36,6 +36,7 @@ PHOTO_DIR = ROOT / "docs" / "survey_photos"
 # 기존 지자기 측정점 30점 — **단일 출처는 existing_network.py** 다.
 # 입지 선정 지도(geomag_site_selection)의 관측망 밀도 설계도 같은 명단을 쓴다.
 # 여기에 사본을 두면 두 지도가 조용히 갈라진다(CLAUDE.md 12-G 참조).
+from aggregate_survey_xlsx import MERGED_INTO_EXISTING
 from existing_network import (EXISTING_ALIAS, EXISTING_TARGET,
                               EXISTING_NETWORK as EXISTING_USE)
 
@@ -319,8 +320,31 @@ def add_topo_layer(m):
     return len(fc["features"])
 
 
-def _existing_popup(name, pr, target):
-    """기존 측정점 팝업."""
+def _survey_block(d):
+    """기존점에서 수행한 사전 답사 요약 — 기존점 팝업 꼬리에 붙인다."""
+    from aggregate_survey_xlsx import mark_max_dist, review
+
+    grade, concl, note = review(d)
+    md = mark_max_dist(d)
+    rows = [f"<b>관리번호:</b> {esc(d['관리번호'])} &nbsp; "
+            f"<b>후보지명:</b> {esc(d['후보지명'])}",
+            f"<b>종합판정:</b> {esc(d['종합판정'])} &nbsp; "
+            f"<b>방위표지:</b> {esc(d['방위표지'])}"
+            + (f" (최장 {md:.0f}m)" if md is not None else "")]
+    if d.get("조사일") or d.get("조사자"):
+        rows.append(f"<b>조사일:</b> {esc(d.get('조사일') or '-')} &nbsp; "
+                    f"<b>조사자:</b> {esc(d.get('조사자') or '-')}")
+    if note:
+        rows.append(f"<span style='color:#555'>{esc(note)}</span>")
+    return ("<div style='margin-top:5px;padding:5px 7px;background:#EEF5EC;"
+            "border-left:3px solid #2E8B57;font-size:11px;color:#24503A'>"
+            "<b>📋 사전 현장답사 — 이 기존점에서 실시</b><br>"
+            + "<br>".join(rows)
+            + f"<br><b>검토:</b> [{grade}] {esc(concl)}</div>")
+
+
+def _existing_popup(name, pr, target, survey=None):
+    """기존 측정점 팝업. `survey` 가 있으면 그 점에서 한 답사 기록을 덧붙인다."""
     vf = lambda x, u="": f"{x:.4f}{u}" if isinstance(x, (int, float)) else "-"
     head = ("🎯 선점 대상 기존점" if target else "⭐ 기존 측정점")
     col = "#B8860B" if target else "#8B4513"
@@ -333,6 +357,8 @@ def _existing_popup(name, pr, target):
             "border-left:3px solid #AAA;font-size:11px;color:#555'>"
             "저수지(제방) 설치점 — 지반 거동·수위 변동으로 표석 지속성이 "
             "확보되지 않아 선점 대상에서 제외.</div>")
+    if survey is not None:
+        tail += _survey_block(survey)
     return (
         f"<div style='font-family:\"맑은 고딕\",sans-serif;font-size:12.5px;min-width:250px'>"
         f"<b style='color:{col}'>{head}: {esc(name)}</b><hr style='margin:4px 0'>"
@@ -346,7 +372,7 @@ def _existing_popup(name, pr, target):
         f"{tail}</div>")
 
 
-def add_existing_layer(m):
+def add_existing_layer(m, merged=None):
     """기존 지자기 측정점(EXISTING_USE 30) 토글 — 두 레이어로 분리.
 
       · 🎯 선점 대상 (16) — 표석 지속성이 확보되는 점. 강조 마커, 기본 켬.
@@ -354,6 +380,7 @@ def add_existing_layer(m):
 
     반환 (선점대상 수, 기타 수).
     """
+    merged = merged or {}
     p = DATA / "existing_sites.geojson"
     if not p.exists():
         return 0, 0
@@ -392,9 +419,12 @@ def add_existing_layer(m):
                                         "text-shadow:1px 1px 2px rgba(0,0,0,.4)'>⭐</div>"),
                                   icon_anchor=(11, 11))
             tip = f"기존 측정점: {name}"
+        sv = merged.get(gname) or merged.get(name)
+        if sv is not None:
+            tip += " · 📋 답사 실시"
         folium.Marker([pr["lat"], pr["lon"]], icon=icon, tooltip=tip,
-                      popup=folium.Popup(_existing_popup(name, pr, target),
-                                         max_width=320)).add_to(fg)
+                      popup=folium.Popup(_existing_popup(name, pr, target, sv),
+                                         max_width=340)).add_to(fg)
         return 1
 
     nt = sum(put(n, fg_t, True) for n in EXISTING_TARGET)
@@ -421,6 +451,14 @@ def build(records):
     counts = {}
     bangwi = {}
     prio = sheet_priority(records)   # B 도엽 대표/예비
+    # 기존점에서 실시한 답사는 등급 마커로 세우지 않는다 — 같은 표석이 두 번
+    # 계상된다(DS-047 화천은 관측망 화천과 12 m). 기존점 팝업으로 넘긴다.
+    merged = {}
+    for d in records:
+        nm = MERGED_INTO_EXISTING.get(d["관리번호"])
+        if nm:
+            merged[nm] = d
+    records = [d for d in records if d["관리번호"] not in MERGED_INTO_EXISTING]
     for d in records:
         lat, lon = fnum(d["위도"]), fnum(d["경도"])
         if lat is None or lon is None:
@@ -450,7 +488,7 @@ def build(records):
         groups[k].add_to(m)
 
     add_topo_layer(m)
-    n_tgt, n_oth = add_existing_layer(m)
+    n_tgt, n_oth = add_existing_layer(m, merged)
 
     folium.LayerControl(collapsed=False).add_to(m)
     total = sum(counts.values())

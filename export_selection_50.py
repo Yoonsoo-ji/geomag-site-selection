@@ -5,11 +5,16 @@
 
 survey_review.html 이 「선점 검토」로 세는 세 갈래를 한 파일로 낸다:
 
-  · 등급 A          6점 — 자기 청정 + 방위표지 좌표거리 ≥100 m
-  · 등급 B 도엽대표 28점 — 자기 청정이나 표지 <100 m, 도엽 대표(A 승격 1순위)
+  · 등급 A          5점 — 자기 청정 + 방위표지 좌표거리 ≥100 m
+  · 등급 B 도엽대표 29점 — 자기 청정이나 표지 <100 m, 도엽 대표(A 승격 1순위)
   · 기존점 선점대상 16점 — 1등 지자기점 관측망 30점 중 표석 지속성 확보분
                            (2026-09-02 함양 추가)
                                                         합계 **50점**
+
+⚠️ **기존점에서 실시한 답사는 기존점 행으로 합친다**(`AG.MERGED_INTO_EXISTING`).
+사전 답사는 신규 후보지뿐 아니라 기존 지자기점에서도 했으므로, 그 카드를 등급
+후보로 따로 세우면 같은 표석이 두 번 계상된다 — DS-047 「화천 기존점」은 관측망
+화천과 **12 m** 떨어진 같은 자리였다. 답사 내용은 기존점 행에 열로 남긴다.
 
 ⚠️ **B 예비 7점은 넣지 않는다.** 자침편각 표기는 도엽당 1점이면 충분하므로
 같은 도엽의 후순위 B 를 유효 후보로 세면 과대계상이 된다(14절 참조).
@@ -66,6 +71,10 @@ def gather_survey():
         sys.exit(f"[중단] 취합본 없음: {AGGREGATE}")
     recs = AG.load_aggregate(AGGREGATE)
     prio = AG.sheet_priority(recs)
+    # 기존점에서 한 답사는 여기서 빼고 `gather_existing()` 이 기존점 행에 붙인다.
+    merged = {AG.MERGED_INTO_EXISTING[d["관리번호"]]: d
+              for d in recs if d["관리번호"] in AG.MERGED_INTO_EXISTING}
+    recs = [d for d in recs if d["관리번호"] not in AG.MERGED_INTO_EXISTING]
     out = []
     for d in recs:
         grade, concl, note = AG.review(d)
@@ -79,10 +88,10 @@ def gather_survey():
         d = dict(d)
         d["_구분"], d["_사유"], d["_결론"], d["_의견"] = kind, why, concl, note
         out.append(d)
-    return sorted(out, key=lambda d: (d["_구분"], d["관리번호"]))
+    return sorted(out, key=lambda d: (d["_구분"], d["관리번호"])), merged
 
 
-def gather_existing():
+def gather_existing(merged=None):
     """기존 관측망 중 선점 대상 — 좌표·성과는 **지도와 같은 파일**에서 읽는다.
 
     ⚠️ 대조표(점조서) 좌표를 그대로 쓰면 안 된다. 프로젝트 규칙은
@@ -94,6 +103,7 @@ def gather_existing():
     """
     import json
 
+    merged = merged or {}
     gj = ROOT / "docs" / "data" / "existing_sites.geojson"
     if not gj.exists():
         sys.exit(f"[중단] 측점 geojson 없음: {gj} — geomag_site_selection.py 를 먼저 실행")
@@ -111,7 +121,7 @@ def gather_existing():
             continue
         pr, lat, lon = feats[nm]
         r = reg.loc[nm] if nm in reg.index else {}
-        rows.append({
+        row = {
             "지점명": nm,
             "지점코드": _s(r.get("지점코드")),
             "도엽번호": _s(r.get("도엽번호")),
@@ -126,7 +136,23 @@ def gather_existing():
             "복각": _f(pr.get("incl")),
             "총자력": _f(pr.get("total")),
             "관측장비": _s(r.get("관측장비")),
-        })
+        }
+        sv = merged.get(nm)
+        if sv is not None:
+            g, concl, note = AG.review(sv)
+            md = AG.mark_max_dist(sv)
+            row.update({
+                "답사 관리번호": _s(sv["관리번호"]),
+                "답사 후보지명": _s(sv["후보지명"]),
+                "답사 종합판정": _s(sv["종합판정"]),
+                "답사 등급": g,
+                "답사 방위표지": _s(sv["방위표지"]),
+                "답사 방위표지 최장(m)": md,
+                "답사일": _s(sv["조사일"]),
+                "답사자": _s(sv["조사자"]),
+                "답사 검토": concl,
+            })
+        rows.append(row)
     return rows
 
 
@@ -169,7 +195,8 @@ def write_table(ws, hdr, rows, widths, start=1, fills=None, numfmt=None):
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    sv, ex = gather_survey(), gather_existing()
+    sv, merged = gather_survey()
+    ex = gather_existing(merged)
     n_a = sum(1 for d in sv if d["_구분"] == "A")
     n_b = sum(1 for d in sv if d["_구분"] == "B")
     total = len(sv) + len(ex)
@@ -215,7 +242,8 @@ def main():
             "도엽번호": r["도엽번호"], "도엽명": r["지점명"],
             "위도": r["위도"], "경도": r["경도"], "표고(m)": r["표고"],
             "소재지": r["소재지"],
-            "선정 사유": "기존 관측망 · 표석 지속성 확보",
+            "선정 사유": ("기존 관측망 · 표석 지속성 확보"
+                        + (" · 사전답사 실시" if r.get("답사 관리번호") else "")),
             "비고": (f"성과 {int(r['관측연도'])}년" if r["관측연도"] else "")
                     + (f" · 점조서 {r['최종관측']}" if r["최종관측"] else ""),
         })
@@ -269,25 +297,30 @@ def main():
     ws3["A1"].font = Font(name=FONT, size=13, bold=True, color=NAVY)
     ws3["A2"] = ("좌표·성과는 지도(existing_sites.geojson)와 같은 값 — 22~25 성과표가 "
                  "있으면 그 값, 없으면 점조서(2025.12.15) 최종관측 행. "
-                 "나머지 14점은 저수지(제방) 설치점으로 표석 지속성 미확보 판정.")
+                 "나머지 14점은 저수지(제방) 설치점으로 표석 지속성 미확보 판정. "
+                 "「답사」 열은 그 기존점에서 실시한 사전 현장답사 기록이다.")
     ws3["A2"].font = Font(name=FONT, size=9, color="666666")
     # ⚠️ 성과값은 geojson(성과표 우선 병합), 「점조서 최종관측」은 대조표에서
     #    온다 — 두 출처가 다를 수 있으므로 **열을 나눠** 적는다. 하나로 합치면
     #    조도처럼 「2010연구성과」 옆에 성과표 값이 서는 짝이 생긴다.
     h3 = ["지점명", "지점코드", "도엽번호", "위도", "경도", "표고(m)", "소재지",
           "성과 연도", "편각(°)", "복각(°)", "총자력(nT)",
-          "점조서 최종관측", "점조서 관측횟수", "점조서 관측장비"]
+          "점조서 최종관측", "점조서 관측횟수", "점조서 관측장비",
+          "답사 관리번호", "답사 후보지명", "답사 종합판정", "답사 등급",
+          "답사 방위표지", "답사 방위표지 최장(m)", "답사일", "답사자", "답사 검토"]
     alias = {"편각(°)": "편각", "복각(°)": "복각", "총자력(nT)": "총자력",
              "표고(m)": "표고", "성과 연도": "관측연도",
              "점조서 최종관측": "최종관측", "점조서 관측횟수": "관측횟수",
              "점조서 관측장비": "관측장비"}
     r3 = [{k: r.get(alias.get(k, k)) for k in h3} for r in ex]
-    write_table(ws3, h3, r3, [10, 10, 13, 11, 11, 9, 44, 10, 11, 11, 12, 15, 12, 13],
+    write_table(ws3, h3, r3,
+                [10, 10, 13, 11, 11, 9, 44, 10, 11, 11, 12, 15, 12, 13,
+                 12, 14, 12, 8, 11, 15, 12, 14, 34],
                 start=4, fills=[BAND["기존점"]] * len(r3),
                 numfmt={"위도": "0.000000", "경도": "0.000000", "표고(m)": "0.0",
                         "편각(°)": "0.0000", "복각(°)": "0.0000",
                         "총자력(nT)": "#,##0.0", "성과 연도": "0",
-                        "점조서 관측횟수": "0"})
+                        "점조서 관측횟수": "0", "답사 방위표지 최장(m)": "0.0"})
 
     # ── 중복 위치 점검 — 세 갈래를 합치면 같은 표석이 두 번 셀 수 있다 ──
     import numpy as np
