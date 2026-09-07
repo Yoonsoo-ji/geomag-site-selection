@@ -4,8 +4,14 @@
 ======================================================================================
 
 선점 검토 50점(등급 A 5 · B 도엽대표 29 · 기존 관측망 선점대상 16)의 시험 탐사용
-표준 야장. 중간보고 자료 23면의 기록양식 3종 중 셋째 **「자기교란 확인표」**다 —
-앞의 둘(도상선점표 103점 · 현황조사표 34점)은 이미 끝났다.
+**사무실 정리 야장**. 중간보고 자료 23면의 기록양식 3종 중 셋째
+**「자기교란 확인표」**다 — 앞의 둘(도상선점표 103점 · 현황조사표 34점)은 끝났다.
+현장 기록은 `make_trial_field_card.py` 의 점별 카드로 받는다.
+
+⚠️ **절대측정(D·I)은 이 단계에 없다**(2026-09-07 사용자 확인). 원 계획 31면의
+선점실시 절차는 「GNSS 수신기 → 오버하우저 자기구배 확인 → 중심점 선정 및 표지
+설치」이며 DI-flux 절대관측은 선점이 «끝난 뒤»의 별도 단계다. 따라서 §19①·§20 도
+이 야장의 게이트가 아니고, 재는 것은 **오버하우저 총자력뿐**이다.
 
     python make_trial_survey_book.py
 
@@ -29,10 +35,10 @@ IAGA 측선 규격·수직 구배·정량 판정기준·이동식 Variometer·�
 | **C3** `ΔF/거리` 와 「그 점의 자기구배」를 같은 것으로 다룸 | **부호를 보존**한 중심점기준 변화율·절댓값·**인접구간 변화율**을 각각 다른 열로. 지점 대표값은 **확정하지 않는다**(국내 적용방안 결정 전) |
 | **C4** 4방향 측선으로 「반경 10 m 전체」를 판정 못 함 | 표현을 **「반경 10 m 내 4개 방위 측선의 관측점에서 확인된 변화」**로 한정. 50 nT 연산도 `max|F−P0|` 와 `max−min` 둘 다 두고 «정의 미확정» 표기 |
 | **C5** 옮긴 중심점의 적합성 재확인 절차 없음 | 최초 후보 중심과 최종 중심에 **다른 Location ID** · 재측정 여부를 명시 필드로 |
-| **C6** D·I 원시관측과 F 판독의 연결이 불완전 | **Observation ID** 신설 · D/I 행이 대응 F 의 Observation ID 를 직접 가리킨다 |
+| **C6** D·I 원시관측과 F 판독의 연결이 불완전 | ⚠️ **해당 없음으로 바뀌었다** — 절대측정을 이 단계에서 하지 않으므로 D·I 관측행 자체가 없다(2026-09-07) |
 | **M1** 수직 기준높이·산출물 미정의 | 기준높이·실제 센서 중심높이·측정기준면 기록. 자동 판정하지 않고 기술지표만 |
 | **M2** 작업량이 «행 수»로 과소 표현 | 행마다 3회 판독이면 점당 **192 회**다. ⑯ 에 산정표를 싣는다 |
-| **M3** PPM 1대인데 기기대조 시트가 2대를 전제 | ⑫ 를 «1대 조건에서 가능한 절차»로 한정하고 교차배치는 **2대 확보 시에만**으로 명시 |
+| **M3** PPM 1대인데 기기대조 시트가 2대를 전제 | 두지점 F 시트 자체를 **뺐다** — 절대측정 절차라 이 단계에 없다 |
 | **M4** §13② 시설별 증빙 필드 없음 | 시설 «유형마다 한 행» — ID·출처·기준일·좌표·도상·현장·방법·사진·판정·확인자 |
 | **M5** 미원 HOLD 범위 불명확 | 「현 물리점 식별 / 공식 좌표 확인 / 과거점 동일성 / 성분별 대조」 넷으로 분리 |
 | **M6** 중단·결측 시 세트 처리 규칙 없음 | Set 상태·중단시각·사유·재시작 Set ID |
@@ -737,94 +743,22 @@ def sheet_center(wb, pts):
     return ws
 
 
-# ═══════════════════════════════════════════════ ⑫ 절대측정 관측행
-def sheet_session(wb):
-    ws = wb.create_sheet("⑫ 절대측정 관측행")
-    title(ws, "Y", "절대측정 — 세션 아래 «관측행». 이 시트가 야장의 중심이다")
-    note(ws, 2, "Y", "연결키: Observation ID — Site — Visit — Date — Session — Seq — "
-                     "Component — Location — Instrument. 하나만 비어도 D·I·F 를 다시 묶을 수 "
-                     "없다. 과거에 F 시각이 사라진 것이 정확히 이 결합의 실패였다.")
-    note(ws, 3, "Y", "⚠ F 는 «판독마다» 초 단위 시각을 적는다(§19①6 총자기장·시간 동시 측정). "
-                     "D·I 행은 「대응 F Obs ID」에 그 시각의 F 관측행을 직접 가리킨다 — 이것이 "
-                     "없으면 §19①6 충족 여부를 사후에 확인할 수 없다. §20 20분은 「소요(분)」이 "
-                     "자동 계산한다.", warn=True)
-    hdr = ["Observation ID", "Site ID", "Visit ID", "관측일자", "Session", "Seq",
-           "Component", "Location ID", "Instrument", "시작 시각(KST)", "종료 시각(KST)",
-           "소요(분)\n계산", "UTC 시작\n계산", "대응 F Obs ID", "Variometer 파일 ID",
-           "원시 판독(gon)", "단위", "D(°)", "I(°)", "F(nT)", "센서 높이(m)",
-           "관측자", "상태", "상태 사유", "비고"]
-    table(ws, 4, hdr, [15, 11, 10, 12, 9, 6, 12, 13, 14, 19, 19, 10, 19, 15, 14,
-                       14, 8, 11, 11, 12, 11, 11, 13, 22, 24],
-          keys={"Observation ID", "Site ID", "Visit ID", "관측일자", "Session",
-                "Seq", "Component", "Location ID", "Instrument"})
-    N = 600
-    blank_rows(ws, 5, N, len(hdr),
-               fmts={4: "yyyy-mm-dd", 10: DTFMT, 11: DTFMT, 16: "0.0000",
-                     18: "0.0000", 19: "0.0000", 20: "0.0", 21: "0.00"})
-    for r in range(5, 5 + N):
-        cell(ws, r, 12, f'=IF(NOT(AND(ISNUMBER(J{r}),ISNUMBER(K{r}))),"",'
-                        f'(K{r}-J{r})*1440)', fill=FILL_AUTO, fmt="0.0")
-        cell(ws, r, 13, f'=IF(ISNUMBER(J{r}),J{r}-TIME(9,0,0),"")',
-             fill=FILL_AUTO, fmt=DTFMT)
-        cell(ws, r, 17, "gon", fill=FILL_LOCK)
-    dv(ws, f"G5:G{4+N}", ["편각 D", "복각 I", "총자력 F"])
-    dv(ws, f"H5:H{4+N}", ["DI점", "원격점", "Variometer"])
-    dv(ws, f"I5:I{4+N}", ["MinGeo 010B", "GSM-19T", "Variometer", "GNSS"])
-    dv(ws, f"W5:W{4+N}", ["정상"] + STATUS)
-    dv_warn(ws, f"R5:R{4+N}", -20, 0, "한국은 서편각이라 D 가 음수여야 한다. 부호 확인 "
-                                      "(지우지 말고 사유를 비고에).")
-    dv_warn(ws, f"S5:S{4+N}", 30, 70, "복각 I 예상 범위 밖이다. 셀이 날짜 서식으로 "
-                                      "바뀌지 않았는지 확인.")
-    dv_warn(ws, f"T5:T{4+N}", 30000, 60000, "총자력 예상 범위 밖이다.")
-    dv_warn(ws, f"L5:L{4+N}", 0, 20, "§20 관측시간 20분을 넘겼다.")
-    return ws
-
-
-# ═══════════════════════════════════════════════ ⑬ 두지점 F
-def sheet_dualF(wb):
-    ws = wb.create_sheet("⑬ 두지점 F")
-    title(ws, "Q", "두 지점 F (센서 위치차) — A–B–A 로 시간변화를 뺀다")
-    note(ws, 2, "Q", "⚠ **이동 자력계는 GSM-19T 1대가 전제다.** 두 지점을 한 번씩 순차로 재면 "
-                     "「위치차 + 그 사이 시간변화」가 섞이므로, A(DI점) → B(원격점) → A(DI점) "
-                     "순서로 재고 A 두 값의 선형내삽으로 B 시각의 A 값을 추정해 ΔF 를 낸다.",
-         warn=True)
-    note(ws, 3, "Q", "「교차배치(swap)」는 **PPM 2대를 확보했을 때만** 수행한다 — 1대 조건에서는 "
-                     "NOT APPLICABLE 로 남긴다. 과거 야장의 「기본값」은 두 번째 지점 측정값이 "
-                     "아니라 «측정값의 정수부»였다 — 위치차 보정에 쓸 두 지점 F 가 애초에 "
-                     "없었다(68개 전수 확인).")
-    hdr = ["Site ID", "Visit ID", "Set ID", "순서", "Location ID", "실제 거리 A↔B(m)",
-           "방위(기준점→원격점, °)", "기기번호", "센서 높이(m)", "관측 시각(KST)",
-           "F 판독1", "F 판독2", "F 판독3", "중앙값\n계산", "교차배치 여부",
-           "ΔF(위치차, nT)", "비고"]
-    table(ws, 4, hdr, [11, 10, 10, 12, 13, 14, 18, 11, 11, 19, 11, 11, 11, 12,
-                       18, 14, 26], keys={"Site ID", "Visit ID", "Set ID"})
-    N = 250
-    blank_rows(ws, 5, N, len(hdr),
-               fmts={6: "0.00", 7: "0.0", 9: "0.00", 10: DTFMT,
-                     11: "0.0", 12: "0.0", 13: "0.0", 16: "0.0"})
-    for r in range(5, 5 + N):
-        cell(ws, r, 14, f'=IF(COUNT(K{r}:M{r})=0,"",MEDIAN(K{r}:M{r}))',
-             fill=FILL_AUTO, fmt="0.0")
-    dv(ws, f"D5:D{4+N}", ["A1 (DI점)", "B (원격점)", "A2 (DI점 재측)"])
-    dv(ws, f"E5:E{4+N}", ["DI점", "원격점"])
-    dv(ws, f"O5:O{4+N}", ["원배치(1대)", "교차배치(2대 확보 시)", "NOT APPLICABLE"])
-    dv_warn(ws, f"K5:M{4+N}", 30000, 60000, "총자력 예상 범위 밖이다.")
-    return ws
-
-
-# ═══════════════════════════════════════════════ ⑭ 게이트
+# ═══════════════════════════════════════════════ ⑫ 게이트
 def sheet_gate(wb, pts):
-    ws = wb.create_sheet("⑭ 게이트 점검")
-    title(ws, "Q", "법정 요건 · 기록 완전성 게이트 — 통과/실패로만 가른다")
-    note(ws, 2, "Q", "⚠ 정량 임계로 바로 선점을 확정하지 않기 위해 판정을 두 층으로 나눈다. "
+    ws = wb.create_sheet("⑫ 게이트 점검")
+    title(ws, "M", "법정 요건 · 기록 완전성 게이트 — 통과/실패로만 가른다")
+    note(ws, 2, "M", "⚠ 정량 임계로 바로 선점을 확정하지 않기 위해 판정을 두 층으로 나눈다. "
                      "이 시트는 «반드시 통과해야 하는 것»만 다룬다 — 법정 조문과 기록 "
                      "완전성이다. 정량 지표는 ⑮에서 본다.", warn=True)
-    hdr = ["Site ID", "지점명", "§13② 이격", "§17 0.1 nT 판독", "§19① 1일 6세션 이상",
-           "§19①6 F·시각 동시", "§20 정수차 30′", "§20 20분 이내", "§21 상시 기준점 대조",
+    # ⚠️ §19①(1일 6회)·§20(정수차 30′·20분)은 **절대측정의 요건**이라 이 단계에
+    #    해당하지 않는다. 시험 탐사는 오버하우저 총자력만 재고, 절대관측은 선점이
+    #    끝난 뒤의 별도 단계다(원 계획 31면 선점실시 절차).
+    hdr = ["Site ID", "지점명", "§13② 이격", "§14 선점실시 자기환경 확인",
+           "§17 0.1 nT 판독", "§21 시간변화 보정",
            "수평 4방향 Set 검증 OK", "수직 Set 검증 OK", "P0 전·후 반복관측",
-           "두 지점 F(A–B–A)", "참방위각 결정", "좌표 검증", "중심점 확정", "게이트 종합"]
-    table(ws, 4, hdr, [11, 15, 11, 13, 15, 14, 12, 12, 14, 15, 13, 13, 13, 12,
-                       11, 12, 13], keys={"Site ID"})
+           "참방위각 결정", "좌표 검증", "중심점 확정", "게이트 종합"]
+    table(ws, 4, hdr, [11, 15, 11, 17, 13, 14, 15, 13, 13, 12, 11, 12, 13],
+          keys={"Site ID"})
     n_gate = len(hdr) - 3
     for i, p in enumerate(pts, 1):
         r = 4 + i
@@ -833,16 +767,16 @@ def sheet_gate(wb, pts):
         for j in range(3, len(hdr)):
             cell(ws, r, j)
         cell(ws, r, len(hdr),
-             f'=IF(COUNTIF(C{r}:P{r},"실패")>0,"실패",'
-             f'IF(COUNTIF(C{r}:P{r},"통과")={n_gate},"통과","미완"))', fill=FILL_AUTO)
+             f'=IF(COUNTIF(C{r}:L{r},"실패")>0,"실패",'
+             f'IF(COUNTIF(C{r}:L{r},"통과")={n_gate},"통과","미완"))', fill=FILL_AUTO)
     last = 4 + len(pts)
-    dv(ws, f"C5:P{last}", ["통과", "실패", "PENDING", "NOT APPLICABLE"])
+    dv(ws, f"C5:L{last}", ["통과", "실패", "PENDING", "NOT APPLICABLE"])
     return ws
 
 
-# ═══════════════════════════════════════════════ ⑮ 지표·판정
+# ═══════════════════════════════════════════════ ⑬ 지표·판정
 def sheet_result(wb, pts):
-    ws = wb.create_sheet("⑮ 지표·판정")
+    ws = wb.create_sheet("⑬ 지표·판정")
     title(ws, "T", "정량 지표 · 시험 탐사 판정")
     note(ws, 2, "T", f"참고 기준: {SP.CRITERIA_SOURCE['range']} / {SP.CRITERIA_SOURCE['grad']}")
     note(ws, 3, "T", "⚠ 「관측사실」·「국제 참고기준 대비」·「국내 판정상태」를 **분리**한다. "
@@ -872,7 +806,7 @@ def sheet_result(wb, pts):
                  fill=FILL_AUTO)
         if gap:
             c.font = F_WARN
-        cell(ws, r, 16, f"='⑭ 게이트 점검'!Q{r}", fill=FILL_AUTO)
+        cell(ws, r, 16, f"='⑫ 게이트 점검'!M{r}", fill=FILL_AUTO)
         cell(ws, r, 17, f"='⑪ 중심점 최종선정'!F{r}", fill=FILL_AUTO)
     last = 4 + len(pts)
     dv(ws, f"L5:L{last}", ["Variometer 연속기록 + P0 보정 (선형성 검증됨)",
@@ -884,9 +818,9 @@ def sheet_result(wb, pts):
     return ws
 
 
-# ═══════════════════════════════════════════════ ⑯ 검토 반영 추적
+# ═══════════════════════════════════════════════ ⑭ 검토 반영 추적
 def sheet_trace(wb, pts, counts):
-    ws = wb.create_sheet("⑯ 검토 반영·작업량")
+    ws = wb.create_sheet("⑭ 검토 반영·작업량")
     for col, w in zip("ABCDEFG", [10, 34, 26, 34, 20, 20, 24]):
         ws.column_dimensions[col].width = w
     title(ws, "G", "Codex 독립 검토 반영 추적 · 현장 작업량 산정")
@@ -975,12 +909,12 @@ def sheet_trace(wb, pts, counts):
         ("관측행/점", rows_pt, f"{nH} + {nV}", ""),
         ("F 판독/점", reads_pt, f"{rows_pt} × {per_read}회 판독", "3회 판독을 각각 보존"),
         ("F 판독 · 50점", reads_pt * len(pts), f"{reads_pt} × {len(pts)}", ""),
-        ("절대측정/점", "6세션 × 20분 = 2 h",
-         "§19① 6회 이상 · §20 20분 이내", "야간·정온 조건(31면)"),
-        ("점당 소요(가정)", "구배 1.6 h + 절대 3.0 h ≈ 4.6 h",
-         "행당 1.5분 가정 + 설치·철수 1 h", "⚠ 가정값 — 파일럿 실측 필요"),
-        ("50점 총계(가정)", "약 230 h · 관측일 50일",
-         "야간·정온 조건상 1일 1점이 상한에 가깝다", "기상·자기교란 배제분 제외"),
+        ("점당 소요(가정)", "구배 1.6 h + 설치·철수 1 h ≈ 2.6 h",
+         "행당 1.5분 가정", "⚠ 가정값 — 파일럿 실측 필요"),
+        ("50점 총계(가정)", "약 130 h",
+         "2.6 h × 50점", "이동·기상 배제분 제외"),
+        ("절대측정", "이 단계에 없음", "원 계획 31면 선점실시 절차",
+         "선점이 끝난 뒤의 별도 관측 단계"),
     ]
     for k, v, f, n in calc:
         for j, val in enumerate([k, v, f, n], 1):
@@ -992,9 +926,9 @@ def sheet_trace(wb, pts, counts):
     return ws
 
 
-# ═══════════════════════════════════════════════ ⑰ 확인 필요
+# ═══════════════════════════════════════════════ ⑮ 확인 필요
 def sheet_human(wb):
-    ws = wb.create_sheet("⑰ 확인 필요")
+    ws = wb.create_sheet("⑮ 확인 필요")
     for col, w in zip("ABCDE", [6, 36, 52, 22, 20]):
         ws.column_dimensions[col].width = w
     title(ws, "E", "확인 필요 — 이 야장이 답하지 않는 것")
@@ -1059,8 +993,6 @@ def main():
     _, h_last = sheet_horizontal(wb, pts)
     sheet_vertical(wb, pts)
     sheet_center(wb, pts)
-    sheet_session(wb)
-    sheet_dualF(wb)
     sheet_gate(wb, pts)
     sheet_result(wb, pts)
     nH = len(SP.H_DIRECTIONS) * (len(SP.H_OFFSETS_M) + 2)
