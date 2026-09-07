@@ -552,96 +552,106 @@ def sheet_condition(wb):
 # ═══════════════════════════════════════════════ ⑨ 수평 자기구배
 def sheet_horizontal(wb, pts):
     ws = wb.create_sheet("⑨ 수평 자기구배")
-    title(ws, "AB", f"수평 자기구배 — {SP.IAGA_SOURCE}")
-    note(ws, 2, "AB", f"P0 → 방향별 측정 → P0 재측정. 한 방향 "
+    title(ws, "AC", f"수평 자기구배 — {SP.IAGA_SOURCE}")
+    note(ws, 2, "AC", f"P0 → 방향별 측정 → P0 재측정. 한 방향 "
                       f"{', '.join(str(x) for x in SP.H_OFFSETS_M)} m 를 재고 "
-                      f"{'·'.join(SP.H_DIRECTIONS)} 네 방향을 반복한다. 방향마다 P0(전)·P0(후) "
-                      f"행이 따로 있고 그 둘의 «선형보간»으로 각 측정 시각의 중심점을 추정한다.")
-    note(ws, 3, "AB", "오른쪽 계산 칸은 「Set 검증」이 OK 로 나올 때만 값을 냅니다. 유효한 P0 가 "
-                      "앞뒤로 각각 하나씩 있어야 하고 측정시각이 그 사이에 들어와야 하는데, "
-                      "하나라도 어긋나면 숫자 대신 무엇이 잘못됐는지가 표시됩니다. ΔF 와 "
-                      "변화율은 부호를 그대로 두었고 절댓값은 옆 칸에 따로 두었습니다. "
-                      "「중심점기준 변화율」은 중심점과 그 측점 사이의 평균 기울기이고 "
-                      "「인접구간 변화율」은 이웃한 두 측점 사이의 기울기라, 서로 다른 "
-                      "값이니 섞어 쓰지 마세요.", warn=True)
-    hdr = ["Site ID", "지점명", "Set ID", "구분", "방향", "명목거리(m)", "실측거리(m)",
-           "측정 시각(KST)", "F 판독1(nT)", "F 판독2", "F 판독3", "중앙값\n계산",
-           "Set 검증\n계산", "P0전 시각\n계산", "P0전 F\n계산", "P0후 시각\n계산",
-           "P0후 F\n계산", "P0 추정값\n계산", "ΔF(nT)\n계산",
+                      f"{'·'.join(SP.H_DIRECTIONS)} 네 방향을 반복한다. 방향마다 "
+                      f"P0(전)·P0(후) 행이 따로 있고 그 둘의 «선형보간»으로 각 측정 "
+                      f"시각의 중심점을 추정한다.")
+    note(ws, 3, "AC", "오른쪽 계산 칸은 「Set 검증」이 OK 로 나올 때만 값을 냅니다. 같은 "
+                      "Set ID·같은 차수 안에 유효한 P0 가 앞뒤로 각각 하나씩 있어야 하고 "
+                      "측정시각이 그 사이에 들어와야 하는데, 하나라도 어긋나면 숫자 대신 "
+                      "무엇이 잘못됐는지가 표시됩니다. ΔF 와 변화율은 부호를 그대로 두었고 "
+                      "절댓값은 옆 칸에 따로 두었습니다. 「중심점기준 변화율」은 중심점과 "
+                      "그 측점 사이의 평균 기울기이고 「인접구간 변화율」은 이웃한 두 측점 "
+                      "사이의 기울기라, 서로 다른 값이니 섞어 쓰지 마세요.", warn=True)
+    note(ws, 4, "AC", "현장에서 그 방향을 다시 쟀다면 차수를 2, 3 으로 올려 «행을 새로 "
+                      "추가»해 주세요. 1차 행을 고쳐 쓰지 않는 것이 중요합니다. 차수를 "
+                      "비워 두고 같은 Set ID 로 행만 늘리면 P0 가 두 벌이 되어 1차 계산까지 "
+                      "함께 막힙니다.", warn=True)
+    hdr = ["Site ID", "지점명", "Set ID", "차수", "구분", "방향",
+           "명목거리(m)", "실측거리(m)", "측정 시각(KST)",
+           "F 판독1(nT)", "F 판독2", "F 판독3", "중앙값\n계산",
+           "Set 검증\n계산", "P0전 시각\n계산", "P0전 F\n계산",
+           "P0후 시각\n계산", "P0후 F\n계산", "P0 추정값\n계산", "ΔF(nT)\n계산",
            "중심점기준\n변화율(nT/m)\n계산", "|변화율|\n계산",
            "인접구간\n변화율(nT/m)\n계산", "Set 지속(분)\n계산",
            "기기번호", "Variometer\n파일 ID", "Set 상태", "중단 시각·사유", "상태·비고"]
-    table(ws, 4, hdr, [11, 13, 13, 10, 7, 10, 10, 19, 12, 11, 11, 11, 16, 17, 11,
-                       17, 11, 12, 11, 13, 11, 13, 12, 11, 14, 13, 22, 24],
-          keys={"Site ID", "Set ID", "구분"})
-    r = 5
+    table(ws, 5, hdr, [11, 13, 13, 7, 10, 7, 10, 10, 19, 12, 11, 11, 11, 16, 17,
+                       11, 17, 11, 12, 11, 13, 11, 13, 12, 11, 14, 13, 22, 24],
+          keys={"Site ID", "Set ID", "차수", "구분"})
+    r = 6
     for p in pts:
         for d in SP.H_DIRECTIONS:
             setid = f"{p['_sid']}-H{d}"
             seq = ([("P0(전)", None)] + [("측정", o) for o in SP.H_OFFSETS_M]
                    + [("P0(후)", None)])
-            first = r
             for kind, off in seq:
                 isP0 = kind != "측정"
                 base = FILL_P0 if isP0 else FILL_AUTO
-                for j, v in enumerate([p["_sid"], p["지점명"], setid, kind, d, off], 1):
-                    cell(ws, r, j, v, fill=base, fmt="0.0" if j == 6 else None)
-                for j in (7, 8, 9, 10, 11, 24, 25, 26, 27, 28):
-                    cell(ws, r, j, fmt={7: "0.00", 8: DTFMT, 9: "0.0", 10: "0.0",
-                                        11: "0.0"}.get(j),
-                         al=AL_L if j in (27, 28) else AL_C)
-                cell(ws, r, 12, f'=IF(COUNT(I{r}:K{r})=0,"",MEDIAN(I{r}:K{r}))',
+                for j2, v in enumerate([p["_sid"], p["지점명"], setid, 1, kind, d,
+                                        off], 1):
+                    cell(ws, r, j2, v, fill=base,
+                         fmt="0.0" if j2 == 7 else ("0" if j2 == 4 else None))
+                for j2 in (8, 9, 10, 11, 12, 25, 26, 27, 28, 29):
+                    cell(ws, r, j2, fmt={8: "0.00", 9: DTFMT, 10: "0.0",
+                                         11: "0.0", 12: "0.0"}.get(j2),
+                         al=AL_L if j2 in (28, 29) else AL_C)
+                cell(ws, r, 13, f'=IF(COUNT(J{r}:L{r})=0,"",MEDIAN(J{r}:L{r}))',
                      fill=FILL_AUTO, fmt="0.0")
-                # 거리: 실측이 있으면 실측, 없으면 명목
-                dist = f'IF(ISNUMBER(G{r}),G{r},F{r})'
+                dist = f'IF(ISNUMBER(H{r}),H{r},G{r})'
                 if isP0:
-                    for j in range(13, 24):
-                        cell(ws, r, j, fill=FILL_LOCK)
+                    for j2 in range(14, 25):
+                        cell(ws, r, j2, fill=FILL_LOCK)
                 else:
-                    for j, (col, tag) in enumerate(
-                            [("$H", "P0(전)"), ("$L", "P0(전)"),
-                             ("$H", "P0(후)"), ("$L", "P0(후)")], 14):
-                        f = (f'=IF(COUNTIFS($C:$C,$C{r},$D:$D,"{tag}",$L:$L,">0")<>1,'
-                             f'"",SUMIFS({col}:{col},$C:$C,$C{r},$D:$D,"{tag}"))')
-                        cell(ws, r, j, f, fill=FILL_AUTO,
-                             fmt=DTFMT if j in (14, 16) else "0.0")
-                    cell(ws, r, 13,
-                         f'=IF(COUNTIFS($C:$C,$C{r},$D:$D,"P0(전)",$L:$L,">0")<>1,'
-                         f'"P0(전) 유효 1개 아님",'
-                         f'IF(COUNTIFS($C:$C,$C{r},$D:$D,"P0(후)",$L:$L,">0")<>1,'
-                         f'"P0(후) 유효 1개 아님",'
-                         f'IF(NOT(AND(ISNUMBER(N{r}),ISNUMBER(P{r}),ISNUMBER(H{r}))),'
-                         f'"시각 결측",'
-                         f'IF(P{r}<=N{r},"P0 시각 역전",'
-                         f'IF(OR(H{r}<N{r},H{r}>P{r}),"측정시각 구간 밖","OK")))))',
-                         fill=FILL_AUTO, al=AL_C)
-                    cell(ws, r, 18,
-                         f'=IF(M{r}<>"OK","",O{r}+(Q{r}-O{r})*(H{r}-N{r})/(P{r}-N{r}))',
-                         fill=FILL_AUTO, fmt="0.0")
+                    # ⚠️ 조회 키에 «차수»($D)가 들어간다. 이게 없으면 재측정 행이
+                    #    1차 행과 같은 Set 으로 묶여 둘 다 계산이 막힌다.
+                    for j2, (col, tag) in enumerate(
+                            [("$I", "P0(전)"), ("$M", "P0(전)"),
+                             ("$I", "P0(후)"), ("$M", "P0(후)")], 15):
+                        f = (f'=IF(COUNTIFS($C:$C,$C{r},$D:$D,$D{r},$E:$E,"{tag}",'
+                             f'$M:$M,">0")<>1,"",'
+                             f'SUMIFS({col}:{col},$C:$C,$C{r},$D:$D,$D{r},'
+                             f'$E:$E,"{tag}"))')
+                        cell(ws, r, j2, f, fill=FILL_AUTO,
+                             fmt=DTFMT if j2 in (15, 17) else "0.0")
+                    cell(ws, r, 14,
+                         f'=IF(COUNTIFS($C:$C,$C{r},$D:$D,$D{r},$E:$E,"P0(전)",'
+                         f'$M:$M,">0")<>1,"P0(전) 유효 1개 아님",'
+                         f'IF(COUNTIFS($C:$C,$C{r},$D:$D,$D{r},$E:$E,"P0(후)",'
+                         f'$M:$M,">0")<>1,"P0(후) 유효 1개 아님",'
+                         f'IF(NOT(AND(ISNUMBER(O{r}),ISNUMBER(Q{r}),'
+                         f'ISNUMBER(I{r}))),"시각 결측",'
+                         f'IF(Q{r}<=O{r},"P0 시각 역전",'
+                         f'IF(OR(I{r}<O{r},I{r}>Q{r}),"측정시각 구간 밖","OK")))))',
+                         fill=FILL_AUTO)
                     cell(ws, r, 19,
-                         f'=IF(OR(M{r}<>"OK",NOT(ISNUMBER(L{r}))),"",L{r}-R{r})',
+                         f'=IF(N{r}<>"OK","",P{r}+(R{r}-P{r})*(I{r}-O{r})/(Q{r}-O{r}))',
                          fill=FILL_AUTO, fmt="0.0")
                     cell(ws, r, 20,
-                         f'=IF(OR(NOT(ISNUMBER(S{r})),{dist}=0),"",S{r}/{dist})',
+                         f'=IF(OR(N{r}<>"OK",NOT(ISNUMBER(M{r}))),"",M{r}-S{r})',
+                         fill=FILL_AUTO, fmt="0.0")
+                    cell(ws, r, 21,
+                         f'=IF(OR(NOT(ISNUMBER(T{r})),{dist}=0),"",T{r}/{dist})',
                          fill=FILL_AUTO, fmt="0.00")
-                    cell(ws, r, 21, f'=IF(ISNUMBER(T{r}),ABS(T{r}),"")',
+                    cell(ws, r, 22, f'=IF(ISNUMBER(U{r}),ABS(U{r}),"")',
                          fill=FILL_AUTO, fmt="0.00")
                     prev = r - 1
-                    pdist = f'IF(ISNUMBER(G{prev}),G{prev},F{prev})'
-                    cell(ws, r, 22,
-                         f'=IF(OR($D{prev}<>"측정",$C{prev}<>$C{r},'
-                         f'NOT(ISNUMBER(L{r})),NOT(ISNUMBER(L{prev})),'
-                         f'({dist}-{pdist})=0),"",(L{r}-L{prev})/({dist}-{pdist}))',
-                         fill=FILL_AUTO, fmt="0.00")
+                    pdist = f'IF(ISNUMBER(H{prev}),H{prev},G{prev})'
                     cell(ws, r, 23,
-                         f'=IF(NOT(AND(ISNUMBER(N{r}),ISNUMBER(P{r}))),"",'
-                         f'(P{r}-N{r})*1440)', fill=FILL_AUTO, fmt="0.0")
+                         f'=IF(OR($E{prev}<>"측정",$C{prev}<>$C{r},$D{prev}<>$D{r},'
+                         f'NOT(ISNUMBER(M{r})),NOT(ISNUMBER(M{prev})),'
+                         f'({dist}-{pdist})=0),"",(M{r}-M{prev})/({dist}-{pdist}))',
+                         fill=FILL_AUTO, fmt="0.00")
+                    cell(ws, r, 24,
+                         f'=IF(NOT(AND(ISNUMBER(O{r}),ISNUMBER(Q{r}))),"",'
+                         f'(Q{r}-O{r})*1440)', fill=FILL_AUTO, fmt="0.0")
                 r += 1
-            del first
     last = r - 1
-    dv(ws, f"Z5:Z{last}", ["정상", "중단", "재시작", "무효", "PENDING"])
-    dv(ws, f"AB5:AB{last}", ["정상"] + STATUS)
-    dv_warn(ws, f"I5:K{last}", 30000, 60000,
+    dv(ws, f"D6:D{last}", ["1", "2", "3"])
+    dv(ws, f"AA6:AA{last}", ["정상", "중단", "재시작", "무효", "PENDING"])
+    dv(ws, f"AC6:AC{last}", ["정상"] + STATUS)
+    dv_warn(ws, f"J6:L{last}", 30000, 60000,
             "한반도 총자력 범위 밖이다. 실제 이상일 수 있으니 지우지 말고 사유를 비고에.")
     return ws, last
 
@@ -649,25 +659,29 @@ def sheet_horizontal(wb, pts):
 # ═══════════════════════════════════════════════ ⑩ 수직 자기구배
 def sheet_vertical(wb, pts):
     ws = wb.create_sheet("⑩ 수직 자기구배")
-    title(ws, "V", "수직 자기구배 — 중심점(P0) 높이별 측정")
-    note(ws, 2, "V", f"중심점에서 지상 {SP.V_HEIGHTS_CM[0]}~{SP.V_HEIGHTS_CM[-1]} cm 를 "
+    title(ws, "X", "수직 자기구배 — 중심점(P0) 높이별 측정")
+    note(ws, 2, "X", f"중심점에서 지상 {SP.V_HEIGHTS_CM[0]}~{SP.V_HEIGHTS_CM[-1]} cm 를 "
                      f"{SP.V_HEIGHTS_CM[1]-SP.V_HEIGHTS_CM[0]} cm 간격으로 순차 측정한다"
                      f"({SP.IAGA_SOURCE}). 기준높이에서 전·후 반복관측해 시간변화를 뺀다.")
-    note(ws, 3, "V", "유럽 권고는 수직 자기구배를 점검하라고만 하고 얼마 이하여야 한다는 "
+    note(ws, 3, "X", "유럽 권고는 수직 자기구배를 점검하라고만 하고 얼마 이하여야 한다는 "
                      "수치는 주지 않았습니다. 그래서 이 시트는 자동으로 합격·불합격을 "
                      "가르지 않고, 보정한 F 프로파일과 전 구간 변화폭, 이웃 높이 사이의 "
                      "변화 같은 기술지표만 냅니다. 높이는 목표값이 아니라 센서 가운데가 "
                      "실제로 어디였는지와 어디를 기준면으로 삼았는지를 적어 주셔야 나중에 "
                      "같은 조건을 재현할 수 있습니다.", warn=True)
-    hdr = ["Site ID", "지점명", "Set ID", "구분", "명목 높이(cm)", "실제 센서 중심높이(cm)",
-           "측정 기준면", "측정 시각(KST)", "F 판독1(nT)", "F 판독2", "F 판독3",
-           "중앙값\n계산", "Set 검증\n계산", "기준(전) 시각\n계산", "기준(전) F\n계산",
-           "기준(후) 시각\n계산", "기준(후) F\n계산", "기준 추정값\n계산", "ΔF(nT)\n계산",
+    note(ws, 4, "X", "다시 쟀다면 차수를 올려 행을 새로 추가해 주세요. 1차 행을 고쳐 쓰거나 "
+                     "차수 없이 행만 늘리면 기준 관측이 두 벌이 되어 1차 계산까지 막힙니다.",
+         warn=True)
+    hdr = ["Site ID", "지점명", "Set ID", "차수", "구분", "명목 높이(cm)",
+           "실제 센서 중심높이(cm)", "측정 기준면", "측정 시각(KST)",
+           "F 판독1(nT)", "F 판독2", "F 판독3", "중앙값\n계산", "Set 검증\n계산",
+           "기준(전) 시각\n계산", "기준(전) F\n계산", "기준(후) 시각\n계산",
+           "기준(후) F\n계산", "기준 추정값\n계산", "ΔF(nT)\n계산",
            "인접높이 변화율\n(nT/m)\n계산", "기기번호", "Set 상태", "상태·비고"]
-    table(ws, 4, hdr, [11, 13, 12, 11, 11, 15, 13, 19, 12, 11, 11, 11, 16, 17, 12,
-                       17, 12, 12, 11, 14, 11, 12, 24],
-          keys={"Site ID", "Set ID", "구분"})
-    r = 5
+    table(ws, 5, hdr, [11, 13, 12, 7, 11, 11, 15, 13, 19, 12, 11, 11, 11, 16, 17,
+                       12, 17, 12, 12, 11, 14, 11, 12, 24],
+          keys={"Site ID", "Set ID", "차수", "구분"})
+    r = 6
     for p in pts:
         setid = f"{p['_sid']}-V"
         seq = ([("기준(전)", None)] + [("측정", h) for h in SP.V_HEIGHTS_CM]
@@ -675,53 +689,58 @@ def sheet_vertical(wb, pts):
         for kind, h in seq:
             isR = kind != "측정"
             base = FILL_P0 if isR else FILL_AUTO
-            for j, v in enumerate([p["_sid"], p["지점명"], setid, kind, h], 1):
-                cell(ws, r, j, v, fill=base, fmt="0" if j == 5 else None)
-            for j in (6, 7, 8, 9, 10, 11, 21, 22, 23):
-                cell(ws, r, j, fmt={6: "0.0", 8: DTFMT, 9: "0.0", 10: "0.0",
-                                    11: "0.0"}.get(j), al=AL_L if j == 23 else AL_C)
-            cell(ws, r, 12, f'=IF(COUNT(I{r}:K{r})=0,"",MEDIAN(I{r}:K{r}))',
+            for j2, v in enumerate([p["_sid"], p["지점명"], setid, 1, kind, h], 1):
+                cell(ws, r, j2, v, fill=base,
+                     fmt="0" if j2 in (4, 6) else None)
+            for j2 in (7, 8, 9, 10, 11, 12, 22, 23, 24):
+                cell(ws, r, j2, fmt={7: "0.0", 9: DTFMT, 10: "0.0", 11: "0.0",
+                                     12: "0.0"}.get(j2),
+                     al=AL_L if j2 == 24 else AL_C)
+            cell(ws, r, 13, f'=IF(COUNT(J{r}:L{r})=0,"",MEDIAN(J{r}:L{r}))',
                  fill=FILL_AUTO, fmt="0.0")
-            hgt = f'IF(ISNUMBER(F{r}),F{r},E{r})'
+            hgt = f'IF(ISNUMBER(G{r}),G{r},F{r})'
             if isR:
-                for j in range(13, 21):
-                    cell(ws, r, j, fill=FILL_LOCK)
+                for j2 in range(14, 22):
+                    cell(ws, r, j2, fill=FILL_LOCK)
             else:
-                for j, (col, tag) in enumerate(
-                        [("$H", "기준(전)"), ("$L", "기준(전)"),
-                         ("$H", "기준(후)"), ("$L", "기준(후)")], 14):
-                    f = (f'=IF(COUNTIFS($C:$C,$C{r},$D:$D,"{tag}",$L:$L,">0")<>1,'
-                         f'"",SUMIFS({col}:{col},$C:$C,$C{r},$D:$D,"{tag}"))')
-                    cell(ws, r, j, f, fill=FILL_AUTO,
-                         fmt=DTFMT if j in (14, 16) else "0.0")
-                cell(ws, r, 13,
-                     f'=IF(COUNTIFS($C:$C,$C{r},$D:$D,"기준(전)",$L:$L,">0")<>1,'
-                     f'"기준(전) 유효 1개 아님",'
-                     f'IF(COUNTIFS($C:$C,$C{r},$D:$D,"기준(후)",$L:$L,">0")<>1,'
-                     f'"기준(후) 유효 1개 아님",'
-                     f'IF(NOT(AND(ISNUMBER(N{r}),ISNUMBER(P{r}),ISNUMBER(H{r}))),'
+                for j2, (col, tag) in enumerate(
+                        [("$I", "기준(전)"), ("$M", "기준(전)"),
+                         ("$I", "기준(후)"), ("$M", "기준(후)")], 15):
+                    f = (f'=IF(COUNTIFS($C:$C,$C{r},$D:$D,$D{r},$E:$E,"{tag}",'
+                         f'$M:$M,">0")<>1,"",'
+                         f'SUMIFS({col}:{col},$C:$C,$C{r},$D:$D,$D{r},'
+                         f'$E:$E,"{tag}"))')
+                    cell(ws, r, j2, f, fill=FILL_AUTO,
+                         fmt=DTFMT if j2 in (15, 17) else "0.0")
+                cell(ws, r, 14,
+                     f'=IF(COUNTIFS($C:$C,$C{r},$D:$D,$D{r},$E:$E,"기준(전)",'
+                     f'$M:$M,">0")<>1,"기준(전) 유효 1개 아님",'
+                     f'IF(COUNTIFS($C:$C,$C{r},$D:$D,$D{r},$E:$E,"기준(후)",'
+                     f'$M:$M,">0")<>1,"기준(후) 유효 1개 아님",'
+                     f'IF(NOT(AND(ISNUMBER(O{r}),ISNUMBER(Q{r}),ISNUMBER(I{r}))),'
                      f'"시각 결측",'
-                     f'IF(P{r}<=N{r},"기준 시각 역전",'
-                     f'IF(OR(H{r}<N{r},H{r}>P{r}),"측정시각 구간 밖","OK")))))',
+                     f'IF(Q{r}<=O{r},"기준 시각 역전",'
+                     f'IF(OR(I{r}<O{r},I{r}>Q{r}),"측정시각 구간 밖","OK")))))',
                      fill=FILL_AUTO)
-                cell(ws, r, 18,
-                     f'=IF(M{r}<>"OK","",O{r}+(Q{r}-O{r})*(H{r}-N{r})/(P{r}-N{r}))',
-                     fill=FILL_AUTO, fmt="0.0")
                 cell(ws, r, 19,
-                     f'=IF(OR(M{r}<>"OK",NOT(ISNUMBER(L{r}))),"",L{r}-R{r})',
+                     f'=IF(N{r}<>"OK","",P{r}+(R{r}-P{r})*(I{r}-O{r})/(Q{r}-O{r}))',
+                     fill=FILL_AUTO, fmt="0.0")
+                cell(ws, r, 20,
+                     f'=IF(OR(N{r}<>"OK",NOT(ISNUMBER(M{r}))),"",M{r}-S{r})',
                      fill=FILL_AUTO, fmt="0.0")
                 prev = r - 1
-                phgt = f'IF(ISNUMBER(F{prev}),F{prev},E{prev})'
-                cell(ws, r, 20,
-                     f'=IF(OR($D{prev}<>"측정",$C{prev}<>$C{r},'
-                     f'NOT(ISNUMBER(L{r})),NOT(ISNUMBER(L{prev})),'
-                     f'({hgt}-{phgt})=0),"",(L{r}-L{prev})/(({hgt}-{phgt})/100))',
+                phgt = f'IF(ISNUMBER(G{prev}),G{prev},F{prev})'
+                cell(ws, r, 21,
+                     f'=IF(OR($E{prev}<>"측정",$C{prev}<>$C{r},$D{prev}<>$D{r},'
+                     f'NOT(ISNUMBER(M{r})),NOT(ISNUMBER(M{prev})),'
+                     f'({hgt}-{phgt})=0),"",(M{r}-M{prev})/(({hgt}-{phgt})/100))',
                      fill=FILL_AUTO, fmt="0.00")
             r += 1
-    dv(ws, f"G5:G{r-1}", ["지면", "표석 상면", "PENDING"])
-    dv(ws, f"V5:V{r-1}", ["정상", "중단", "재시작", "무효", "PENDING"])
-    dv(ws, f"W5:W{r-1}", ["정상"] + STATUS)
-    dv_warn(ws, f"I5:K{r-1}", 30000, 60000, "한반도 총자력 범위 밖이다.")
+    dv(ws, f"D6:D{r-1}", ["1", "2", "3"])
+    dv(ws, f"H6:H{r-1}", ["지면", "표석 상면", "PENDING"])
+    dv(ws, f"W6:W{r-1}", ["정상", "중단", "재시작", "무효", "PENDING"])
+    dv(ws, f"X6:X{r-1}", ["정상"] + STATUS)
+    dv_warn(ws, f"J6:L{r-1}", 30000, 60000, "한반도 총자력 범위 밖이다.")
     return ws
 
 
