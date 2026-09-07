@@ -36,6 +36,24 @@
 계산해 둔다.
 
 ⚠️ 규격은 `trial_survey_spec.py` 단일 출처다 — 원 계획(중간보고 자료)에서 옮긴 값.
+
+## Codex Delta Review 반영 (2026-09-07, Critical 3 · Major 7)
+
+코덱스가 **실제 파일을 열어** 본 검토라 지적이 구체적이었다. 반영한 것:
+
+| 지적 | 반영 |
+|---|---|
+| **C1** 카드는 F 한 칸인데 사무실은 F1·F2·F3 을 요구 — 점당 192회 산정이 성립 안 함 | **1 판독 기준으로 통일**했다. 오버하우저는 기기 내부에서 평균하므로 IAGA 예시도 점당 단일값이다. 판독이 의심스러우면 「재측」 칸에 적고 사유를 남긴다 — 작업량도 **64회/점**으로 다시 셌다 |
+| **C2** Visit·Location·Set·Attempt 식별자가 없어 재시작·재방문·중심 이동을 유일하게 구분 못 함 | 카드 머리에 **Visit ID · Location ID**, 구역마다 **Set ID · 차수**. 중심점을 옮기면 **새 Location ID 로 새 카드**를 쓰고 기존 값을 덮지 않는다 |
+| **C3** §18③ 자기오염 방지(작업자 금속물 제거)가 없다 | 「0. 측정 전 확인」 구역 신설 — 개인 금속물·차량·전자기기 통제 체크. **이건 D·I 와 무관하게 총자력 측정에 직접 영향을 준다** |
+| **M1** 절대측정 제외의 잔재(야간 의무 문구) | 「야간」 의무를 **「시간변화가 안정된 구간」**으로 바꿨다 |
+| **M3** 자동지표 넷만으로는 재측정 여부를 못 정함 | **현장 완전성 점검** 줄 신설 — 필수행·시각·P0 구간·Variometer 연결을 채웠는지 스스로 확인 |
+| **M4** 방위표지 구역이 폐합차만 보고 참방위각을 재현 못 함 | 표지 ID·좌표·GNSS 취득방법·정확도·기존 확정값·결정방법·변경 사유 추가 |
+| **M5** 파일명만으로 사진 대응이 보장되지 않음 | **명명규칙** `{Site}_{Visit}_{코드}_{연번}` 안내 + 촬영시각 칸 |
+| **M7** 여러 쪽으로 나뉘면 2쪽 이후 지점 식별이 사라짐 | 1~3행을 **모든 쪽에 반복**(`print_title_rows`) · 머리글에 Site ID · 꼬리말에 쪽번호 |
+
+⚠️ **판독 횟수는 발주자 확인 사항으로 남는다** — 1회(기기 내부평균)로 갈지
+3회 수기로 갈지에 따라 작업량이 64 ↔ 192 회로 3배 달라진다.
 """
 from __future__ import annotations
 
@@ -153,7 +171,14 @@ def build_card(wb, p, idx):
         ws.column_dimensions[col].width = w
     ws.page_setup.orientation = "landscape"
     ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0          # 세로는 자연스럽게 넘긴다
     ws.sheet_properties.pageSetUpPr.fitToPage = True
+    # ⚠️ 여러 쪽으로 나뉘면 2쪽부터 어느 지점인지 사라진다 — 머리 3행을 반복한다.
+    ws.print_title_rows = "1:3"
+    ws.oddHeader.right.text = f"{p['_sid']} {p['지점명']}"
+    ws.oddHeader.right.size = 9
+    ws.oddFooter.center.text = "&P / &N"
+    ws.oddFooter.center.size = 9
 
     # ── 머리 ────────────────────────────────────────────────
     ws.merge_cells("A1:I1")
@@ -171,18 +196,55 @@ def build_card(wb, p, idx):
     c.font, c.fill, c.alignment = F_SUB, FILL_TITLE, AL_L
     ws.row_dimensions[2].height = 16
     r = 3
+    ws.merge_cells(f"A{r}:E{r}")
+    c = ws[f"A{r}"]
+    c.value = f"소재지: {p['소재지']}"
+    c.font, c.alignment = F_SM, AL_L
+    # ── 결합키 — 이게 없으면 재방문·재시작·중심 이동을 구분할 수 없다 ──
+    _lbl(ws, f"F{r}", "Visit ID")
+    _fld(ws, f"G{r}")
+    _lbl(ws, f"H{r}", "Location ID")
+    _fld(ws, f"I{r}")
+    ws[f"G{r}"].value = None
+    ws[f"I{r}"].value = f"{p['_sid']}-P0a"
+    ws[f"I{r}"].font = F_CALC
+    ws[f"I{r}"].fill = FILL_CALC
+    r += 1
     ws.merge_cells(f"A{r}:I{r}")
     c = ws[f"A{r}"]
-    c.value = (f"소재지: {p['소재지']}")
-    c.font, c.alignment = F_SM, AL_L
+    c.value = ("⚠ Visit ID 는 방문마다 새로 준다(V1·V2…). 중심점을 옮기면 **새 "
+               "Location ID 로 새 카드**를 쓰고 이 카드 값을 덮지 않는다 — 옛 중심 "
+               "자료가 새 중심을 입증하지 않기 때문이다.")
+    c.font, c.fill, c.alignment = F_WARN, FILL_WARN, AL_TL
+    ws.row_dimensions[r].height = 14
     r += 1
+
+    # ── 0. 측정 전 확인 (§18③ 자기오염 방지) ────────────────
+    #
+    # ⚠️ 「지구물리측량 작업규정」 §18③ 은 측정자의 자기성 물품 제거를 명시한다.
+    #    D·I 를 재지 않더라도 **총자력 측정에 직접 영향**을 준다 — 시계·펜·혁대
+    #    하나가 네 방향 모두를 같은 방향으로 밀어 공간구배로 오인되게 만든다.
+    r = _s(ws, r, "0. 측정 전 확인 — 자기오염 방지 (§18③)",
+           "측정자 본인과 주변의 자기성 물품을 먼저 걷어낸다. 못 뺀 것이 있으면 "
+           "무엇을 왜 못 뺐는지 적는다 — 나중에 그 방향 구배를 해석할 때 쓴다.")
+    _lbl(ws, f"A{r}", "개인 금속물 제거")
+    _fld(ws, f"B{r}")
+    _dv(ws, f"B{r}", ["확인 — 전부 제거", "일부 미제거(사유 기재)"])
+    _lbl(ws, f"C{r}", "차량 이격")
+    _fld(ws, f"D{r}")
+    _dv(ws, f"D{r}", ["확인 — 측정범위 밖", "근접(거리 기재)"])
+    _lbl(ws, f"E{r}", "전자기기 차단")
+    _fld(ws, f"F{r}")
+    _dv(ws, f"F{r}", ["확인 — 전원 차단", "가동 중(사유 기재)"])
+    _lbl(ws, f"G{r}", "미제거·예외 사유")
+    _fld(ws, f"H{r}:I{r}")
+    r += 2
 
     # ── 1. 도착·조건 ────────────────────────────────────────
     r = _s(ws, r, "1. 도착 · 관측 조건",
-           "야간·정온 시기에 관측한다. Kp 와 우주기상 예보를 확인하고, 교란이 나면 "
-           "그 구간은 빼거나 다시 잰다.")
-    for lab, ref in (("관측일자", "B"), ("도착 시각", "D"), ("관측자", "F"), ("기상", "H")):
-        pass
+           "⚠ 절대측정을 하지 않으므로 «야간 의무»는 없다. 다만 시간변화가 안정된 "
+           "구간을 골라야 한다 — Kp 와 우주기상 예보를 확인하고, 교란이 나면 그 "
+           "구간은 빼거나 다시 잰다.")
     _lbl(ws, f"A{r}", "관측일자");   _fld(ws, f"B{r}", "yyyy-mm-dd")
     _lbl(ws, f"C{r}", "도착 시각");  _fld(ws, f"D{r}", "hh:mm")
     _lbl(ws, f"E{r}", "관측자");     _fld(ws, f"F{r}")
@@ -214,8 +276,20 @@ def build_card(wb, p, idx):
     r = _s(ws, r, "3. 수평 자기구배 — 방향마다 P0 재측정",
            f"한 방향을 다 잰 뒤 반드시 P0 로 돌아와 다시 잰다. 시각은 «시:분:초»까지 "
            f"적는다 — 사무실에서 이 시각으로 시간변화를 보정한다. "
-           f"기준(참고): 반경 10 m 내 {SP.IAGA_RANGE_NT:.0f} nT · "
-           f"구배 {SP.EURO_GRAD_NT_PER_M:.0f} nT/m (국제 권고, 국내 미확정)")
+           f"기준(참고): 반경 10 m 내 «4개 방위 측선의 관측점에서» "
+           f"{SP.IAGA_RANGE_NT:.0f} nT · 구배 {SP.EURO_GRAD_NT_PER_M:.0f} nT/m "
+           f"— 국제 권고이고 국내 기준은 미확정이다. 측선 사이와 대각선은 재지 "
+           f"않으므로 「반경 10 m 전체」를 말할 수 없다. 판정은 사무실에서 한다.")
+    _lbl(ws, f"A{r}", "Set ID 접두")
+    _fld(ws, f"B{r}:C{r}", calc=f'="{p["_sid"]}-H"&"(방향)"')
+    _lbl(ws, f"D{r}", "차수(Attempt)")
+    _fld(ws, f"E{r}")
+    _dv(ws, f"E{r}", ["1", "2", "3"])
+    _lbl(ws, f"F{r}", "실측거리 사용")
+    _fld(ws, f"G{r}")
+    _dv(ws, f"G{r}", ["명목거리 그대로", "실측(비고에 기재)"])
+    _lbl(ws, f"H{r}:I{r}", "중단 시 → 차수 올려 새 Set")
+    r += 1
     hdr_r = r
     _lbl(ws, f"A{r}", "거리(m)")
     for k, d in enumerate(SP.H_DIRECTIONS):
@@ -261,14 +335,42 @@ def build_card(wb, p, idx):
     ws.merge_cells(f"A{r}:I{r}")
     c = ws[f"A{r}"]
     c.value = ("⚠ P0 전후차가 크면(수십 nT) 그 구간에 자기장이 크게 흔들린 것이다 — "
-               "다시 재거나 소견에 적는다. 위 두 값은 «보정 전» 참고치이며 판정값이 아니다.")
+               "다시 재거나 소견에 적는다. 위 두 값은 «보정 전» 참고치이며 판정값이 "
+               "아니다.  ※ 판독은 위치당 1회(기기 내부평균) 기준이다. 값이 의심스러우면 "
+               "차수를 올려 그 방향을 통째로 다시 잰다.")
     c.font, c.fill, c.alignment = F_WARN, FILL_WARN, AL_TL
-    ws.row_dimensions[r].height = 15
+    ws.row_dimensions[r].height = 26
+    r += 1
+    # ── 현장 완전성 점검 (Codex M3) — 자동지표만으로는 못 정한다 ──
+    _lbl(ws, f"A{r}", "완전성 점검")
+    for lab, col in (("필수행 다 채움", "B"), ("시각 시:분:초", "C"),
+                     ("P0 전·후 있음", "D"), ("측정시각 P0 사이", "E"),
+                     ("Variometer 연결", "F")):
+        _lbl(ws, f"{col}{r}", lab)
+    _lbl(ws, f"G{r}:I{r}", "하나라도 아니오 → 철수 전 보완")
+    r += 1
+    _lbl(ws, f"A{r}", "예 / 아니오")
+    for col in "BCDEF":
+        _fld(ws, f"{col}{r}")
+        _dv(ws, f"{col}{r}", ["예", "아니오"])
+    _fld(ws, f"G{r}:I{r}")
     r += 2
 
     # ── 4. 수직 자기구배 ────────────────────────────────────
     r = _s(ws, r, "4. 수직 자기구배 — 중심점(P0)에서 높이별",
-           "기준높이에서 시작·종료 두 번 잰다. 실제 센서 «중심» 높이를 적는다.")
+           "기준높이에서 시작·종료 두 번 잰다. 실제 센서 «중심» 높이를 적는다 — "
+           "목표 높이만으로는 재현되지 않는다.")
+    _lbl(ws, f"A{r}", "Set ID")
+    _fld(ws, f"B{r}", calc=f'="{p["_sid"]}-V"')
+    _lbl(ws, f"C{r}", "차수")
+    _fld(ws, f"D{r}")
+    _dv(ws, f"D{r}", ["1", "2", "3"])
+    _lbl(ws, f"E{r}", "측정 기준면")
+    _fld(ws, f"F{r}")
+    _dv(ws, f"F{r}", ["지면", "표석 상면"])
+    _lbl(ws, f"G{r}", "기준높이(cm)")
+    _fld(ws, f"H{r}:I{r}", "0")
+    r += 1
     _lbl(ws, f"A{r}", "명목 높이(cm)")
     _lbl(ws, f"B{r}", "실제 높이(cm)")
     _lbl(ws, f"C{r}", "시각")
@@ -300,25 +402,47 @@ def build_card(wb, p, idx):
     r += 2
 
     # ── 5. 방위표지 ─────────────────────────────────────────
-    r = _s(ws, r, "5. 방위표지 시준 — 기준점 → 표지 방향",
-           "원시각은 곤(gon, 1회전 400 · 대척 200)으로 적는다. 정·반 시준 폐합차가 "
-           "0.02 gon(약 65″)을 넘으면 다시 시준한다. 표지를 바꿨으면 반드시 적을 것.")
-    for lab, ref in (("표지", "A"), ("시준 지점", "B"), ("정 시준(gon)", "D"),
-                     ("반 시준(gon)", "E"), ("폐합차", "F"), ("표지 변경 여부", "G")):
-        pass
-    _lbl(ws, f"A{r}", "표지");        _lbl(ws, f"B{r}:C{r}", "시준 지점(표지의 어디)")
-    _lbl(ws, f"D{r}", "정 시준(gon)"); _lbl(ws, f"E{r}", "반 시준(gon)")
-    _lbl(ws, f"F{r}", "폐합차(gon)");  _lbl(ws, f"G{r}:I{r}", "표지 변경 여부·사유")
+    r = _s(ws, r, "5. 방위표지 시준 — 기준점 → 표지 방향 (진북 · 북 0° · 시계방향)",
+           "원시각은 곤(gon, 1회전 400 · 대척 200)으로 적는다. 폐합차가 0.02 gon"
+           "(약 65″)을 넘으면 다시 시준한다. ⚠ 폐합차가 작아도 «참방위각이 틀릴 수» "
+           "있다 — 그래서 표지 좌표·취득방법·기존 확정값을 함께 남긴다. 재방문 잔여 "
+           "RMS 33.7′ 의 원인이 바로 방문마다 달라진 참방위각이었다.")
+    _lbl(ws, f"A{r}", "표지");         _lbl(ws, f"B{r}", "Mark ID")
+    _lbl(ws, f"C{r}:D{r}", "시준 지점(표지의 어디)")
+    _lbl(ws, f"E{r}", "표지 위도");    _lbl(ws, f"F{r}", "표지 경도")
+    _lbl(ws, f"G{r}", "좌표 취득방법"); _lbl(ws, f"H{r}", "정확도(m)")
+    _lbl(ws, f"I{r}", "기존 확정값(°)")
     r += 1
     for k in (1, 2):
         c = ws[f"A{r}"]
         c.value, c.font, c.fill, c.border, c.alignment = (
             f"방위표지{k}", F_LBL, FILL_LBL, BOX, AL_C)
-        _fld(ws, f"B{r}:C{r}")
-        _fld(ws, f"D{r}", "0.0000")
+        _fld(ws, f"B{r}", calc=f'="{p["_sid"]}-M{k}"')
+        _fld(ws, f"C{r}:D{r}")
+        for cc, fm in (("E", "0.000000"), ("F", "0.000000"), ("H", "0.00"),
+                       ("I", "0.0000")):
+            _fld(ws, f"{cc}{r}", fm)
+        _fld(ws, f"G{r}")
+        _dv(ws, f"G{r}", ["RTK-GNSS", "네트워크RTK", "정적GNSS", "휴대GNSS",
+                          "기존 성과 인용"])
+        r += 1
+    _lbl(ws, f"A{r}", "표지");        _lbl(ws, f"B{r}", "정 시준(gon)")
+    _lbl(ws, f"C{r}", "반 시준(gon)"); _lbl(ws, f"D{r}", "폐합차(gon)")
+    _lbl(ws, f"E{r}", "참방위각(gon)"); _lbl(ws, f"F{r}", "결정방법")
+    _lbl(ws, f"G{r}:I{r}", "표지 변경 여부 · 사유")
+    r += 1
+    for k in (1, 2):
+        c = ws[f"A{r}"]
+        c.value, c.font, c.fill, c.border, c.alignment = (
+            f"방위표지{k}", F_LBL, FILL_LBL, BOX, AL_C)
+        _fld(ws, f"B{r}", "0.0000")
+        _fld(ws, f"C{r}", "0.0000")
+        _fld(ws, f"D{r}", "0.0000",
+             calc=f'=IF(COUNT(B{r}:C{r})<2,"",ABS(ABS(C{r}-B{r})-200))')
         _fld(ws, f"E{r}", "0.0000")
-        _fld(ws, f"F{r}", "0.0000",
-             calc=f'=IF(COUNT(D{r}:E{r})<2,"",ABS(ABS(E{r}-D{r})-200))')
+        _fld(ws, f"F{r}")
+        _dv(ws, f"F{r}", ["천문관측", "자이로", "RTK 장기선", "좌표계산",
+                          "기존 성과 인용"])
         _fld(ws, f"G{r}:I{r}")
         r += 1
     r += 1
@@ -329,10 +453,14 @@ def build_card(wb, p, idx):
     #    칸을 상자마다 붙인 것은 그래서다 — 엑셀에 붙인 그림은 나중에 파일과
     #    대조하기 어렵고, 용량 때문에 빠지는 일도 있다.
     r = _s(ws, r, "6. 현장 사진",
-           "상자 안에 사진을 붙이고 아래 칸에 파일명을 적는다. 방위별 전경은 "
-           "«중심점에 서서» 그 방향을 보고 찍는다 — 구배가 큰 방향의 원인을 "
-           "나중에 사진으로 찾는다. 자기교란 요소(철구조물·전선·차량 등)가 "
-           "보이면 반드시 그 방향 사진에 담는다.")
+           "상자 안에 사진을 붙이고 아래 칸에 «원본 파일명»과 촬영시각을 적는다. "
+           f"명명규칙은 {{{p['_sid']}}}_{{VisitID}}_{{코드}}_{{연번}} 이다"
+           "(코드: P0·MEAS·M1·M2·E·W·S·N·INT). ⚠ 파일명만으로는 카메라 간 중복·"
+           "이름 변경·복사 누락을 잡지 못하므로 촬영시각을 함께 남긴다. "
+           "방위별 전경은 «중심점에 서서» 그 방향을 보고, **측선과 10 m 종점이 "
+           "보이게** 찍는다 — 구배가 큰 방향의 원인을 사진으로 되짚는다. "
+           "자기교란 요소는 P0 와의 방향·거리가 보이는 관계사진과 근접사진을 "
+           "함께 담고, 여러 개면 소견에 목록을 적는다.")
     SPANS = [("A", "C"), ("D", "F"), ("G", "I")]
     SHOTS = [
         [("중심점(P0) 전경", "표석·마커가 보이게"),
@@ -355,6 +483,10 @@ def build_card(wb, p, idx):
         for (a, b), (t, hint) in zip(SPANS, band):
             _lbl(ws, f"{a}{r}", "파일명")
             _fld(ws, f"{chr(ord(a)+1)}{r}:{b}{r}")
+        r += 1
+        for (a, b), (t, hint) in zip(SPANS, band):
+            _lbl(ws, f"{a}{r}", "촬영시각")
+            _fld(ws, f"{chr(ord(a)+1)}{r}:{b}{r}", "hh:mm:ss")
         r += 1
     r += 1
 
