@@ -661,8 +661,8 @@ main{position:relative;z-index:1}
 section{min-height:100vh;display:flex;align-items:center;
  padding:clamp(48px,7vh,110px) clamp(20px,6vw,96px);position:relative}
 .wrap{width:100%;max-width:1180px;margin:0 auto}
-.tag{font:700 12px/1 ui-monospace,Consolas,monospace;letter-spacing:.18em;
- color:var(--cyan);margin-bottom:20px;display:block}
+.tag{font:700 clamp(14px,1.15vw,17px)/1.35 ui-monospace,Consolas,monospace;
+ letter-spacing:.16em;color:var(--cyan);margin-bottom:20px;display:block}
 .tag.o{color:var(--orange)}
 h1{font-size:clamp(34px,6.2vw,82px);line-height:1.16;font-weight:800;
  letter-spacing:-.02em;text-wrap:balance}
@@ -1450,7 +1450,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
   오늘 여러분이 남기는 한 줄이<br>
   <span class="hl">앞으로 수십 년을 다시 잴 자리</span>를 정합니다.</div>
  <p class="lead reveal" style="font-size:clamp(17px,1.7vw,23px);color:var(--ink)">
- 안전하게 다녀오십시오. 고맙습니다.</p>
+ 안전하게 다녀오십시오. 감사합니다.</p>
 </div></section>
 
 </main>
