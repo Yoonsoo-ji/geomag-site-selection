@@ -1,41 +1,52 @@
 # -*- coding: utf-8 -*-
 """
-현장 자료취득 요원 교육 — 웹 시네마틱 (`docs/field_training.html`)
+현장 자료취득 «직원» 교육 — 웹 시네마틱 (`docs/field_training.html`)
 ====================================================================
 
     python create_field_training.py
 
-현장 요원에게 **지자기 측량이 무엇이고 왜 당신의 기록 하나가 중요한가**를
-전달하는 스크롤형 교육 자료. 22장면 · 약 35분(질의 별도).
+지자기 측량이 무엇이고 왜 당신의 기록 하나가 중요한가를 전달하는 스크롤형
+교육 자료. **22장면 · 약 35분**(질의 별도). 실시일 `TRAINING_DATE`.
 
 ## 이 자료가 다른 발표자료와 다른 점
 
 `create_lmm_cinematic.py` 는 전문가·발주자용이라 「모델이 이만큼 나왔다」를 말한다.
-이 자료는 **현장 요원용**이라 「당신이 이렇게 기록하지 않으면 이런 일이 벌어진다」를
+이 자료는 **현장 직원용**이라 「당신이 이렇게 기록하지 않으면 이런 일이 벌어진다」를
 말한다. 그래서 가상 사례를 쓰지 않고 **이 프로젝트가 실제로 겪은 일**만 싣는다:
 
 | 장면 | 실화 |
 |---|---|
-| 시각을 안 적으면 | 야장 68개 전수조사에서 **F 측정시각 0건** → 외부장 보정이 원리적으로 불가능해졌다 |
+| 시각을 안 적으면 | 야장 68권 전수조사에서 **F 측정시각 0건** → 외부장 보정이 원리적으로 불가능해졌다 |
 | 좌표가 어긋나면 | 미원 353 m · 남양은 세 자료가 전부 다르고 **현재 좌표 미상** · 서산 시트에 남양 좌표가 통째로 복사 |
-| 한 방문이 틀리면 | 부안·포천 2023 두 방문을 빼니 **전국 LOO 편각 −26 %** (0.7691 → 0.5675°) |
-| 나쁜 자리를 고르면 | 이원 여의저수지 동쪽 **−250.72 nT/m** — 참고 기준 3 nT/m 의 83배 |
+| 같은 자리를 다시 가면 | 같은 날 산포는 1.4분인데 **재방문 잔여는 34분** — 방문마다 방위표지가 달라져 있었다 |
+| 나쁜 자리를 고르면 | 이원 여의저수지 동쪽 **250.72 nT/m** — 참고 기준 3 nT/m 의 83배 |
 
-## ⚠️ 올해 요원이 하는 것은 «절대측정이 아니다»
+## ⚠️ 「모델」을 말하지 않는다 (2026-09-14 발주자 지적)
+
+1차본은 3부 앞에 「지금 모델은 얼마나 맞습니까」 장면을 두고 LOO 편각 29.9분 ·
+총자력 62.8 nT 를 실었다. **쓸 수 있는 지역 자기장 모델은 아직 없다** —
+있는 것처럼 말하면 직원이 「이미 다 되어 있는데 왜 또 재나」로 듣는다.
+그 장면을 통째로 빼고 `lmm_model.json` 의존도 끊었다. 4부의 재방문 장면도
+「모델이 26 % 망가졌다」에서 **「같은 자리를 다시 갔더니 34분이 어긋났다」**
+로 바꿨다 — 모델 성능이 아니라 관측 자체로 말한다.
+
+## ⚠️ 올해 하는 것은 «절대측정이 아니다»
 
 발주자 확정(2026-09-07) — 올해 50점에서 하는 것은 **자기교란(구배) 측정**이고
-DI-flux 절대측정은 선점이 끝난 뒤의 별도 단계다. 그래서 편각 4방향(E Up/W Up…)·
-복각 4방향·Null 측정은 **「앞으로 이 자리에서 이런 관측을 합니다」라는 미래 맥락**
-으로만 짧게 보이고, **올해 실제 작업**(P0 → 4방향 × 11점 → P0 · 수직 20~200 cm ·
-사진 9칸 · 카드 7구역)을 3부 본론에 놓는다.
+DI-flux 절대측정은 선점이 끝난 뒤의 별도 단계다. 편각 4방향·복각 4방향·Null
+측정은 **「앞으로 이 자리에서 이런 관측을 합니다」라는 미래 맥락**으로만 짧게
+보이고, **올해 실제 작업**(P0 → 4방향 × 11점 → P0 · 수직 20~200 cm · 사진 9칸 ·
+카드 7구역)이 3부 본론이다.
 
-⚠️ 이 원칙을 어기면 요원이 「내가 DI-flux 를 배워야 하는구나」로 이해한다.
+⚠️ 이 원칙을 어기면 직원이 「내가 DI-flux 를 배워야 하는구나」로 이해한다.
+같은 이유로 **4부의 좌표·재방문 장면에는 「올해가 아니라 내년」 띠**를 붙였다 —
+그 둘은 절대측정 캠페인의 이야기다.
 
 ## 수치는 전부 파일에서 읽는다
 
 `trial_survey_points`(50점) · `trial_survey_spec`(측선·참고값·발주자 결정) ·
-`lmm_model.json`(LOO) · `existing_pts.geojson`(관측망 30) · `korea_boundary.geojson`.
-**하드코딩 금지** — 재적합·명단 변경이 자동으로 따라온다.
+`existing_pts.geojson`(관측망 30) · `korea_boundary.geojson`.
+**하드코딩 금지** — 명단이 바뀌면 자동으로 따라온다.
 
 ⚠️ 숫자 네 갈래를 섞지 말 것 — **관측망 30** / 2022~25 측량 15 / LMM 투입 16 /
 **올해 선점 검토 50**. 교육 대상이 헷갈리는 첫 번째 지점이다.
@@ -56,6 +67,10 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 DATA = ROOT / "docs" / "data"
 OUT = ROOT / "docs" / "field_training.html"
+
+# ⚠️ 교육 «실시일»이지 파일 생성일이 아니다. today() 로 두면 다시 돌릴 때마다
+#    표지 날짜가 바뀐다 — 인쇄본·배포본과 어긋난다.
+TRAINING_DATE = "2026년 9월 14일"
 THREE_RUNTIME = ROOT / "vendor" / "three.r149.min.js"
 
 
@@ -104,8 +119,6 @@ def build_payload():
         p.setdefault("_sid", f"S{i:02d}")
     kinds = Counter(p["구분"] for p in pts)
 
-    model = read_json(DATA / "lmm_model.json")
-    loo = {k: float(v) for k, v in model["loo_cv"].items()}
     boundary = compact_boundary(read_json(DATA / "korea_boundary.geojson"))
 
     net = read_json(DATA / "existing_pts.geojson")
@@ -145,7 +158,7 @@ def build_payload():
     nV = len(SP.V_HEIGHTS_CM) + 2
 
     return {
-        "generated": f"{dt.date.today():%Y년 %m월 %d일}",
+        "generated": TRAINING_DATE,
         "boundary": boundary,
         "network": network,
         "sites": sites,
@@ -156,10 +169,6 @@ def build_payload():
         "n_grade_b": kinds["B"],
         "n_network": len(network),
         "target_network": len(network) + 50,
-        "loo_d": round(loo["D"], 4),
-        "loo_d_min": round(loo["D"] * 60, 1),
-        "loo_i": round(loo["I"], 4),
-        "loo_f": round(loo["F"], 1),
         "offsets": SP.H_OFFSETS_M,
         "dirs": SP.H_DIRECTIONS,
         "heights": SP.V_HEIGHTS_CM,
@@ -305,13 +314,13 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
 
 <!-- ══ 프롤로그 ══ -->
 <section data-t="프롤로그"><div class="wrap reveal">
- <span class="tag">현장 자료취득 요원 교육 · {{GENERATED}}</span>
+ <span class="tag">현장 자료취득 직원 교육 · {{GENERATED}}</span>
  <h1>우리는 보이지 않는<br>국가 기준을 측정합니다</h1>
  <p class="lead">지구자기장은 눈에 보이지 않지만 지도의 북쪽, 나침반의 방향,
- 항법 장비의 기준이 됩니다. 그 값은 <b>현장에서 사람이 직접 재야만</b>
- 알 수 있습니다.</p>
+ 항법 장비의 기준이 됩니다. 그 값이 지금 이 자리에서 얼마인지는
+ <b>현장에서 실제로 재어야</b> 확인됩니다.</p>
  <p class="lead">오늘 이야기는 하나입니다 —
- <b class="hl">전국 지자기 모델의 품질은 현장에서 기록한 단 한 번의 관측에서
+ <b class="hl">대한민국 지자기 기준은 현장에서 기록한 단 한 번의 관측에서
  시작됩니다.</b></p>
 </div></section>
 
@@ -345,7 +354,10 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
      <small>기존 지자기점 — 관측망 {{N_NETWORK}}점 중 표석이 계속 유지될
      수 있는 자리</small></div>
    </div>
-   <p class="lead" style="margin-top:24px">이 {{N_SITES}}곳에서 여러분이 할 일은
+   <p class="lead" style="margin-top:24px"><b>이 {{N_SITES}}곳이 전부 새 관측점이
+   되는 것은 아닙니다</b> — {{N_EXIST}}곳은 이미 관측점이고, 나머지 {{N_NEW}}곳은
+   «후보지»라 조사 결과를 보고 나중에 가릅니다.</p>
+   <p class="lead">이 {{N_SITES}}곳에서 여러분이 할 일은
    <b>지자기 측량이 아닙니다.</b> 그 자리가 자기적으로 조용한지를 재는
    <b class="hl">자기교란 조사</b> 입니다. 왜 그것부터 하는지는 3부에서
    말씀드리겠습니다.</p>
@@ -361,13 +373,17 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   <p class="lead">현장에서 자력계에 뜨는 숫자 하나는 네 가지가 겹쳐진
   결과입니다. 이걸 갈라내는 것이 이 연구의 핵심입니다.</p>
  </div>
- <div class="grid4 reveal" style="margin-top:38px">
+ <div class="reveal" style="margin-top:30px"><canvas class="fig" id="figLayers"
+  width="1180" height="520"
+  aria-label="지구 외핵·지각 암석·상공 태양활동이 만드는 자기장과 항공자력·지상 반복관측의 관계"></canvas></div>
+ <div class="grid4 reveal" style="margin-top:26px">
   <div class="card"><h3 class="hl">① 주 자기장</h3>
-   <p>지구 외핵의 유체 운동에서 생깁니다. 전체의 <b>99 %</b> 를 차지하고
-   해마다 조금씩 움직입니다.</p></div>
+   <p>지구 외핵의 유체 운동에서 생깁니다. 전체의
+   <b>대부분(95 % 이상)</b> 을 차지하고 해마다 조금씩 움직입니다.</p></div>
   <div class="card"><h3 class="hl">② 지역장</h3>
-   <p>전지구 모델이 못 담는 우리나라만의 차이입니다.
-   <b>이 값을 만드는 것이 이 연구</b> 입니다.</p></div>
+   <p>전지구 표준값이 우리나라에서 실제와 얼마나 다른지입니다.
+   <b>따로 있는 자기장이 아니라 «표준값과 실제의 차이»</b>이고, 그 차이를
+   실제로 재어 두는 것이 이 연구입니다.</p></div>
   <div class="card"><h3 class="hl">③ 지각 자기장</h3>
    <p>땅속 암석이 만듭니다. 몇 m 만 옮겨도 값이 달라지는 것이
    대부분 이것 때문입니다.</p></div>
@@ -389,7 +405,7 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   <b class="hl">주기적으로 다시 재야</b> 합니다. 여러분이 고른 자리에서
   <b>앞으로 5년마다</b> 관측이 이어집니다.</p>
  </div>
- <div class="reveal"><canvas class="fig" id="figDrift" width="640" height="440"
+ <div class="reveal"><canvas class="fig" id="figDrift" width="640" height="540"
   aria-label="편각의 연간 변화"></canvas></div>
 </div></section>
 
@@ -407,38 +423,17 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   <div class="card stat"><span class="num o">129<span class="unit">km</span></span>
    <small>가장 가까운 관측점까지 이만큼 떨어진 곳이 있습니다(강원 북동)</small></div>
   <div class="card stat"><span class="num c">{{TARGET_NETWORK}}</span>
-   <small>목표 관측망 — 현 {{N_NETWORK}}점에 신규 50점을 더한 설계</small></div>
+   <small>장래 설계 시나리오 — 현 {{N_NETWORK}}점에 «신규» 50점을 더하면 이렇게
+   된다는 안입니다. <b>올해 도는 {{N_SITES}}곳과 같은 50 이 아닙니다</b></small></div>
  </div>
  <div class="quote reveal o">관측점이 부족하면 그 지역의 값은
  <b>측정이 아니라 추정</b>이 됩니다.</div>
 </div></section>
 
-<section data-t="현재 성능"><div class="wrap">
- <div class="reveal">
-  <span class="tag">06</span>
-  <h2>지금 모델은<br>얼마나 맞습니까</h2>
-  <p class="lead">현재 우리 모델의 편각 예측 오차는
-  <b class="hl-o">{{LOO_D_MIN}}분</b> 입니다. 목표는 6분인데,
-  아직 다섯 배 떨어져 있습니다.</p>
- </div>
- <div class="grid3 reveal" style="margin-top:30px">
-  <div class="card stat"><span class="num o">{{LOO_D_MIN}}<span class="unit">분</span></span>
-   <small>편각 예측 오차 — 모델에 넣지 않은 지점에서 재어 본 값</small></div>
-  <div class="card stat"><span class="num">{{LOO_F}}<span class="unit">nT</span></span>
-   <small>총자력 예측 오차</small></div>
-  <div class="card stat"><span class="num c">16</span>
-   <small>모델에 실제로 들어간 관측점 수 — 이것이 부족의 핵심입니다</small></div>
- </div>
- <p class="lead reveal" style="margin-top:26px">원인을 찾아보니 장비도 계산도
- 문제가 없었습니다. 같은 날 두 번 재면 <b class="hl-g">1.4분</b> 안에 들어옵니다.
- 문제는 <b class="hl-r">몇 년 뒤 다시 가서 재면 34분이 어긋난다</b>는 것이었습니다.
- 그 이야기를 4부에서 하겠습니다.</p>
-</div></section>
-
 <!-- ══ 2부 무엇을 ══ -->
 <section data-t="2부 · 벡터"><div class="wrap grid2">
  <div class="reveal">
-  <span class="tag">2부 — 무엇을 재는가 · 07</span>
+  <span class="tag">2부 — 무엇을 재는가 · 06</span>
   <h2>자기장은 방향과 세기를<br>함께 가진 화살표입니다</h2>
   <p class="lead">한 지점의 자기장은 3차원 화살표 하나로 나타납니다.
   이 화살표를 완전히 알려면 <b>세 가지</b>만 재면 됩니다.</p>
@@ -452,12 +447,12 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   <p class="lead">셋을 재면 나머지 넷은 계산으로 나옵니다.
   <b class="hl">그래서 이 셋을 정확히 재는 것이 지자기 측량입니다.</b></p>
  </div>
- <div class="reveal"><canvas class="fig" id="figVector" width="640" height="620"
+ <div class="reveal"><canvas class="fig" id="figVector" width="760" height="560"
   aria-label="자기장 벡터의 성분 분해"></canvas></div>
 </div></section>
 
 <section data-t="D·I·F"><div class="wrap">
- <div class="reveal"><span class="tag">08</span>
+ <div class="reveal"><span class="tag">07</span>
  <h2>세 가지를 하나씩 보면</h2></div>
  <div class="grid3 reveal" style="margin-top:30px">
   <div class="card"><h3 class="hl">편각 D</h3>
@@ -476,6 +471,47 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
  일입니다.</div>
 </div></section>
 
+<section data-t="장비"><div class="wrap">
+ <div class="reveal">
+  <span class="tag">08</span>
+  <h2>그럼 무엇으로 잽니까</h2>
+  <p class="lead">방금 「비자성 경위의」 같은 말이 나왔습니다. 장비 이름이 낯설 수
+  있으니 한 번 짚고 넘어가겠습니다. <b class="hl-g">올해 확실히 쓰는 것은 앞의 둘</b>
+  이고, 셋째는 <b>확보 여부가 아직 정해지지 않았으며</b>, 넷째는 내년 이야기입니다.</p>
+ </div>
+ <div class="reveal" style="margin-top:26px"><canvas class="fig" id="figGear"
+  width="1180" height="440" aria-label="올해 쓰는 장비 둘과 내년 쓰는 장비 둘"></canvas></div>
+ <div class="grid4 reveal" style="margin-top:24px">
+  <div class="card good"><h3 class="hl-g">① 오버하우저 자력계</h3>
+   <p><b>올해 씁니다.</b> 센서 속 액체의 수소 원자핵이 자기장 안에서 팽이처럼
+   도는 «진동수»를 셉니다. 그 진동수가 자기장 세기에 비례하는 것이 물리 상수라
+   <b>따로 눈금을 맞추지 않아도 절대값이 나옵니다.</b> 그래도 현장에서 동작·시각·
+   상태 점검은 그대로 해야 합니다. 그리고 <b>세기(F)만 재고 방향은 못 잽니다.</b></p></div>
+  <div class="card good"><h3 class="hl-g">② GNSS 수신기</h3>
+   <p><b>올해 씁니다.</b> 중심점의 위도·경도를 <b>십진도 여섯 자리</b>로 잽니다
+   (방위표지 좌표는 <b>별도로 통보된 대상 지점만</b>). 다음 사람이 그 자리를
+   다시 찾아오는 <b>가장 확실한 단서</b>라, 이 값이 틀리면 그 점을 잃습니다.</p></div>
+  <div class="card"><h3 style="color:var(--muted)">③ 이동식 Variometer</h3>
+   <p>자기장이 «시간에 따라» 얼마나 흔들리는지 옆에서 계속 지켜보는 장비입니다.
+   확보되면 중심점 앞뒤 두 값 사이가 정말 직선이었는지 확인할 수 있습니다.</p></div>
+  <div class="card"><h3 style="color:var(--muted)">④ DI-flux 자기경위의</h3>
+   <p><b>내년에 씁니다.</b> 편각·복각을 재는 장비이고,
+   <b class="hl">비자성 경위의</b> 위에 <b class="hl">플럭스게이트</b> 센서를
+   얹은 것입니다. 아래에서 이 둘을 풀어 설명합니다.</p></div>
+ </div>
+ <div class="grid2 reveal" style="margin-top:16px">
+  <div class="card"><h3 class="hl">비자성 경위의가 무엇입니까</h3>
+   <p>각도를 재는 측량용 망원경을 «경위의»라 합니다. 그것을
+   <b>자성 재료를 쓰지 않고</b> 만들어(놋쇠·알루미늄·세라믹 등) 자기 영향이
+   없음을 검증해 둔 것이 비자성 경위의입니다. 보통 측량기는 강철이 들어 있어
+   장비 자체가 자기장을 흐트러뜨리므로 자기장을 재는 자리에는 쓸 수 없습니다.</p></div>
+  <div class="card"><h3 class="hl">플럭스게이트가 무엇입니까</h3>
+   <p>자기장의 <b>방향</b>을 찾아내는 센서입니다. 세기를 읽는 것이 아니라
+   <b>센서 축 방향의 성분이 0 이 되는 자세</b>를 찾고, 그때 망원경이 향한 각도를
+   눈금에서 읽습니다. 그렇게 편각과 복각이 나옵니다.</p></div>
+ </div>
+</div></section>
+
 <!-- ══ 3부 올해 할 일 ══ -->
 <section data-t="3부 · 올해 할 일"><div class="wrap">
  <div class="reveal">
@@ -484,8 +520,22 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   <p class="lead">지자기 측량은 그 자리가 <b>조용한 자리일 때만</b> 뜻이 있습니다.
   땅속 암석이나 주변 철구조물 때문에 몇 m 만 움직여도 값이 뛰는 자리라면,
   아무리 정밀하게 재도 그 값은 그 지역을 대표하지 못합니다.</p>
-  <p class="lead">그래서 <b class="hl">먼저 자리가 조용한지를 재고</b>,
-  그다음에 그 자리를 국가 기준점으로 삼습니다. 올해가 그 첫 단계입니다.</p>
+  <p class="lead">그래서 <b class="hl">먼저 자리가 조용한지를 재 둡니다.</b>
+  선점을 확정하고, 표지를 세우고, 별도로 편각·복각·총자력을 재는 일은
+  <b>그 뒤에 오는 단계</b>입니다. 올해는 그 첫 단계입니다.</p>
+ </div>
+ <div class="grid2 reveal" style="margin-top:26px">
+  <div class="card warn"><h3 class="hl-o">★ 이번 조사는 «법정 선점»이 아닙니다</h3>
+   <p style="font-size:15.5px">법으로 정해진 선점 절차를 밟는 것이 아니고,
+   <b>국내 합격 기준도 아직 없습니다.</b> 그래서 <b class="hl-o">현장에서
+   합격·탈락을 판정하지 않습니다.</b> 값이 크게 나와도 그 자리를 접지 마시고
+   나온 대로 적어 주십시오.</p></div>
+  <div class="card"><h3 class="hl">확정된 작업 조건 넷</h3>
+   <p style="font-size:15.5px">① <b>야간 관측은 하지 않습니다.</b>
+   ② 원본은 <b>종이 카드</b>이고 기기 파일은 그 뒤에 붙입니다.
+   ③ 판독은 <b>한 자리에 1회</b>입니다.
+   ④ Kp·기상은 <b>적기만</b> 하고 «오늘은 안 되겠다»의 기준으로 쓰지 않습니다 —
+   어느 값에서 걸러야 할지를 정하려고 이 조사를 합니다.</p></div>
  </div>
  <div class="grid2 reveal" style="margin-top:34px">
   <div class="card good"><h3>올해 하는 것</h3>
@@ -505,9 +555,22 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   {{OFFSETS_TXT}} m 를 차례로 잰 뒤 <b class="hl">다시 중심점으로 돌아와
   한 번 더</b> 잽니다. 이걸 동·서·남·북 네 방향 반복합니다.</p>
   <p class="lead"><b>수직</b> — 중심점에서 센서 높이만 바꿔가며
-  지상 {{H_MIN}}~{{H_MAX}} cm 를 {{H_STEP}} cm 간격으로 잽니다.</p>
+  지상 {{H_MIN}}~{{H_MAX}} cm 를 {{H_STEP}} cm 간격으로 잽니다. 높이는
+  <b>{{N_HEIGHT}}개</b> 인데, 여기에도 <b class="hl">시작할 때와 끝날 때
+  「기준높이」에서 한 번씩</b> 더 재기 때문에 모두
+  <b>{{N_READ_V}}줄</b>이 됩니다. 기준높이는 재기 편한 높이 하나(보통 100 cm)를
+  골라 카드에 적어 두고 처음·끝에 같은 높이로 잽니다.</p>
   <p class="lead">한 지점에서 모두 <b class="hl">{{N_READ}}번</b>
   재게 됩니다(수평 {{N_READ_H}} + 수직 {{N_READ_V}}).</p>
+  <div class="card warn" style="margin-top:20px">
+   <p style="font-size:16px;color:var(--ink)"><b class="hl-o">★ 현장 상황에 따라
+   달라질 수 있습니다.</b> 바위·물·급경사·사유지 때문에 10 m 를 다 못 채우거나
+   방향을 틀어야 할 수 있습니다. 그럴 때 임의로 건너뛰지 마시고
+   <b>실제로 잰 방위와 거리, 그리고 그렇게 한 이유</b>를 카드에 적어 주십시오 —
+   그 셋이 있어야 사무실에서 그 줄을 살려 쓸 수 있습니다.
+   못 잰 칸은 빈칸으로 두지 말고 <b>「측정불가」</b> 로 표시합니다 —
+   빈칸은 «안 쟀다»인지 «못 쟀다»인지 나중에 구분되지 않습니다.</p>
+  </div>
  </div>
  <div class="reveal"><canvas class="fig" id="figProfile" width="640" height="640"
   aria-label="수평 4방향 측선과 수직 측선 배치"></canvas></div>
@@ -522,7 +585,10 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   저절로 변합니다.</p>
   <p class="lead">중심점을 앞뒤로 두 번 재두면, 그 두 값을 직선으로 이어
   «각 측점을 잰 순간의 중심점 값»을 추정할 수 있습니다. 그만큼을 빼면
-  <b class="hl">순수하게 자리 때문에 생긴 차이</b>만 남습니다.</p>
+  <b class="hl">자리 때문에 생긴 차이에 훨씬 가까워집니다.</b></p>
+  <p class="lead">다만 이것은 두 시각 사이가 <b>직선으로 변했다고 «본»</b> 것이라
+  전부를 걷어내지는 못합니다. 그래서 시각을 정확히 적는 일이 더 중요합니다 —
+  사무실에서 다르게 계산해 볼 여지를 남겨 두는 것이 시각입니다.</p>
  </div>
  <div class="grid2 reveal" style="margin-top:30px">
   <div><canvas class="fig" id="figCorr" width="640" height="380"
@@ -556,9 +622,13 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   중심점에서 1 m 떨어진 네 방향 값입니다.</p>
  </div>
  <div class="reveal" style="margin-top:26px">{{PILOT_TABLE}}</div>
- <div class="quote reveal r">한 곳은 동쪽으로 1 m 만 가도
- <span class="hl-r">{{WORST_VAL}} nT/m</span> 씩 값이 뜁니다 —
- 국제 권고 기준 {{EURO_GRAD}} nT/m 의 <b>{{WORST_RATIO}}배</b> 입니다.</div>
+ <div class="quote reveal r">한 곳은 동쪽으로 1 m 만 가도 구배의 «크기»가
+ <span class="hl-r">{{WORST_VAL}} nT/m</span> 입니다 —
+ 해외 참고값 {{EURO_GRAD}} nT/m 의 <b>{{WORST_RATIO}}배</b> 입니다.</div>
+ <p class="lead reveal" style="margin-top:-8px;font-size:15px">표의 부호는
+ <b>방향</b>입니다 — 「−」는 중심점보다 값이 «작아졌다»는 뜻이고, 판정에 쓰는 것은
+ 부호를 뗀 <b>크기(|ΔF| ÷ 거리)</b> 입니다. 그러니 「−250」을 「3보다 작다」로
+ 읽지 마십시오.</p>
  <p class="lead reveal">이런 자리에서는 정밀하게 재도 소용이 없습니다.
  표석을 몇 cm 만 잘못 찾아도 값이 달라지니까요.
  <b class="hl">그 자리가 이런 자리인지 아닌지를 가려내는 것</b>이
@@ -569,12 +639,14 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
  <div class="reveal">
   <span class="tag o">13</span>
   <h2>그런데 아직<br><span class="hl-o">합격 기준이 없습니다</span></h2>
-  <p class="lead">국제 권고에는 「반경 {{IAGA_RADIUS}} m 안에서
-  {{IAGA_RANGE}} nT 이내」「구배 {{EURO_GRAD}} nT/m 미만」이라는 값이 있습니다.
-  그런데 <b class="hl-r">국내 기준은 아직 정해져 있지 않습니다.</b></p>
-  <p class="lead">앞 장의 시범관측을 보십시오. 두 곳 모두 네 방향 전부가
-  {{EURO_GRAD}} nT/m 를 넘었습니다. 이 기준을 그대로 쓰면 상당수가 탈락합니다.
-  그 기준이 우리 땅에 맞는지 아직 아무도 모릅니다.</p>
+  <p class="lead">해외에는 「반경 {{IAGA_RADIUS}} m 안에서 {{IAGA_RANGE}} nT
+  이내」「구배 {{EURO_GRAD}} nT/m 미만」이라는 값이 있습니다. 출처가 서로 다른
+  <b>참고값</b>이고, <b class="hl-r">국내 판정 기준은 아직 정해져 있지
+  않습니다.</b></p>
+  <p class="lead">앞 장의 시범관측을 보십시오. 재어 본 <b>두 곳</b> 모두 네 방향
+  전부가 {{EURO_GRAD}} nT/m 를 넘었습니다. 두 곳만으로 전국이 그렇다고 말할 수는
+  없지만, 이 참고값을 그대로 합격선으로 쓰면 상당수가 걸린다는 것은 분명합니다.
+  그 값이 우리 땅에 맞는지는 <b>이번 조사를 다 마치고 나서</b> 판단합니다.</p>
  </div>
  <div class="quote reveal">그래서 이번 조사는 기준을 <b>지키는</b> 일이 아니라
  <span class="hl">기준을 만들 자료를 모으는</span> 일입니다.</div>
@@ -593,10 +665,19 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   <p class="lead">센서 가까이에 쇠붙이가 있으면 그 영향이 값에 섞여 들어옵니다.
   문제는 나중에 보면 <b class="hl-r">그것이 사람 때문인지 그 자리의 성질인지
   가려낼 방법이 없다</b>는 것입니다.</p>
-  <p class="lead">측정 전에 몸에서 빼 주십시오. 사정상 못 뺀 것이 있으면
-  무엇을 왜 못 뺐는지 적어 주시면 됩니다.</p>
+  <p class="lead">측정 전에 <b>뺄 수 있는 것</b>부터 몸에서 내려놓아 주십시오 —
+  시계·휴대전화·열쇠·펜·무전기처럼 손에서 놓아도 되는 것들입니다.</p>
+  <div class="card warn" style="margin-top:18px;border-color:rgba(255,180,80,.6);
+   background:rgba(255,180,80,.09)">
+   <p style="font-size:17px;color:var(--ink)">
+   <b style="color:#ffc06a">★ 안전모와 안전화는 절대 벗지 마십시오.</b>
+   금속이 들어 있어도 이 둘은 <b>몸을 지키는 장비</b>입니다. 벗는 대신
+   그런 것이 있다고 카드에 적어 두시면 됩니다. 영향이 걱정될 만큼 크면
+   센서를 조금 더 떼어 놓거나, 그래도 안 되면 <b>측정을 멈추고 알려</b> 주십시오 —
+   자료보다 사람이 먼저입니다.</p>
+  </div>
  </div>
- <div class="reveal"><canvas class="fig" id="figClean" width="620" height="560"
+ <div class="reveal"><canvas class="fig" id="figClean" width="660" height="580"
   aria-label="측정자가 지닌 자성 물품"></canvas></div>
 </div></section>
 
@@ -606,20 +687,30 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   <h2>현장에서는 이 카드<br>한 장을 채웁니다</h2>
   <p class="lead">점마다 카드가 한 장씩 있습니다. 한 장을 다 채우면
   그 지점의 기록이 끝납니다. 순서대로 되어 있으니 위에서부터 채워 가시면 됩니다.</p>
+  <p class="lead">보라색으로 표시한 칸은 <b>모든 지점에서 하는 것이 아닙니다.</b>
+  대상 지점만 채우고, 아니면 「해당없음」으로 남겨 주십시오.</p>
  </div>
  <div class="steps reveal">
   <div class="step"><div><b>측정 전 확인</b>
    <small>몸에 지닌 자성 물품, 차량 위치, 전자기기 전원</small></div></div>
   <div class="step"><div><b>도착 · 관측 조건 · 원시자료 연결</b>
-   <small>일자·시각·관측자·기상·Kp, 그리고 <b>장비 원시파일명과 레코드 범위</b></small></div></div>
+   <small>일자·시각·관측자·기상·Kp, 그리고 <b>장비 원시파일명과 레코드 범위</b>.
+   시각은 <b>모든 F 줄에 시·분·초까지</b> — 종이와 기기 파일을 잇는 끈입니다</small></div></div>
   <div class="step"><div><b>기준점 좌표</b>
-   <small>GNSS 실측 위도·경도를 십진도로</small></div></div>
+   <small>GNSS 실측 위도·경도를 <b>십진도 여섯 자리</b>로. 미리 알려 드린
+   사전좌표와 많이 다르면 왜 그런지도 함께</small></div></div>
   <div class="step"><div><b>수평 자기구배</b>
    <small>네 방향 × {{N_OFF}}점, 방향마다 P0 앞뒤로 한 번씩</small></div></div>
   <div class="step"><div><b>수직 자기구배</b>
-   <small>중심점에서 높이별, 실제 센서 «가운데» 높이를 적습니다</small></div></div>
-  <div class="step"><div><b>방위표지 시준</b>
-   <small>정·반 시준과 표지 좌표·취득방법</small></div></div>
+   <small>높이 {{N_HEIGHT}}개 + <b>시작·끝 기준높이 2회 = {{N_READ_V}}줄</b>.
+   높이는 목표값이 아니라 실제 센서 «가운데» 높이를 적습니다</small></div></div>
+  <div class="step" style="border-color:rgba(155,127,232,.42);
+   background:rgba(155,127,232,.06)">
+   <div><b>방위표지 시준 <span style="color:#b9a6f2;font-size:15px;
+    font-weight:600">— 대상 지점만</span></b>
+   <small>정·반 시준과 표지 좌표·취득방법. <b>전 지점에서 하는 것이 아닙니다</b> —
+   방위표지는 내년 절대측정을 위한 준비라 대상 여부를 착수 전에 따로 알려 드립니다.
+   대상이 아니면 이 구역은 「해당없음」으로 두시면 됩니다</small></div></div>
   <div class="step"><div><b>현장 사진 9칸</b>
    <small>중심점·측정 모습·표지 2장·네 방향 전경·교란 요소</small></div></div>
   <div class="step"><div><b>중심점 최종 결정 · 소견</b>
@@ -644,8 +735,8 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   <div class="card stat"><span class="num o">불가</small></span>
    <small>외부장 보정 — 시각이 없으니 어느 시점 값을 빼야 할지 알 수 없습니다</small></div>
  </div>
- <div class="quote reveal r">각도를 아무리 정확히 재도,
- <b>몇 시에 쟀는지 모르면 그 값은 쓸 수 없습니다.</b></div>
+ <div class="quote reveal r">아무리 정확히 재도,
+ <b>몇 시에 쟀는지 모르면 그 값은 외부장 보정에 쓸 수 없습니다.</b></div>
  <p class="lead reveal">규정에도 「편각·복각을 잴 때 총자기장과 시간을 함께
  측정한다」고 되어 있었습니다. 다만 <b>야장 양식에 그 칸이 없었습니다.</b>
  그래서 이번 카드에는 <b class="hl">F 를 잰 모든 줄에 시각 칸</b>을 넣었습니다.</p>
@@ -655,6 +746,13 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
  <div class="reveal">
   <span class="tag" style="color:var(--red)">17</span>
   <h2>좌표가 어긋나서<br><span class="hl-r">점 하나를 잃은 일</span></h2>
+ </div>
+ <div class="card reveal" style="border-color:rgba(155,127,232,.5);
+  background:rgba(155,127,232,.09);margin:0 0 26px">
+  <p style="font-size:17px;color:var(--ink)">
+  <b style="color:#b9a6f2">★ 과거 성과와 대조하는 일은 내년 몫입니다.</b>
+  다만 <b>중심점 좌표를 정확히 남기는 것은 올해 여러분의 책임</b>입니다 —
+  아래 사고들이 바로 그 한 줄에서 시작됐습니다.</p>
  </div>
  <div class="reveal tblwrap" style="margin-top:24px"><table>
   <tr><th>점</th><th>무슨 일이 있었나</th><th>결과</th></tr>
@@ -679,26 +777,31 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
 <section data-t="두 번의 방문"><div class="wrap">
  <div class="reveal">
   <span class="tag" style="color:var(--red)">18</span>
-  <h2>두 번의 방문이<br>전국 모델을 <span class="hl-r">26 % 망가뜨렸습니다</span></h2>
-  <p class="lead">같은 표석을 몇 년 뒤 다시 가서 재면, 자연스러운 변화만큼만
-  달라져야 합니다. 그런데 <b class="hl-r">34분</b> 씩 어긋나는 구간이
-  있었습니다.</p>
-  <p class="lead">원인을 찾아보니 <b>방문할 때마다 시준한 방위표지가
-  달라져 있었습니다.</b> 표지를 바꾼 것 자체는 잘못이 아닙니다.
-  바뀐 표지의 참방위각이 틀리면 그 방문의 편각이 통째로 그만큼 틀어집니다.</p>
+  <h2>같은 자리를 다시 갔더니<br><span class="hl-r">34분이 어긋났습니다</span></h2>
+ </div>
+ <div class="card reveal" style="border-color:rgba(155,127,232,.5);
+  background:rgba(155,127,232,.09);margin:0 0 26px">
+  <p style="font-size:17px;color:var(--ink)">
+  <b style="color:#b9a6f2">★ 올해 여러분이 하는 일은 아닙니다.</b>
+  여기부터는 <b>내년에 실제 측량이 시작되면</b> 반드시 확인해야 하는 내용입니다.
+  그래도 지금 알아 두셔야 하는 이유는, 올해 여러분이 고른 자리와 남긴 좌표가
+  그때 그대로 쓰이기 때문입니다.</p>
+ </div>
+ <div class="reveal">
+  <p class="lead">같은 표석을 몇 년 뒤 다시 재면 자연스러운 변화만큼만
+  달라져야 합니다. 그런데 재방문 16구간 가운데 <b class="hl-r">9구간</b> 에서
+  어긋남이 6분을 넘었고, 전체로는 <b class="hl-r">33.7분</b> 이었습니다.</p>
+  <p class="lead">장비나 계산 탓이 아니었습니다. 야장의 산술을 다시 계산해 보니
+  <b class="hl-g">0.16초</b> 까지 맞았고, 같은 날 두 번 재면
+  <b class="hl-g">1.4분</b> 안에 들어옵니다. <b>정밀한데 부정확했던 것입니다.</b></p>
+  <p class="lead">원인은 <b class="hl-r">방문할 때마다 시준한 방위표지가
+  달라져 있었다</b>는 것이었습니다. 표지를 바꾼 것 자체는 잘못이 아닙니다.
+  다만 바뀐 표지의 참방위각이 틀리면 그 방문의 편각이 통째로 그만큼 틀어집니다.</p>
  </div>
  <div class="reveal" style="margin-top:30px"><canvas class="fig" id="figAudit"
-  width="1100" height="300" aria-label="두 방문 제거 전후의 모델 오차"></canvas></div>
- <div class="grid2 reveal" style="margin-top:22px">
-  <div class="card warn"><h3>빼기 전</h3>
-   <p>전국 편각 예측 오차 <b class="hl-r">0.7691°</b><br>
-   편각 잔차 <b class="hl-r">35.0분</b></p></div>
-  <div class="card good"><h3>부안·포천 2023 두 방문을 빼면</h3>
-   <p>전국 편각 예측 오차 <b class="hl-g">0.5675°</b> (−26 %)<br>
-   편각 잔차 <b class="hl-g">20.7분</b> (−41 %)</p></div>
- </div>
- <div class="quote reveal r">모델은 <b>잘못된 현장값도 정답이라고 믿습니다.</b>
- 두 번의 방문이 전국의 값을 끌고 갔습니다.</div>
+  width="1100" height="330" aria-label="같은 날 재현성과 재방문 재현성 비교"></canvas></div>
+ <div class="quote reveal r">한 번 잘못 잰 값은 <b>그 자리의 40년 기록을
+ 통째로 흔듭니다.</b> 다음 사람이 무엇을 보고 쟀는지 알 수 있게 남겨 주십시오.</div>
 </div></section>
 
 <section data-t="당신의 자리"><div class="wrap">
@@ -710,13 +813,14 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   <div class="card"><h3 class="hl">① 그 자리에서 계속 잽니다</h3>
    <p>선점이 확정되면 표석을 세우고 <b>5년마다</b> 반복 관측을 합니다.
    지금 조용한 자리를 못 고르면 그 오차가 수십 년 따라갑니다.</p></div>
-  <div class="card"><h3 class="hl">② 여러분의 자료가 기준이 됩니다</h3>
-   <p>국내 판정 기준이 아직 없습니다. <b>이번에 {{N_SITES}}곳에서 모은 값으로
-   그 기준을 만듭니다.</b> 여러분의 측정이 규정이 됩니다.</p></div>
+  <div class="card"><h3 class="hl">② 기준을 정할 때 이 자료를 씁니다</h3>
+   <p>국내 판정 기준이 아직 없습니다. <b>이번에 {{N_SITES}}곳에서 모은 값</b>이
+   그 기준을 정할 때 쓰는 자료가 됩니다. 한쪽으로 치우친 자료를 모으면
+   기준도 그만큼 치우칩니다.</p></div>
  </div>
  <p class="lead reveal" style="margin-top:26px">그래서 「기록을 빠뜨리지 마세요」가
  형식적인 당부가 아닙니다. 시각 하나, 좌표 하나, 차수 하나가 빠지면
- 그 줄은 <b class="hl-r">계산에서 통째로 빠집니다.</b> 나중에 사무실에서
+ 그 줄은 <b class="hl-r">보정 계산에서 빠집니다.</b> 나중에 사무실에서
  되살릴 방법이 없습니다.</p>
 </div></section>
 
@@ -729,14 +833,22 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
   <div class="card good"><h3 class="hl-g">지금 바로</h3>
    <p>국가기본도의 자침편차 표기 · 측량과 방위 기준 ·
    국가 지자기 성과 고시 · 상시관측소 기선값 관리</p></div>
-  <div class="card"><h3 class="hl">연구에</h3>
-   <p>대한민국 지역 자기장 모델 · 장기 영년변화 분석 ·
-   전지구 모델(IGRF)과 국내 실측값 대조 · 지각 자기이상 해석</p></div>
+  <div class="card"><h3 class="hl">지금 만들어 가는 것</h3>
+   <p>전국의 편각을 설명할 수 있는 기준 자료 · 장기 영년변화 분석 ·
+   전지구 표준값과 국내 실측 대조 — <b>아직 만드는 중이고,
+   그 재료가 여러분의 관측입니다</b></p></div>
   <div class="card"><h3 style="color:var(--muted)">앞으로 넓혀 갈 수 있는 곳</h3>
    <p>항법 보조 · 우주환경 영향 분석 · 지하자원 탐사 기준 ·
    전력망·철도의 지자기 유도 영향 — <b>가능성이지 확정된 계획은
    아닙니다</b></p></div>
  </div>
+ <div class="reveal" style="margin-top:34px"><canvas class="fig" id="figUse"
+  width="1180" height="430"
+  aria-label="현장 카드에서 국가 성과, 지형도 자침편차 표기, 나침반 사용자로 이어지는 흐름"></canvas></div>
+ <p class="lead reveal" style="margin-top:22px">가장 가까운 쓰임은 <b>지형도</b>
+ 입니다. 1:25,000 지형도 가장자리에는 「이 도엽에서 나침반이 진북에서 얼마나
+ 틀어지는가」가 인쇄되어 있습니다. 그 각도의 뿌리가
+ <b class="hl">여러분이 현장에서 적은 값</b> 입니다.</p>
 </div></section>
 
 <!-- ══ 에필로그 ══ -->
@@ -744,22 +856,26 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
  <div class="reveal">
   <span class="tag">에필로그 · 21</span>
   <h2>한 점에서 전국으로</h2>
-  <p class="lead">여러분이 현장에서 적은 각도 하나, 시각 하나, 좌표 하나가
+  <p class="lead">여러분이 현장에서 적은 값 하나, 시각 하나, 좌표 하나가
   데이터베이스로, 전국 지도로, 대한민국 지자기 기준으로 이어집니다.</p>
  </div>
  <div class="quote reveal" style="font-size:clamp(22px,3.2vw,42px);margin:44px 0">
   대한민국 지자기 기준은<br><span class="hl">여러분의 기록 하나에서
   시작됩니다.</span></div>
  <div class="rules reveal">
+  <div class="rule"><div><b>필수 보호구는 벗지 않습니다</b>
+   <small>안전모·안전화는 금속이 들어 있어도 그대로 씁니다. 그런 것이 있다고
+   적어 두시면 됩니다</small></div></div>
   <div class="rule"><div><b>같은 지점에서 잽니다</b>
    <small>좌표와 소재지를 정확히 남겨야 다음 사람이 그 자리를 찾아갑니다</small></div></div>
-  <div class="rule"><div><b>자기적 영향을 없앱니다</b>
-   <small>몸에 지닌 쇠붙이, 차량, 전자기기 — 못 뺀 것은 적어 둡니다</small></div></div>
+  <div class="rule"><div><b>뺄 수 있는 쇠붙이는 내려놓습니다</b>
+   <small>시계·휴대전화·열쇠·펜, 차량과 전자기기 — 못 뺀 것은 적어 둡니다</small></div></div>
   <div class="rule"><div><b>시각을 시·분·초까지 적습니다</b>
    <small>F 를 잰 모든 줄에. 이것 하나가 빠지면 그 줄은 계산에서 빠집니다</small></div></div>
-  <div class="rule"><div><b>이상한 값은 원인을 확인합니다</b>
-   <small>값이 커서가 아니라 «절차가 깨져서» 다시 잽니다. 시작한 방향은
-   끝까지 재 주세요</small></div></div>
+  <div class="rule"><div><b>다시 재는 것은 «절차가 깨졌을 때»입니다</b>
+   <small>값이 커서가 아닙니다. 시작한 방향은 값이 어떻게 나오든 끝까지 재고,
+   다시 잴 때는 <b>차수를 올려 새 줄</b>에 적습니다 — 앞서 잰 줄은 지우지
+   않습니다</small></div></div>
   <div class="rule"><div><b>재현할 수 있게 남깁니다</b>
    <small>차수, 장비 원시파일명, 사진 파일명 — 나중에 되짚을 수 있어야
    자료입니다</small></div></div>
@@ -769,7 +885,7 @@ canvas.fig{width:100%;height:auto;display:block;border:1px solid var(--line);
 </main>
 <div class="foot">
  지자기 측량 현장교육 · {{GENERATED}}<br>
- 수치는 <code>lmm_model.json</code> · <code>trial_survey_spec</code> ·
+ 수치는 <code>trial_survey_points</code> · <code>trial_survey_spec</code> ·
  <code>existing_pts.geojson</code> 에서 읽습니다 — 자료가 갱신되면 이 자료도
  따라갑니다.<br>
  Three.js r149 (MIT) 인라인 · 외부 요청 없음 · 오프라인 실행
@@ -840,6 +956,16 @@ function drawCoast(ctx, pj, color, lw) {
     ctx.stroke();
   });
 }
+function rrect(ctx, x, y, w, h, r, fill, line) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (line) { ctx.strokeStyle = line; ctx.stroke(); }
+}
 function hidpi(cv) {
   const r = Math.min(devicePixelRatio || 1, 2);
   const w = cv.width, h = cv.height;
@@ -849,6 +975,307 @@ function hidpi(cv) {
   ctx.scale(r, r);
   return {ctx, w, h};
 }
+
+/* ── 자기장의 출처 단면도 ────────────────────────── */
+/* 「지구 핵 · 지각 · 항공자력 · 반복측정」을 한 그림에 둔다. 카드 넷은
+   무엇이 있는지만 말하고, 이 그림이 «어디서 와서 어떻게 재는지»를 말한다. */
+(function () {
+  const cv = document.getElementById("figLayers"); if (!cv) return;
+  const {ctx, w, h} = hidpi(cv);
+  const GY = 322, FLY = 152;
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineJoin = "round"; ctx.lineCap = "round";
+  /* 맨틀 */
+  ctx.fillStyle = "rgba(140,180,210,.05)";
+  ctx.fillRect(0, GY + 58, w, h - GY - 58);
+  /* 외핵 */
+  const cg = ctx.createLinearGradient(0, 402, 0, h);
+  cg.addColorStop(0, "rgba(63,216,208,.07)");
+  cg.addColorStop(1, "rgba(63,216,208,.26)");
+  ctx.fillStyle = cg;
+  ctx.beginPath(); ctx.moveTo(0, h); ctx.lineTo(0, 470);
+  ctx.quadraticCurveTo(w / 2, 402, w, 470); ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "rgba(63,216,208,.45)"; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(0, 470); ctx.quadraticCurveTo(w / 2, 402, w, 470); ctx.stroke();
+  [620, 820, 1020].forEach(x => {                 /* 쇳물 순환 */
+    const r = 30, a = Math.PI * 1.7;
+    ctx.strokeStyle = "rgba(63,216,208,.55)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, h - 42, r, Math.PI * .2, a); ctx.stroke();
+    ctx.save(); ctx.translate(x + Math.cos(a) * r, h - 42 + Math.sin(a) * r);
+    ctx.rotate(a + Math.PI / 2); ctx.fillStyle = "rgba(63,216,208,.75)";
+    ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(6, 5); ctx.lineTo(-6, 5);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  });
+  /* 지각 */
+  ctx.fillStyle = "rgba(155,127,232,.13)"; ctx.fillRect(0, GY, w, 58);
+  ctx.strokeStyle = "rgba(155,127,232,.55)"; ctx.lineWidth = 1.6;
+  [[600, 28, 62, 17], [800, 34, 44, 13], [1010, 24, 54, 15]].forEach(([x, d, rx, ry]) => {
+    ctx.beginPath(); ctx.ellipse(x, GY + d, rx, ry, .2, 0, 7); ctx.stroke();
+  });
+  /* 지표 */
+  ctx.strokeStyle = "#8ba3b8"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, GY); ctx.lineTo(w, GY); ctx.stroke();
+  /* 항공자력 측선 */
+  ctx.strokeStyle = "rgba(74,127,232,.6)"; ctx.lineWidth = 1.6;
+  ctx.setLineDash([9, 7]);
+  ctx.beginPath(); ctx.moveTo(60, FLY); ctx.lineTo(w - 60, FLY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = "rgba(74,127,232,.22)"; ctx.lineWidth = 1;
+  for (let x = 90; x < w - 60; x += 46) {
+    ctx.beginPath(); ctx.moveTo(x, FLY + 6); ctx.lineTo(x, GY - 4); ctx.stroke();
+  }
+  (function plane(x, y) {                          /* 항공기 */
+    ctx.fillStyle = "#4a7fe8";
+    ctx.beginPath(); ctx.moveTo(x + 28, y); ctx.lineTo(x - 16, y - 9);
+    ctx.lineTo(x - 7, y); ctx.lineTo(x - 16, y + 9); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x + 6, y - 2); ctx.lineTo(x - 10, y - 22);
+    ctx.lineTo(x - 1, y - 22); ctx.lineTo(x + 15, y - 2); ctx.closePath(); ctx.fill();
+  })(700, FLY);
+  /* 지상 반복관측점 */
+  [600, 800, 1010].forEach(x => {
+    ctx.strokeStyle = "#3fd8a0"; ctx.lineWidth = 2;
+    ctx.fillStyle = "rgba(63,216,160,.25)";
+    ctx.beginPath(); ctx.moveTo(x - 12, GY); ctx.lineTo(x + 12, GY);
+    ctx.lineTo(x + 9, GY - 17); ctx.lineTo(x - 9, GY - 17); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, GY - 17); ctx.lineTo(x, GY - 62); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, GY - 71, 9, 0, 7);
+    ctx.fillStyle = "rgba(63,216,160,.4)"; ctx.fill(); ctx.stroke();
+  });
+  /* 태양 */
+  const SX = w - 62, SY = 60;
+  ctx.fillStyle = "rgba(255,112,72,.28)";
+  ctx.beginPath(); ctx.arc(SX, SY, 23, 0, 7); ctx.fill();
+  ctx.strokeStyle = "#ff7048"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(SX, SY, 23, 0, 7); ctx.stroke();
+  for (let i = 0; i < 10; i++) {
+    const a = i / 10 * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(SX + Math.cos(a) * 29, SY + Math.sin(a) * 29);
+    ctx.lineTo(SX + Math.cos(a) * 37, SY + Math.sin(a) * 37); ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(255,112,72,.42)"; ctx.lineWidth = 1.6;
+  [0, 26, 52].forEach(off => {                     /* 흔들리는 외부장 */
+    ctx.beginPath();
+    for (let t = 0; t <= 1; t += .02) {
+      const x = SX - 40 - t * 420, y = SY + 44 + off + t * 190 + Math.sin(t * 22) * 9;
+      if (t === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  });
+  /* 이름표 — 왼쪽 한 줄로 모아 겹치지 않게 한다 */
+  /* ⚠️ 발생원(자기장이 «오는 곳»)과 관측방법(그것을 «재는 법»)을 같은
+     모양으로 찍으면 항공자력·반복관측이 자기장의 원인처럼 보인다.
+     채운 사각형 = 발생원 · 빈 사각형 = 재는 방법 으로 갈라 둔다. */
+  function lab(y, col, t1, t2, how) {
+    if (how) {
+      ctx.strokeStyle = col; ctx.lineWidth = 2;
+      ctx.strokeRect(73, y - 9, 8, 8);
+    } else {
+      ctx.fillStyle = col; ctx.fillRect(72, y - 10, 10, 10);
+    }
+    ctx.fillStyle = how ? "#c9d8e4" : "#eaf2f8";
+    ctx.font = "700 14.5px sans-serif"; ctx.textAlign = "left";
+    ctx.fillText((how ? "[재는 방법] " : "") + t1, 90, y);
+    ctx.fillStyle = "#8ba3b8"; ctx.font = "600 13px sans-serif";
+    ctx.fillText(t2, 90, y + 19);
+  }
+  lab(46, "#ff7048", "태양 활동 — 상공에서 오는 자기장",
+      "하루 사이에도 값을 흔듭니다. 그래서 «몇 시에 쟀는지»가 필요합니다");
+  lab(112, "#4a7fe8", "항공자력 측량 — 하늘에서 넓게 훑습니다",
+      "지각 자기장의 «모양»을 봅니다. 이미 확보되어 있는 자료입니다", true);
+  lab(250, "#3fd8a0", "지상 반복관측 — 한 점에서 정확하게 잽니다",
+      "5년마다 다시 갑니다. 여러분이 하는 일이 바로 이것입니다", true);
+  lab(356, "#9b7fe8", "지각 암석 — 땅속 암석이 만드는 국지 자기장",
+      "몇 m 만 옮겨도 값이 달라지는 원인입니다");
+  lab(486, "#3fd8d0", "지구 외핵 — 쇳물의 흐름",
+      "자기장의 대부분을 만들고, 해마다 조금씩 움직입니다");
+})();
+
+/* ── 장비 넷 ─────────────────────────────────────── */
+(function () {
+  const cv = document.getElementById("figGear"); if (!cv) return;
+  const {ctx, w, h} = hidpi(cv);
+  const G = "#3fd8a0", M = "#7d92a4", V = "#9b7fe8", BASE = 300;
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineJoin = "round"; ctx.lineCap = "round";
+  const CX = [0, 1, 2, 3].map(i => w * (.14 + i * .24));
+  function tripod(x, topY, col) {
+    ctx.strokeStyle = col; ctx.lineWidth = 2.4;
+    [[-46, 0], [46, 0], [-9, -15]].forEach(([dx, dz]) => {
+      ctx.beginPath(); ctx.moveTo(x, topY); ctx.lineTo(x + dx, BASE + dz); ctx.stroke();
+    });
+  }
+  function badge(x, txt, col) {
+    ctx.font = "700 12.5px sans-serif";
+    const bw = ctx.measureText(txt).width + 26;
+    rrect(ctx, x - bw / 2, 30, bw, 26, 13, "rgba(255,255,255,.04)", col);
+    ctx.fillStyle = col; ctx.textAlign = "center"; ctx.fillText(txt, x, 47);
+  }
+  function name(x, txt) {
+    ctx.fillStyle = "#eaf2f8"; ctx.font = "700 16px sans-serif";
+    ctx.textAlign = "center"; ctx.fillText(txt, x, 356);
+  }
+  /* ① 오버하우저 자력계 */
+  let x = CX[0];
+  tripod(x, 196, G);
+  ctx.strokeStyle = G; ctx.lineWidth = 2.4;
+  ctx.beginPath(); ctx.moveTo(x, 196); ctx.lineTo(x, 134); ctx.stroke();
+  rrect(ctx, x - 46, 108, 92, 26, 13, "rgba(63,216,160,.22)", G);
+  ctx.beginPath(); ctx.moveTo(x + 30, 130);
+  ctx.bezierCurveTo(x + 78, 152, x + 84, 212, x + 78, 244); ctx.stroke();
+  rrect(ctx, x + 52, 244, 56, 46, 5, "rgba(63,216,160,.14)", G);
+  ctx.fillStyle = "rgba(63,216,160,.45)"; ctx.fillRect(x + 61, 253, 38, 16);
+  badge(x, "올해 사용", G); name(x, "오버하우저 자력계");
+  /* ② GNSS 수신기 */
+  x = CX[1];
+  tripod(x, 200, G);
+  ctx.strokeStyle = G; ctx.lineWidth = 2.4;
+  ctx.beginPath(); ctx.moveTo(x, 200); ctx.lineTo(x, 170); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x, 160, 54, 15, 0, 0, 7);
+  ctx.fillStyle = "rgba(63,216,160,.22)"; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, 158, 26, Math.PI, 0); ctx.stroke();
+  ctx.strokeStyle = "rgba(63,216,160,.4)"; ctx.lineWidth = 1.8;
+  [40, 56, 72].forEach(r => {
+    ctx.beginPath(); ctx.arc(x, 136, r, Math.PI * 1.18, Math.PI * 1.82); ctx.stroke();
+  });
+  badge(x, "올해 사용", G); name(x, "GNSS 수신기");
+  /* ③ 이동식 Variometer */
+  x = CX[2];
+  ctx.strokeStyle = M; ctx.lineWidth = 2.2;
+  ctx.beginPath(); ctx.moveTo(x - 92, BASE); ctx.lineTo(x + 92, BASE); ctx.stroke();
+  rrect(ctx, x - 58, 246, 116, 54, 6, "rgba(140,180,210,.09)", M);
+  ctx.beginPath(); ctx.moveTo(x, 246); ctx.lineTo(x, 214); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, 205, 9, 0, 7); ctx.stroke();
+  ctx.strokeStyle = "rgba(155,127,232,.8)"; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= 170; i++) {
+    const px = x - 85 + i, py = 158 + Math.sin(i / 14) * 17 + Math.sin(i / 5) * 4;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.fillStyle = "#9b7fe8"; ctx.font = "600 12px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("시간에 따른 흔들림", x, 122);
+  badge(x, "확보되면", M); name(x, "이동식 Variometer");
+  /* ④ DI-flux 자기경위의 */
+  x = CX[3];
+  tripod(x, 208, V);
+  rrect(ctx, x - 24, 160, 48, 48, 4, "rgba(155,127,232,.15)", V);
+  ctx.strokeStyle = V; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x - 36, 184, 16, 0, 7); ctx.stroke();
+  rrect(ctx, x - 58, 130, 116, 24, 12, "rgba(155,127,232,.2)", V);
+  rrect(ctx, x - 30, 108, 60, 20, 4, "rgba(255,112,72,.28)", "#ff7048");
+  ctx.fillStyle = "#ff7048"; ctx.font = "700 12px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("플럭스게이트 센서", x, 98);
+  ctx.fillStyle = V; ctx.font = "700 12px sans-serif"; ctx.textAlign = "right";
+  ctx.fillText("비자성 경위의", x - 62, 190);
+  badge(x, "내년 사용", V); name(x, "DI-flux 자기경위의");
+  /* 요지 */
+  ctx.fillStyle = "#8ba3b8"; ctx.font = "600 13.5px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("올해는 세기(F)만 잽니다 — 방향(D·I)을 재는 장비는 내년에 들어옵니다",
+               w / 2, h - 18);
+})();
+
+/* ── 활용 흐름 ───────────────────────────────────── */
+(function () {
+  const cv = document.getElementById("figUse"); if (!cv) return;
+  const {ctx, w, h} = hidpi(cv);
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineJoin = "round";
+  const BW = 248, BH = 180, BY = 84, GAP = 36, X0 = 40;
+  const COL = ["#3fd8a0", "#3fd8d0", "#4a7fe8", "#ff7048"];
+  const TT = [["현장 기록", "올해 자리 고르기 → 내년 D·I·F 측량"],
+              ["국가 지자기 성과", "검증하고 고시합니다"],
+              ["1:25,000 지형도", "가장자리의 자침편차 표기"],
+              ["나침반 · 측량 · 항법", "그 각도를 보고 방향을 잡습니다"]];
+  for (let i = 0; i < 4; i++) {
+    const x = X0 + i * (BW + GAP);
+    rrect(ctx, x, BY, BW, BH, 3, "rgba(255,255,255,.03)", COL[i]);
+    ctx.lineWidth = 1.6;
+    if (i === 0) {
+      ctx.fillStyle = "rgba(63,216,160,.10)";
+      ctx.fillRect(x + 70, BY + 24, 104, 130);
+      ctx.strokeStyle = COL[0]; ctx.strokeRect(x + 70, BY + 24, 104, 130);
+      ctx.strokeStyle = "rgba(63,216,160,.55)"; ctx.lineWidth = 1.2;
+      for (let r = 0; r < 6; r++) {
+        ctx.beginPath(); ctx.moveTo(x + 82, BY + 46 + r * 18);
+        ctx.lineTo(x + 162, BY + 46 + r * 18); ctx.stroke();
+      }
+      ctx.strokeStyle = COL[0]; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(x + 152, BY + 150); ctx.lineTo(x + 192, BY + 110);
+      ctx.stroke();
+    } else if (i === 1) {
+      ctx.fillStyle = "rgba(63,216,208,.09)";
+      ctx.fillRect(x + 66, BY + 22, 110, 132);
+      ctx.strokeStyle = COL[1]; ctx.strokeRect(x + 66, BY + 22, 110, 132);
+      ctx.strokeStyle = "rgba(63,216,208,.5)"; ctx.lineWidth = 1.2;
+      for (let r = 0; r < 5; r++) {
+        ctx.beginPath(); ctx.moveTo(x + 78, BY + 44 + r * 16);
+        ctx.lineTo(x + 164, BY + 44 + r * 16); ctx.stroke();
+      }
+      ctx.strokeStyle = COL[1]; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x + 150, BY + 126, 21, 0, 7); ctx.stroke();
+      ctx.fillStyle = COL[1]; ctx.font = "700 12px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("고시", x + 150, BY + 131);
+    } else if (i === 2) {
+      ctx.fillStyle = "rgba(74,127,232,.08)";
+      ctx.fillRect(x + 34, BY + 18, 180, 96);
+      ctx.strokeStyle = COL[2]; ctx.lineWidth = 1.6;
+      ctx.strokeRect(x + 34, BY + 18, 180, 96);
+      ctx.strokeStyle = "rgba(74,127,232,.32)"; ctx.lineWidth = .8;
+      for (let g = 1; g < 5; g++) {
+        ctx.beginPath(); ctx.moveTo(x + 34 + g * 36, BY + 18);
+        ctx.lineTo(x + 34 + g * 36, BY + 114); ctx.stroke();
+      }
+      for (let g = 1; g < 3; g++) {
+        ctx.beginPath(); ctx.moveTo(x + 34, BY + 18 + g * 32);
+        ctx.lineTo(x + 214, BY + 18 + g * 32); ctx.stroke();
+      }
+      const dx0 = x + 84, dy0 = BY + 168;
+      ctx.strokeStyle = "#8ba3b8"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(dx0, dy0); ctx.lineTo(dx0, dy0 - 38); ctx.stroke();
+      ctx.fillStyle = "#8ba3b8"; ctx.font = "700 13px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("★", dx0, dy0 - 42);
+      const a2 = -8.2 * Math.PI / 180;
+      ctx.strokeStyle = COL[2]; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(dx0, dy0);
+      ctx.lineTo(dx0 + Math.sin(a2) * 38, dy0 - Math.cos(a2) * 38); ctx.stroke();
+      ctx.fillStyle = COL[2]; ctx.font = "700 13.5px sans-serif"; ctx.textAlign = "left";
+      ctx.fillText("8°10′W", dx0 + 18, dy0 - 6);
+    } else {
+      const mx = x + BW / 2, my = BY + 88;
+      ctx.strokeStyle = COL[3]; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(mx, my, 56, 0, 7); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,112,72,.32)";
+      ctx.beginPath(); ctx.arc(mx, my, 44, 0, 7); ctx.stroke();
+      ctx.save(); ctx.translate(mx, my); ctx.rotate(-8.2 * Math.PI / 180);
+      ctx.fillStyle = COL[3];
+      ctx.beginPath(); ctx.moveTo(0, -46); ctx.lineTo(7, 0); ctx.lineTo(0, 11);
+      ctx.lineTo(-7, 0); ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.fillStyle = "#8ba3b8"; ctx.font = "700 12px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("N", mx, BY + 26);
+      ctx.font = "600 12.5px sans-serif";
+      ctx.fillText("측량 · 항법 · 등산", mx, BY + 166);
+    }
+    ctx.fillStyle = "#eaf2f8"; ctx.font = "700 16.5px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(TT[i][0], x + BW / 2, BY + BH + 36);
+    ctx.fillStyle = "#8ba3b8"; ctx.font = "600 13px sans-serif";
+    ctx.fillText(TT[i][1], x + BW / 2, BY + BH + 57);
+    if (i < 3) {
+      const a = x + BW + 6, b = x + BW + GAP - 4, y = BY + BH / 2;
+      ctx.strokeStyle = "rgba(140,180,210,.5)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(a, y); ctx.lineTo(b - 8, y); ctx.stroke();
+      ctx.fillStyle = "rgba(140,180,210,.75)";
+      ctx.beginPath(); ctx.moveTo(b, y); ctx.lineTo(b - 10, y - 6);
+      ctx.lineTo(b - 10, y + 6); ctx.closePath(); ctx.fill();
+    }
+  }
+  ctx.fillStyle = "#8ba3b8"; ctx.font = "600 13.5px sans-serif"; ctx.textAlign = "center";
+  ctx.fillText("⚠ 올해 재는 총자력만으로는 편각이 나오지 않습니다 — 선점을 확정하고 «따로» 편각·복각을 재야 이 흐름이 이어집니다.",
+               w / 2, h - 36);
+  ctx.fillStyle = "#55707f"; ctx.font = "600 13px sans-serif";
+  ctx.fillText("그 출발점이 올해 여러분이 고르는 «자리»입니다.", w / 2, h - 14);
+})();
 
 /* ── 나침반 ──────────────────────────────────────── */
 (function () {
@@ -867,10 +1294,10 @@ function hidpi(cv) {
     /* 진북 */
     ctx.strokeStyle = "#8ba3b8"; ctx.lineWidth = 1.6;
     ctx.setLineDash([5, 5]);
-    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - R * 1.06); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - R * 1.10); ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = "#8ba3b8"; ctx.font = "700 15px sans-serif";
-    ctx.textAlign = "center"; ctx.fillText("진북 (지도의 북)", cx, cy - R * 1.14);
+    ctx.textAlign = "center"; ctx.fillText("진북 (지도의 북)", cx, cy - R * 1.21);
     /* 자북 바늘 */
     const rad = (ang - 90) * Math.PI / 180;
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(rad + Math.PI / 2);
@@ -893,10 +1320,17 @@ function hidpi(cv) {
     ctx.fillText(ang.toFixed(1) + "°", cx - R * .62, cy - R * .28);
     ctx.font = "600 13px sans-serif"; ctx.fillStyle = "#8ba3b8";
     ctx.fillText("서편각", cx - R * .62, cy - R * .28 + 20);
+    /* ⚠️ 자북 이름을 바늘 «머리 위»에 두면 편각이 8도뿐이라 「진북」 위에
+       겹쳐 찍힌다. 지시선을 왼쪽으로 빼서 따로 앉힌다. */
+    const tipX = cx + Math.sin(rad + Math.PI / 2) * R * .98;
+    const tipY = cy - Math.cos(rad + Math.PI / 2) * R * .98;
+    const lbX = cx - R * .56, lbY = cy - R * .99;
+    ctx.strokeStyle = "rgba(63,216,208,.5)"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(tipX - 6, tipY + 3); ctx.lineTo(lbX + 8, lbY - 4);
+    ctx.stroke();
     ctx.fillStyle = "#3fd8d0"; ctx.font = "700 15px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("자북 (나침반)", cx + Math.sin(rad + Math.PI / 2) * R * 1.18,
-                 cy - Math.cos(rad + Math.PI / 2) * R * 1.18);
+    ctx.textAlign = "right";
+    ctx.fillText("자북 (나침반 바늘)", lbX, lbY);
     ctx.beginPath(); ctx.arc(cx, cy, 5, 0, 7); ctx.fillStyle = "#eaf2f8"; ctx.fill();
     if (k < 1) requestAnimationFrame(draw);
   }
@@ -941,91 +1375,174 @@ function hidpi(cv) {
 })();
 
 /* ── 편각 영년변화 ───────────────────────────────── */
+/* ⚠️ 꺾은선 그래프로는 «움직인다»가 안 느껴진다 — 1차본이 그랬다.
+   바늘을 실제로 돌리되, 36년치 차이가 1.8° 뿐이라 맨눈으로는 안 보이므로
+   돋보기로 8배 키워 세 해의 방향을 나란히 보인다. */
 (function () {
   const cv = document.getElementById("figDrift"); if (!cv) return;
   const {ctx, w, h} = hidpi(cv);
-  const L = 58, R = w - 24, T = 26, B = h - 44;
-  ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(140,180,210,.22)"; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(L, T); ctx.lineTo(L, B); ctx.lineTo(R, B); ctx.stroke();
-  const y0 = 1990, y1 = 2030, d0 = -6.0, d1 = -9.6;
-  const px = y => L + (y - y0) / (y1 - y0) * (R - L);
-  const py = d => B - (d - d0) / (d1 - d0) * (B - T);
-  ctx.font = "600 12px sans-serif"; ctx.fillStyle = "#8ba3b8";
-  ctx.textAlign = "center";
-  for (let y = 1990; y <= 2030; y += 10) {
-    ctx.fillText(y, px(y), B + 20);
-    ctx.strokeStyle = "rgba(140,180,210,.1)";
-    ctx.beginPath(); ctx.moveTo(px(y), T); ctx.lineTo(px(y), B); ctx.stroke();
+  const cx = w * .41, cy = h * .58, R = Math.min(w, h) * .30;
+  const D90 = -6.4, D26 = -8.2;                  /* 연 0.05°(3분) 서편 */
+  const MX = w * .78, MY = h * .28, MR = Math.min(w, h) * .17;
+  function needle(deg, col, alpha, dash) {
+    const rad = deg * Math.PI / 180;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rad); ctx.globalAlpha = alpha;
+    if (dash) {
+      ctx.setLineDash([6, 5]); ctx.strokeStyle = col; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -R * .95); ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.moveTo(0, -R * .95);
+      ctx.lineTo(9, 0); ctx.lineTo(0, 13); ctx.lineTo(-9, 0); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
   }
-  ctx.textAlign = "right";
-  for (let d = -6; d >= -9.5; d -= 1) ctx.fillText(d.toFixed(0) + "°", L - 9, py(d) + 4);
-  ctx.strokeStyle = "#3fd8d0"; ctx.lineWidth = 2.6;
-  ctx.beginPath();
-  for (let y = y0; y <= y1; y += .5) {
-    const d = -6.0 - (y - y0) * 0.055;
-    const X = px(y), Y = py(d);
-    if (y === y0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+  function ray(deg, col, dash, nm, lr) {
+    const bx = MX, by = MY + MR * .86, a = (deg - 90) * Math.PI / 180;
+    ctx.strokeStyle = col; ctx.lineWidth = dash ? 2 : 3;
+    if (dash) ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(bx, by);
+    ctx.lineTo(bx + Math.cos(a) * MR * 1.8, by + Math.sin(a) * MR * 1.8); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = col; ctx.font = "700 12.5px ui-monospace,Consolas,monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(nm, bx + Math.cos(a) * MR * lr, by + Math.sin(a) * MR * lr - 6);
   }
-  ctx.stroke();
-  const yn = 2026, dn = -6.0 - (yn - y0) * 0.055;
-  ctx.beginPath(); ctx.arc(px(yn), py(dn), 6, 0, 7);
-  ctx.fillStyle = "#ff7048"; ctx.fill();
-  ctx.fillStyle = "#ff7048"; ctx.font = "700 13px sans-serif";
-  ctx.textAlign = "left"; ctx.fillText("현재", px(yn) + 11, py(dn) - 6);
-  ctx.fillStyle = "#8ba3b8"; ctx.font = "600 12.5px sans-serif";
-  ctx.fillText("편각은 해마다 약 3분씩 서쪽으로 움직입니다", L + 6, T + 16);
+  function frame(k) {
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = "rgba(140,180,210,.20)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, R * .72, 0, 7); ctx.stroke();
+    ctx.strokeStyle = "#8ba3b8"; ctx.setLineDash([5, 5]); ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - R * 1.08); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#8ba3b8"; ctx.font = "700 13px sans-serif";
+    ctx.textAlign = "center"; ctx.fillText("진북", cx, cy - R * 1.17);
+    needle(D90, "#6b8296", .8, false);                /* 1990 자취 */
+    const cur = D90 + (D26 - D90) * k;
+    needle(cur, "#3fd8d0", 1, false);                 /* 지금 */
+    ctx.beginPath(); ctx.arc(cx, cy, 5, 0, 7); ctx.fillStyle = "#eaf2f8"; ctx.fill();
+    ctx.fillStyle = "#3fd8d0";
+    ctx.font = "800 32px 'Arial Narrow',Consolas,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(String(Math.round(1990 + 36 * k)), cx, cy + R * .5);
+    ctx.font = "600 12.5px sans-serif"; ctx.fillStyle = "#8ba3b8";
+    ctx.fillText(cur.toFixed(1) + "°", cx, cy + R * .5 + 19);
+    /* 돋보기 — 실제 각도차가 작아 8배로 키운다 */
+    const tx = cx + Math.sin(cur * Math.PI / 180) * R * .95;
+    const ty = cy - Math.cos(cur * Math.PI / 180) * R * .95;
+    ctx.strokeStyle = "rgba(140,180,210,.26)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tx + 7, ty - 5); ctx.lineTo(MX - MR * .95, MY - MR * .55);
+    ctx.moveTo(tx + 7, ty + 9); ctx.lineTo(MX - MR * .95, MY + MR * .66); ctx.stroke();
+    ctx.save();
+    ctx.beginPath(); ctx.arc(MX, MY, MR, 0, 7); ctx.clip();
+    ctx.fillStyle = "rgba(9,17,28,.9)";
+    ctx.fillRect(MX - MR, MY - MR, MR * 2, MR * 2);
+    ray((D90 - D26) * 8, "#6b8296", false, "1990", 1.64);
+    ray(0, "#3fd8d0", false, "2026", 1.3);
+    ctx.fillStyle = "#8ba3b8"; ctx.font = "600 10.5px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("각도차만 키운 것", MX, MY + MR * .58);
+    ctx.fillText("숫자는 실제값", MX, MY + MR * .78);
+    ctx.restore();
+    ctx.strokeStyle = "rgba(140,180,210,.45)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(MX, MY, MR, 0, 7); ctx.stroke();
+    ctx.fillStyle = "#55707f"; ctx.font = "700 11px ui-monospace,Consolas,monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("각도차만 8배로 벌려 그림", MX, MY + MR + 17);
+    ctx.fillStyle = "#eaf2f8"; ctx.font = "700 15px sans-serif";
+    ctx.fillText("36년 동안 1.8° 움직였습니다", w / 2, h - 32);
+    ctx.fillStyle = "#8ba3b8"; ctx.font = "600 13px sans-serif";
+    ctx.fillText("1 km 앞에서 31 m 가 어긋나는 각도입니다", w / 2, h - 12);
+  }
+  let t0 = null;
+  function run(ts) {
+    if (t0 === null) t0 = ts;
+    const k = Math.min((ts - t0) / 2600, 1);
+    frame(k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+    if (k < 1) requestAnimationFrame(run);
+  }
+  frame(0);
+  new IntersectionObserver((es, ob) => {
+    es.forEach(e => { if (e.isIntersecting) { requestAnimationFrame(run); ob.disconnect(); } });
+  }, {threshold: .3}).observe(cv);
 })();
 
-/* ── 벡터 분해 (WebGL) ───────────────────────────── */
+/* ── 벡터 분해 (2D · 화살표마다 이름) ────────────── */
+/* ⚠️ 1차본은 WebGL 로 돌아가는 화살표 셋이었는데 «무엇이 무엇인지»가
+   없었다. 회전보다 이름이 중요하다 — 정지 그림에 이름표를 단다. */
 (function () {
-  const cv = document.getElementById("figVector"); if (!cv || !window.THREE) return;
-  const W = cv.width, H = cv.height;
-  const rn = new THREE.WebGLRenderer({canvas: cv, antialias: true, alpha: true});
-  rn.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
-  rn.setSize(W, H, false);
-  const sc = new THREE.Scene();
-  const cam = new THREE.PerspectiveCamera(42, W / H, .1, 100);
-  cam.position.set(3.1, 2.3, 3.6); cam.lookAt(0, .1, 0);
-  sc.add(new THREE.AmbientLight(0xffffff, .85));
-  const dl = new THREE.DirectionalLight(0xffffff, .55);
-  dl.position.set(3, 5, 2); sc.add(dl);
-  /* 지면 */
-  const g = new THREE.GridHelper(4, 8, 0x2c4759, 0x1b2f3d);
-  g.position.y = 0; sc.add(g);
-  function arrow(dir, len, col, lw) {
-    const a = new THREE.ArrowHelper(dir.clone().normalize(),
-      new THREE.Vector3(0, 0, 0), len, col, len * .17, len * .09);
-    a.line.material.linewidth = lw || 2;
-    sc.add(a); return a;
+  const cv = document.getElementById("figVector"); if (!cv) return;
+  const {ctx, w, h} = hidpi(cv);
+  const O = [w * .33, h * .36], L = Math.min(w, h) * .45;
+  const Dg = -8.2, Ig = 53;
+  const D = Dg * Math.PI / 180, I = Ig * Math.PI / 180;
+  /* 등각 투영 — 북은 오른쪽 위, 동은 오른쪽 아래, 연직은 곧게 아래 */
+  const pr = (n, e, z) => [O[0] + (n * .87 + e * .87) * L,
+                           O[1] + (-n * .5 + e * .5 + z) * L];
+  const Ft = pr(Math.cos(I) * Math.cos(D), Math.cos(I) * Math.sin(D), Math.sin(I));
+  const Ht = pr(Math.cos(I) * Math.cos(D), Math.cos(I) * Math.sin(D), 0);
+  const Zt = pr(0, 0, Math.sin(I));
+  const Nt = pr(.85, 0, 0), Et = pr(0, .85, 0);
+  ctx.clearRect(0, 0, w, h);
+  /* 지면 격자 */
+  ctx.strokeStyle = "rgba(140,180,210,.16)"; ctx.lineWidth = 1;
+  for (let k = -5; k <= 5; k++) {
+    let a = pr(k / 10, -.5, 0), b = pr(k / 10, .5, 0);
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+    a = pr(-.5, k / 10, 0); b = pr(.5, k / 10, 0);
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
   }
-  const D = 8.2 * Math.PI / 180, I = 53 * Math.PI / 180;
-  const Fv = new THREE.Vector3(
-    Math.cos(I) * Math.cos(-D), -Math.sin(I), Math.cos(I) * Math.sin(-D));
-  const items = [
-    {v: Fv, l: 2.2, c: 0x3fd8d0},                                  /* F */
-    {v: new THREE.Vector3(Fv.x, 0, Fv.z), l: 1.35, c: 0x4a7fe8},   /* H */
-    {v: new THREE.Vector3(0, Fv.y, 0), l: 1.75, c: 0x9b7fe8},      /* Z */
-    {v: new THREE.Vector3(1, 0, 0), l: 1.3, c: 0x55707f},          /* 북 */
-  ];
-  const arrows = items.map(it => { const a = arrow(it.v, .01, it.c); a.userData = it; return a; });
-  let t = 0, run = false;
-  function loop() {
-    requestAnimationFrame(loop);
-    if (!run) return;
-    t = Math.min(t + .012, 1);
-    arrows.forEach((a, i) => {
-      const k = Math.max(0, Math.min((t - i * .16) / .5, 1));
-      const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-      a.setLength(Math.max(a.userData.l * e, .001),
-                  a.userData.l * e * .17, a.userData.l * e * .09);
-    });
-    sc.rotation.y = Math.sin(t * Math.PI) * .18 + (t >= 1 ? performance.now() * .00012 : 0);
-    rn.render(sc, cam);
+  function arrow(p, col, lw) {
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(O[0], O[1]); ctx.lineTo(p[0], p[1]); ctx.stroke();
+    const a = Math.atan2(p[1] - O[1], p[0] - O[0]), t = 16;
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(p[0], p[1]);
+    ctx.lineTo(p[0] - Math.cos(a - .36) * t, p[1] - Math.sin(a - .36) * t);
+    ctx.lineTo(p[0] - Math.cos(a + .36) * t, p[1] - Math.sin(a + .36) * t);
+    ctx.closePath(); ctx.fill();
   }
-  loop();
-  new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) run = true; }),
-    {threshold: .25}).observe(cv);
+  arrow(Nt, "#55707f", 1.6); arrow(Et, "#55707f", 1.6);
+  /* 각도 호 */
+  function arc(fn, col) {
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let t = 0; t <= 1.0001; t += .04) {
+      const p = fn(t);
+      if (t === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+    }
+    ctx.stroke();
+  }
+  arc(t => pr(Math.cos(D * t) * .55, Math.sin(D * t) * .55, 0), "#8ba3b8");
+  arc(t => pr(Math.cos(I * t) * Math.cos(D) * .7, Math.cos(I * t) * Math.sin(D) * .7,
+              Math.sin(I * t) * .7), "#8ba3b8");
+  /* 보조선 */
+  ctx.strokeStyle = "rgba(140,180,210,.4)"; ctx.setLineDash([5, 5]); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(Ht[0], Ht[1]); ctx.lineTo(Ft[0], Ft[1]);
+  ctx.moveTo(Zt[0], Zt[1]); ctx.lineTo(Ft[0], Ft[1]); ctx.stroke();
+  ctx.setLineDash([]);
+  arrow(Zt, "#9b7fe8", 3.2); arrow(Ht, "#4a7fe8", 3.2); arrow(Ft, "#3fd8d0", 4);
+  ctx.beginPath(); ctx.arc(O[0], O[1], 5, 0, 7); ctx.fillStyle = "#eaf2f8"; ctx.fill();
+  /* 이름표 — 오른쪽 한 줄로 모으고 지시선을 뺀다 */
+  const LX = w * .70;
+  const dm = pr(Math.cos(D * .5) * .55, Math.sin(D * .5) * .55, 0);
+  const im = pr(Math.cos(I * .5) * Math.cos(D) * .7, Math.cos(I * .5) * Math.sin(D) * .7,
+                Math.sin(I * .5) * .7);
+  [[Nt, 80, "#8ba3b8", "북 (진북)"],
+   [Ht, 126, "#4a7fe8", "H  수평성분"],
+   [dm, 172, "#8ba3b8", "D  편각 — 북과 H 사이"],
+   [im, 218, "#8ba3b8", "I  복각 — H와 F 사이"],
+   [Et, 300, "#8ba3b8", "동"],
+   [Ft, 346, "#3fd8d0", "F  총자력 — 화살표 전체"],
+   [Zt, 400, "#9b7fe8", "Z  연직성분 (아래로)"]].forEach(([p, y, col, t]) => {
+    ctx.strokeStyle = "rgba(140,180,210,.35)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(p[0] + 6, p[1]); ctx.lineTo(LX - 10, y - 4); ctx.stroke();
+    ctx.fillStyle = col; ctx.font = "700 14px sans-serif"; ctx.textAlign = "left";
+    ctx.fillText(t, LX, y);
+  });
+  ctx.fillStyle = "#55707f"; ctx.font = "600 12.5px sans-serif"; ctx.textAlign = "left";
+  ctx.fillText("우리나라 실제값 — D 8.2° 서편 · I 53° 아래", 24, h - 18);
 })();
 
 /* ── 측선 배치 ───────────────────────────────────── */
@@ -1120,81 +1637,136 @@ function hidpi(cv) {
   ctx.fillText("P0 앞뒤를 이은 선", px(0) + 8, py(100) - 12);
   ctx.fillStyle = "#3fd8d0";
   ctx.fillText("동쪽 2 m 측정값", px(2) + 12, py(106) - 10);
+  ctx.fillStyle = "#55707f"; ctx.font = "600 11.5px sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("설명용으로 줄인 값입니다 — 실제 판독은 약 5만 nT 입니다", L, h - 8);
 })();
 
 /* ── 자기청정 ────────────────────────────────────── */
+/* ⚠️ 1차본은 막대사람이라 «현장 작업자»로 안 읽혔다. 안전모·안전화까지
+   갖춘 실루엣으로 바꾸고, 물품 이름은 오른쪽 한 줄로 모은다. */
 (function () {
   const cv = document.getElementById("figClean"); if (!cv) return;
   const {ctx, w, h} = hidpi(cv);
   ctx.clearRect(0, 0, w, h);
-  const cx = w * .38, cy = h * .5;
-  /* 사람 실루엣 */
-  ctx.strokeStyle = "rgba(140,180,210,.5)"; ctx.lineWidth = 2.2;
-  ctx.beginPath(); ctx.arc(cx, cy - 118, 26, 0, 7); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx, cy - 92); ctx.lineTo(cx, cy + 24); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx - 44, cy - 46); ctx.lineTo(cx + 44, cy - 46); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx, cy + 24); ctx.lineTo(cx - 30, cy + 128); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx, cy + 24); ctx.lineTo(cx + 30, cy + 128); ctx.stroke();
+  const cx = w * .30, HY = 98;
+  const SKIN = "rgba(150,190,215,.20)", EDGE = "rgba(150,190,215,.55)";
+  ctx.lineJoin = "round"; ctx.lineCap = "round";
+  /* 팔·다리 */
+  ctx.strokeStyle = SKIN; ctx.lineWidth = 26;
+  ctx.beginPath(); ctx.moveTo(cx - 50, HY + 76);
+  ctx.quadraticCurveTo(cx - 84, HY + 140, cx - 72, HY + 200); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 50, HY + 76);
+  ctx.quadraticCurveTo(cx + 86, HY + 140, cx + 76, HY + 198); ctx.stroke();
+  ctx.lineWidth = 34;
+  ctx.beginPath(); ctx.moveTo(cx - 24, HY + 196); ctx.lineTo(cx - 30, HY + 322); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 24, HY + 196); ctx.lineTo(cx + 30, HY + 322); ctx.stroke();
+  /* 몸통 */
+  ctx.fillStyle = SKIN; ctx.strokeStyle = EDGE; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 19, HY + 32);
+  ctx.bezierCurveTo(cx - 54, HY + 42, cx - 62, HY + 60, cx - 60, HY + 92);
+  ctx.lineTo(cx - 46, HY + 204); ctx.lineTo(cx + 46, HY + 204);
+  ctx.lineTo(cx + 60, HY + 92);
+  ctx.bezierCurveTo(cx + 62, HY + 60, cx + 54, HY + 42, cx + 19, HY + 32);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  /* 안전화 */
+  [-30, 30].forEach(dx => {
+    ctx.beginPath();
+    ctx.moveTo(cx + dx - 19, HY + 318); ctx.lineTo(cx + dx + 19, HY + 318);
+    ctx.lineTo(cx + dx + 27, HY + 348); ctx.lineTo(cx + dx - 23, HY + 348);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  });
+  /* 머리·안전모 */
+  ctx.beginPath(); ctx.arc(cx, HY, 30, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "rgba(255,180,80,.22)"; ctx.strokeStyle = "rgba(255,180,80,.65)";
+  ctx.beginPath(); ctx.arc(cx, HY - 4, 32, Math.PI * 1.02, Math.PI * 1.98);
+  ctx.lineTo(cx + 44, HY - 2); ctx.lineTo(cx - 44, HY - 2); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  /* 손에 든 자력계 */
+  ctx.strokeStyle = "rgba(63,216,160,.75)"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cx + 80, HY + 196); ctx.lineTo(cx + 80, HY + 96); ctx.stroke();
+  rrect(ctx, cx + 58, HY + 78, 44, 18, 9, "rgba(63,216,160,.25)", "rgba(63,216,160,.75)");
+  /* keep=true 는 «필수 보호구» — 벗지 않고 적어 두는 것 */
   const ITEM = [
-    [cx + 46, cy - 44, "손목시계"], [cx - 46, cy - 30, "휴대전화"],
-    [cx + 16, cy - 62, "금속 펜"], [cx, cy + 22, "혁대 버클"],
-    [cx - 30, cy + 126, "안전화 철심"], [cx + 6, cy - 122, "안경 부품"],
-    [cx - 20, cy - 20, "열쇠"],
+    [cx, HY - 26, 78, "안전모 속 금속 부품", true],
+    [cx + 13, HY + 4, 126, "안경테 · 나사"],
+    [cx + 32, HY + 98, 174, "가슴 주머니 볼펜"],
+    [cx - 34, HY + 106, 222, "무전기"],
+    [cx, HY + 196, 270, "혁대 버클"],
+    [cx + 80, HY + 196, 318, "손목시계"],
+    [cx - 44, HY + 202, 366, "휴대전화"],
+    [cx + 44, HY + 214, 414, "열쇠꾸러미"],
+    [cx + 30, HY + 336, 462, "안전화 속 철심", true],
   ];
+  const LX = w * .62;
   let n = 0;
   function tick() {
-    if (n >= ITEM.length) return;
-    const [x, y, nm] = ITEM[n];
-    const gr = ctx.createRadialGradient(x, y, 0, x, y, 34);
-    gr.addColorStop(0, "rgba(232,80,63,.55)");
-    gr.addColorStop(1, "rgba(232,80,63,0)");
+    if (n >= ITEM.length) {
+      ctx.fillStyle = "#e8503f"; ctx.fillRect(LX, 500, 9, 9);
+      ctx.fillStyle = "#8ba3b8"; ctx.font = "600 12.5px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("빼 두는 것", LX + 15, 509);
+      ctx.fillStyle = "#ffb450"; ctx.fillRect(LX, 522, 9, 9);
+      ctx.fillStyle = "#8ba3b8";
+      ctx.fillText("필수 보호구 — 그대로 쓰고 적어만 둡니다", LX + 15, 531);
+      ctx.fillStyle = "#55707f"; ctx.font = "600 12px sans-serif";
+      ctx.fillText("센서에 가까울수록 영향이 큽니다", LX, 553);
+      return;
+    }
+    const [x, y, ly, nm, keep] = ITEM[n];
+    const c0 = keep ? "255,180,80" : "232,80,63";
+    const gr = ctx.createRadialGradient(x, y, 0, x, y, 32);
+    gr.addColorStop(0, "rgba(" + c0 + ",.55)");
+    gr.addColorStop(1, "rgba(" + c0 + ",0)");
     ctx.fillStyle = gr;
-    ctx.beginPath(); ctx.arc(x, y, 34, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 32, 0, 7); ctx.fill();
     ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7);
-    ctx.fillStyle = "#e8503f"; ctx.fill();
-    ctx.strokeStyle = "rgba(232,80,63,.5)"; ctx.lineWidth = 1;
-    const tx = w * .74;
-    ctx.beginPath(); ctx.moveTo(x + 5, y); ctx.lineTo(tx - 8, y); ctx.stroke();
-    ctx.fillStyle = "#f0b5ad"; ctx.font = "600 13.5px sans-serif";
-    ctx.textAlign = "left"; ctx.fillText(nm, tx, y + 4);
+    ctx.fillStyle = keep ? "#ffb450" : "#e8503f"; ctx.fill();
+    ctx.strokeStyle = "rgba(" + c0 + ",.42)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x + 6, y); ctx.lineTo(LX - 10, ly - 4); ctx.stroke();
+    ctx.fillStyle = keep ? "#ffc98a" : "#f0b5ad";
+    ctx.font = "600 14px sans-serif"; ctx.textAlign = "left";
+    ctx.fillText(nm, LX, ly);
+    if (keep) {
+      ctx.fillStyle = "#ffb450"; ctx.font = "700 11.5px sans-serif";
+      ctx.fillText("★ 벗지 않습니다 — 적어만 두세요", LX, ly + 16);
+    }
     n++;
-    setTimeout(() => requestAnimationFrame(tick), 340);
+    setTimeout(() => requestAnimationFrame(tick), 300);
   }
   new IntersectionObserver((es, ob) => {
     es.forEach(e => { if (e.isIntersecting) { tick(); ob.disconnect(); } });
   }, {threshold: .3}).observe(cv);
 })();
 
-/* ── 감사 전후 ───────────────────────────────────── */
+/* ── 재현성 비교 ─────────────────────────────────── */
 (function () {
   const cv = document.getElementById("figAudit"); if (!cv) return;
   const {ctx, w, h} = hidpi(cv);
   ctx.clearRect(0, 0, w, h);
-  const rows = [
-    ["전국 편각 예측 오차", 0.7691, 0.5675, "°", 1.0],
-    ["편각 잔차", 35.0, 20.73, "분", 40],
-  ];
-  const L = 200, R = w - 130;
-  rows.forEach((r, i) => {
-    const y = 82 + i * 108;
-    ctx.fillStyle = "#8ba3b8"; ctx.font = "700 14px sans-serif";
-    ctx.textAlign = "right"; ctx.fillText(r[0], L - 18, y + 5);
-    const bw = v => (v / r[4]) * (R - L);
-    ctx.fillStyle = "rgba(232,80,63,.75)";
-    ctx.fillRect(L, y - 24, bw(r[1]), 20);
-    ctx.fillStyle = "rgba(63,216,160,.8)";
-    ctx.fillRect(L, y + 6, bw(r[2]), 20);
-    ctx.textAlign = "left"; ctx.font = "800 14px ui-monospace,monospace";
-    ctx.fillStyle = "#f0b5ad";
-    ctx.fillText(r[1] + " " + r[3], L + bw(r[1]) + 10, y - 9);
-    ctx.fillStyle = "#8ce8c4";
-    ctx.fillText(r[2] + " " + r[3], L + bw(r[2]) + 10, y + 21);
+  const L = 340, R = w - 150, MAX = 40;
+  const bw = v => (v / MAX) * (R - L);
+  [["같은 날 두 번 재면", 1.4, "#3fd8a0", "이만큼 잘 맞습니다 (산포 중앙값)"],
+   ["몇 년 뒤 다시 가서 재면", 33.7, "#e8503f", "이만큼 어긋났습니다 (잔여 RMS)"]
+  ].forEach((r, i) => {
+    const y = 102 + i * 92;
+    ctx.fillStyle = "#eaf2f8"; ctx.font = "700 16px sans-serif"; ctx.textAlign = "right";
+    ctx.fillText(r[0], L - 22, y + 8);
+    ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.fillRect(L, y - 14, R - L, 40);
+    ctx.fillStyle = r[2]; ctx.fillRect(L, y - 14, Math.max(bw(r[1]), 3), 40);
+    ctx.textAlign = "left"; ctx.fillStyle = r[2];
+    ctx.font = "800 22px 'Arial Narrow',Consolas,sans-serif";
+    ctx.fillText(r[1].toFixed(1) + "분", L + bw(r[1]) + 14, y + 6);
+    ctx.font = "600 13px sans-serif"; ctx.fillStyle = "#8ba3b8";
+    ctx.fillText(r[3], L + bw(r[1]) + 14, y + 26);
   });
-  ctx.fillStyle = "#8ba3b8"; ctx.font = "600 12.5px sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText("■ 두 방문 포함", L, h - 22);
-  ctx.fillStyle = "#8ce8c4";
-  ctx.fillText("■ 두 방문 제외", L + 140, h - 22);
+  ctx.fillStyle = "#8ba3b8"; ctx.font = "600 13.5px sans-serif"; ctx.textAlign = "left";
+  ctx.fillText("장비도 계산도 문제가 없었습니다. 달라진 것은 «무엇을 보고 방위를 잡았는가» 하나였습니다.",
+               42, h - 38);
+  ctx.fillStyle = "#55707f"; ctx.font = "600 12px sans-serif";
+  ctx.fillText("두 값은 재는 방식이 다릅니다(산포 중앙값 ↔ 잔여 RMS) — 자릿수를 견주는 그림이지 같은 잣대의 비교가 아닙니다.",
+               42, h - 16);
 })();
 
 /* ── 배경 자기력선 (WebGL) ───────────────────────── */
@@ -1255,7 +1827,9 @@ def pilot_table(payload):
         + "".join(rows)
         + '</table></div>'
         '<p style="color:var(--muted);font-size:13.5px;margin-top:10px">'
-        '단위 nT/m · 중심점에서 1 m 떨어진 지점의 값</p>'
+        '단위 nT/m · 중심점에서 1 m 떨어진 지점의 «변화율». 부호는 방향이라 '
+        '「−」는 중심점보다 값이 작아졌다는 뜻이고, 판정에 쓰는 것은 '
+        '부호를 뗀 크기입니다.</p>'
     )
 
 
@@ -1268,8 +1842,6 @@ def render(payload):
         "N_EXIST": payload["n_exist"],
         "N_NETWORK": payload["n_network"],
         "TARGET_NETWORK": payload["target_network"],
-        "LOO_D_MIN": payload["loo_d_min"],
-        "LOO_F": payload["loo_f"],
         "OFFSETS_TXT": ", ".join(str(x) for x in payload["offsets"]),
         "H_MIN": payload["heights"][0],
         "H_MAX": payload["heights"][-1],
@@ -1277,6 +1849,7 @@ def render(payload):
         "N_READ": payload["n_read"],
         "N_READ_H": payload["n_read_h"],
         "N_READ_V": payload["n_read_v"],
+        "N_HEIGHT": len(payload["heights"]),
         "N_OFF": len(payload["offsets"]),
         "IAGA_RADIUS": f"{payload['iaga_radius']:.0f}",
         "IAGA_RANGE": f"{payload['iaga_range']:.0f}",
