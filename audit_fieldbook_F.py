@@ -29,7 +29,12 @@ ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 from lmm_fieldbook import ngii_files      # noqa: E402
 
-LBL = {"head": "전자력 측정 결과", "meas": "자력측정", "time": "측정일시",
+# ⚠️ 야장의 실제 라벨은 「측정일시」가 아니라 **「측정일자」** 다.
+#    "측정일시" 로 찾으면 그 행을 «한 번도 열어 보지 못한 채» 시각 0건이
+#    나온다 — 2026-08-19 감사가 실제로 그렇게 오진했다(2026-09-14 확인).
+#    날짜만 받는 칸이라는 것이 요점이므로 「측정일」로 느슨하게 찾는다.
+TIME_LABEL = re.compile(r"측정\s*일")
+LBL = {"head": "전자력 측정 결과", "meas": "자력측정",
        "res": "결과", "avg": "전자력(평균)"}
 
 
@@ -56,8 +61,12 @@ def scan_sheet(df):
                     rec["측정값"] = float(nums[0])
                 if len(nums) >= 2:
                     rec["기본값"] = float(nums[1])
-            elif LBL["time"] in lab:
-                rec["시각원문"] = " | ".join(vals[:4])
+            elif TIME_LABEL.search(lab):
+                rec["일시라벨"] = lab
+                rec["시각원문"] = " | ".join(vals[:6])
+                for v in (df.iat[rr, c] for c in range(1, min(ncol, 16))):
+                    if isinstance(v, dt.datetime):
+                        rec.setdefault("날짜", v.strftime("%Y-%m-%d"))
             elif lab == LBL["res"]:
                 nums = [v for v in vals if re.fullmatch(r"\d{4,6}(\.\d+)?", v)]
                 if nums:
@@ -109,9 +118,10 @@ def main():
     for c in ("측정값", "기본값", "결과"):
         if c not in d:
             d[c] = np.nan
-    if "시각원문" not in d:
-        d["시각원문"] = ""
-    d["시각원문"] = d["시각원문"].fillna("")
+    for c in ("시각원문", "일시라벨", "날짜"):
+        if c not in d:
+            d[c] = ""
+        d[c] = d[c].fillna("")
     d["시각있음"] = d["시각원문"].map(has_real_time)
     d["위치차_nT"] = d["측정값"] - d["기본값"]
 
@@ -122,7 +132,11 @@ def main():
     diff = both & (d["위치차_nT"].abs() > 0.05)
     print(f"  두 값 모두 기재 {int(both.sum())}건 · "
           f"**서로 다른 값** {int(diff.sum())}건")
-    print(f"  측정일시 실기재 {int(d['시각있음'].sum())}건")
+    print(f"  「측정일」 행 발견 {int((d['일시라벨'] != '').sum())}건 "
+          f"(라벨: {sorted(set(d['일시라벨']) - {''})})")
+    print(f"  날짜 기재       {int((d['날짜'] != '').sum())}건")
+    print(f"  실제 시각 기재  {int(d['시각있음'].sum())}건  "
+          f"← 0 이면 «칸은 있는데 00:00» 이라는 뜻이다")
 
     if diff.any():
         print("\n두 값이 다른 사례 (위치차 후보)")

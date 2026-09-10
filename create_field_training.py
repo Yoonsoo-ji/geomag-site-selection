@@ -17,7 +17,7 @@
 
 | 장면 | 실화 |
 |---|---|
-| 시각을 안 적으면 | 야장 68**건** 전수조사 — 총자력 절 36건, 그중 F 측정시각 **0건** → 외부장 보정이 막혔다 |
+| 날짜만 적히면 | 총자력 절 36건에 「측정일자」가 있고 **날짜는 32건**, **시각은 0건**(전부 00:00) → 그날 «언제» 쟀는지를 몰라 세션 창으로만 보정된다 |
 | 좌표가 어긋나면 | 미원 353 m · 남양은 세 자료가 전부 다르고 **현재 좌표 미상** · 서산 시트에 남양 좌표가 통째로 복사 |
 | 같은 자리를 다시 가면 | 같은 날 산포는 1.4분인데 **재방문 잔여는 34분** — 방문마다 방위표지가 달라져 있었다 |
 | 나쁜 자리를 고르면 | 이원 여의저수지 동쪽 **250.72 nT/m** — 참고 기준 3 nT/m 의 83배 |
@@ -1258,31 +1258,34 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 <section data-t="4부 · 실화"><div class="wrap">
  <div class="reveal">
   <span class="tag" style="color:var(--red)">4부 — 실제로 있었던 일 · 16</span>
-  <h2>시각을 안 적어서<br><span class="hl-r">보정을 통째로 못 한 일</span></h2>
+  <h2>날짜는 적혔는데<br><span class="hl-r">시각이 비어 있던 일</span></h2>
   <p class="lead">지난 자료를 정리하면서 야장 <b>68건을 전부</b> 열어 봤습니다.
-  그중 총자력 측정 결과가 적힌 것은 <b>36건</b> 이었는데, 그 36건 어디에도
-  <b class="hl-r">몇 시 몇 분에 쟀는지는 없었습니다.</b></p>
+  총자력 측정 결과 절이 있는 것이 <b>36건</b>, 그 절에는
+  <b>「측정일자」</b> 칸이 있고 <b class="hl-g">32건에 날짜가 적혀</b> 있습니다.
+  그런데 <b class="hl-r">시각 칸은 36건 모두 00:00</b> 이었습니다.</p>
  </div>
  <div class="grid3 reveal" style="margin-top:30px">
-  <div class="card stat"><span class="num">68</span>
-   <small>전수조사한 야장 건수</small></div>
   <div class="card stat"><span class="num">36</span>
-   <small>그중 총자력 측정 결과가 적힌 건수</small></div>
+   <small>총자력 측정 결과 절이 있는 야장 (전수 68건 중)</small></div>
+  <div class="card stat good"><span class="num c">32</span>
+   <small>그중 <b>날짜</b>가 적힌 건수 — 적기는 적었습니다</small></div>
   <div class="card stat warn"><span class="num r">0</span>
-   <small>그 36건 가운데 총자력을 «몇 시에» 쟀는지 적힌 건수</small></div>
+   <small>그중 <b>시각</b>이 적힌 건수 — 칸이 전부 00:00 입니다</small></div>
  </div>
  <p class="lead reveal" style="margin-top:24px">편각·복각은 사정이 달랐습니다.
- 세션 시각이 <b class="hl-g">212세션 가운데 211세션</b>에 적혀 있어서, 나중에
- 시각을 되살려 그 시점의 외부장 보정량을 낼 수 있었습니다.
- <b class="hl-r">총자력만 그러지 못했습니다.</b></p>
+ 세션 시작·종료 시각이 <b class="hl-g">212세션 가운데 211세션</b>에 남아 있어서,
+ 나중에 그 시점의 외부장 보정량을 낼 수 있었습니다.
+ <b class="hl-r">총자력만 그러지 못했습니다</b> — 그날 «언제» 쟀는지를 모르니
+ 세션 전체 시간창으로 뭉뚱그려 보정할 수밖에 없습니다.</p>
  <p class="lead reveal">그리고 지금까지 정리된 관측 가운데 실제로 계산에 들어간
  것은 <b>16개 지점 · 30개 관측행</b> 입니다. 야장에 적힌 것이 전부 쓰이지는
  않습니다 — <b class="hl">쓸 수 있게 적혀 있어야</b> 쓰입니다.</p>
- <div class="quote reveal r">아무리 정확히 재도,
- <b>몇 시에 쟀는지 모르면 그 값은 외부장 보정에 쓸 수 없습니다.</b></div>
+ <div class="quote reveal r">날짜만으로는 부족합니다 —
+ <b>외부장은 하루 안에서도 움직이기 때문입니다.</b></div>
  <p class="lead reveal">규정에도 「편각·복각을 잴 때 총자기장과 시간을 함께
- 측정한다」고 되어 있었습니다. 다만 <b>야장 양식에 그 칸이 없었습니다.</b>
- 그래서 이번 카드에는 <b class="hl">F 를 잰 모든 줄에 시각 칸</b>을 넣었습니다.</p>
+ 측정한다」고 되어 있었습니다. 다만 <b>야장 양식이 그 절에서 날짜만 받고
+ 있었습니다.</b> 그래서 이번 카드에는
+ <b class="hl">F 를 잰 모든 줄에 시·분·초 칸</b>을 넣었습니다.</p>
 </div></section>
 
 <section data-t="좌표"><div class="wrap">
