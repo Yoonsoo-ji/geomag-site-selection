@@ -114,7 +114,112 @@ svg.figsvg text{font-family:"Pretendard","Noto Sans KR","맑은 고딕",system-u
  .reveal{opacity:1;transform:none;transition:none}
  html{scroll-behavior:auto}
 }
+/* ── CINEMATIC EDITION : presentation layer ─────────────── */
+body{--mx:72%;--my:24%;background:
+ radial-gradient(circle at var(--mx) var(--my),rgba(49,133,170,.13),transparent 24%),
+ linear-gradient(180deg,#040911 0%,#07111c 52%,#03070c 100%)}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.16;
+ background-image:linear-gradient(rgba(90,165,190,.11) 1px,transparent 1px),linear-gradient(90deg,rgba(90,165,190,.08) 1px,transparent 1px);
+ background-size:72px 72px;mask-image:linear-gradient(to bottom,black,transparent 72%)}
+section{isolation:isolate;overflow:hidden}
+section::after{content:attr(data-t);position:absolute;right:3vw;bottom:-.14em;z-index:-1;
+ font:900 clamp(70px,12vw,180px)/1 "Arial Narrow","Pretendard",sans-serif;
+ letter-spacing:-.06em;color:rgba(130,196,216,.027);white-space:nowrap;pointer-events:none}
+.wrap{position:relative}
+.wrap::before{content:"";position:absolute;left:-32px;top:3px;width:1px;height:44px;
+ background:linear-gradient(var(--cyan),transparent);box-shadow:0 0 16px var(--cyan)}
+.tag{display:flex;align-items:center;gap:12px;text-shadow:0 0 16px rgba(63,216,208,.45)}
+.tag::before{content:"";width:28px;height:1px;background:currentColor;box-shadow:0 0 10px currentColor}
+h1,h2{text-shadow:0 12px 40px rgba(0,0,0,.34)}
+.hl,.hl-g{filter:drop-shadow(0 0 15px rgba(63,216,208,.2))}
+.hl-o,.hl-r{filter:drop-shadow(0 0 15px rgba(255,112,72,.18))}
+.card{position:relative;overflow:hidden;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+ box-shadow:0 18px 55px rgba(0,0,0,.16);transition:transform .3s ease,border-color .3s ease,background .3s ease}
+.card::after{content:"";position:absolute;left:0;top:0;width:38%;height:1px;
+ background:linear-gradient(90deg,var(--cyan),transparent);opacity:.55}
+.card:hover{transform:translateY(-4px);border-color:rgba(63,216,208,.42);background:rgba(25,65,82,.17)}
+.card.warn::after{background:linear-gradient(90deg,var(--orange),transparent)}
+.quote{background:linear-gradient(90deg,rgba(63,216,208,.055),transparent 70%);
+ padding-top:18px;padding-bottom:18px;box-shadow:-16px 0 38px rgba(63,216,208,.035)}
+canvas.fig{box-shadow:0 28px 70px rgba(0,0,0,.27),inset 0 0 55px rgba(23,91,117,.05)}
+.tblwrap{border:1px solid rgba(140,180,210,.13);background:rgba(4,11,18,.48);padding:5px 16px 12px}
+th{color:#71bbb9}.step,.rule{backdrop-filter:blur(12px);transition:.28s ease}
+.step:hover,.rule:hover{border-color:rgba(63,216,208,.42);transform:translateX(5px)}
+.num{filter:drop-shadow(0 0 24px rgba(63,216,208,.16))}
+main>section:first-child{background:radial-gradient(circle at 80% 42%,rgba(24,114,145,.2),transparent 34%)}
+main>section:first-child::before{content:"MAGNETIC FIELD / KOREA";position:absolute;right:6vw;top:16vh;
+ color:rgba(133,206,224,.18);font:700 11px/1 ui-monospace,monospace;letter-spacing:.35em;
+ writing-mode:vertical-rl}
+main>section:first-child h1{font-size:clamp(44px,7vw,98px);max-width:940px;letter-spacing:-.035em}
+main>section:first-child .lead{max-width:62ch}
+main>section:nth-of-type(4),main>section:nth-of-type(6),main>section:nth-of-type(9),main>section:nth-of-type(16),main>section:nth-of-type(20){
+ background:linear-gradient(110deg,rgba(10,35,51,.82),rgba(4,10,17,.45));border-top:1px solid rgba(63,216,208,.12)}
+.cinema-hud{position:fixed;z-index:60;left:22px;right:22px;top:18px;height:50px;display:flex;
+ align-items:center;pointer-events:none;color:#b8cad5;font-size:12px;letter-spacing:.08em}
+.hud-brand{display:flex;align-items:center;gap:11px;font-weight:800}.hud-sigil{width:25px;height:25px;border:1px solid var(--cyan);
+ border-radius:50%;position:relative;box-shadow:0 0 22px rgba(63,216,208,.28)}
+.hud-sigil::before,.hud-sigil::after{content:"";position:absolute;background:var(--cyan);left:50%;top:50%;transform:translate(-50%,-50%)}
+.hud-sigil::before{width:13px;height:1px}.hud-sigil::after{height:13px;width:1px}
+.hud-current{margin-left:auto;margin-right:18px;color:var(--muted);font-family:ui-monospace,monospace}
+.hud-actions{display:flex;gap:7px;pointer-events:auto}.hud-actions button{height:34px;border:1px solid var(--line);
+ background:rgba(5,16,26,.72);backdrop-filter:blur(14px);color:#dceaf1;padding:0 13px;cursor:pointer;
+ font:700 11px/1 inherit;letter-spacing:.06em;transition:.2s}.hud-actions button:hover{border-color:var(--cyan);color:var(--cyan)}
+.hud-actions .primary{border-color:rgba(63,216,208,.45);background:rgba(63,216,208,.08)}
+.cinema-corners{position:fixed;inset:11px;z-index:55;pointer-events:none;border:1px solid rgba(126,183,207,.07)}
+.cinema-corners::before,.cinema-corners::after{content:"";position:absolute;width:52px;height:52px;border-color:rgba(63,216,208,.35)}
+.cinema-corners::before{left:-1px;top:-1px;border-left:1px solid;border-top:1px solid}.cinema-corners::after{right:-1px;bottom:-1px;border-right:1px solid;border-bottom:1px solid}
+.hud-hidden .cinema-hud,.hud-hidden .cinema-corners,.hud-hidden .nav{display:none}
+.section-flash{position:fixed;inset:0;z-index:90;pointer-events:none;background:var(--cyan);opacity:0}
+.section-flash.go{animation:sceneFlash .5s ease-out}
+@keyframes sceneFlash{0%{opacity:.055}100%{opacity:0}}
+@media(max-width:860px){.cinema-hud{left:13px;right:13px;top:9px}.hud-current{display:none}.hud-actions button:not(.primary){display:none}
+ .cinema-corners{display:none}.wrap::before{display:none}section::after{font-size:20vw}.card:hover{transform:none}}
+/* ── 한 화면에 담기 ─────────────────────────────────────
+   ⚠️ 발표 자료라 «장면 하나 = 화면 하나»여야 한다. 1366×768 에서 재어 보니
+   23장 중 14장이 화면을 넘었고 최악은 1.98배였다. 아래 셋으로 잡는다:
+   ① 도판이 화면을 다 먹지 않게 높이를 묶고 ② 낮은 화면에서 여백·글자를 줄이고
+   ③ 그래도 넘치면 스크립트가 그 장면만 축소한다(--fit). */
+canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
+ margin-left:auto;margin-right:auto}
+.wrap{transform:scale(var(--fit,1));transform-origin:center center}
+.wrap.reveal{transform:translateY(22px) scale(var(--fit,1))}
+.wrap.reveal.in{transform:scale(var(--fit,1))}
+@media(min-width:1100px){.steps,.rules{grid-template-columns:1fr 1fr}}
+@media(max-height:900px){
+ section{padding-top:clamp(24px,3.4vh,56px);padding-bottom:clamp(24px,3.4vh,56px)}
+ h1{font-size:clamp(34px,5vw,68px)}
+ h2{margin-bottom:13px;font-size:clamp(24px,3.2vw,40px)}
+ .lead{margin-top:11px;font-size:clamp(14.5px,1.3vw,17.5px)}
+ .card{padding:14px 15px}
+ .card p{font-size:13.5px;line-height:1.5}
+ .card h3{font-size:clamp(16px,1.6vw,20px);margin-bottom:6px}
+ .quote{margin:16px 0;padding-top:9px;padding-bottom:9px;
+  font-size:clamp(17px,2vw,26px)}
+ .steps{margin-top:14px;gap:7px}
+ .step{padding:9px 12px;grid-template-columns:34px 1fr;gap:11px}
+ .step small{font-size:13px;line-height:1.45}
+ .rules{margin-top:14px;gap:8px}
+ .rule{padding:11px 15px;grid-template-columns:40px 1fr;gap:13px}
+ .rule small{font-size:13.5px}
+ .num{font-size:clamp(26px,3.4vw,48px)}
+ .stat small{margin-top:6px;font-size:13px}
+ canvas.fig,svg.figsvg{max-height:44vh}
+ .tblwrap{margin-top:12px;padding:3px 12px 8px}
+ table{font-size:14px}th,td{padding:8px 10px}
+ p+p{margin-top:8px}
+}
+@media(max-width:860px){.wrap{transform:none}}
 </style></head><body>
+<div class="cinema-hud" aria-label="발표 제어">
+ <div class="hud-brand"><span class="hud-sigil"></span><span>GEOMAGNETIC FIELD</span></div>
+ <div class="hud-current" id="hudCurrent">프롤로그</div>
+ <div class="hud-actions">
+  <button type="button" id="hudToggle" title="화면 요소 숨기기 (H)">HUD</button>
+  <button type="button" id="fullScreen" class="primary" title="전체화면 전환 (F)">전체화면&nbsp; ↗</button>
+ </div>
+</div>
+<div class="cinema-corners" aria-hidden="true"></div>
+<div class="section-flash" id="sectionFlash" aria-hidden="true"></div>
 <div class="prog" id="prog"></div>
 <div class="nav" id="nav"></div>
 <div id="bg"></div>
@@ -201,8 +306,8 @@ svg.figsvg text{font-family:"Pretendard","Noto Sans KR","맑은 고딕",system-u
    <p>태양 활동으로 <b>하루 사이에도 변합니다.</b> 그래서 «몇 시 몇 분»에
    쟀는지가 반드시 필요합니다.</p></div>
  </div>
- <div class="quote reveal">④ 때문에 <span class="hl-o">시각을 안 적으면 그 값은
- 쓸 수 없습니다.</span> 뒤에서 실제로 그런 일이 있었습니다.</div>
+ <div class="quote reveal">④ 때문에 <span class="hl-o">시각을 안 적으면
+ 그 값을 되살릴 수 없습니다.</span></div>
 </div></section>
 
 <section data-t="변한다"><div class="wrap grid2">
@@ -422,14 +527,14 @@ svg.figsvg text{font-family:"Pretendard","Noto Sans KR","맑은 고딕",system-u
 </svg></div>
  <div class="grid3 reveal" style="margin-top:24px">
   <div class="card good"><h3 class="hl-g">① 오버하우저 자력계</h3>
-   <p><b>올해 씁니다.</b> 센서 속 액체의 수소 원자핵이 자기장 안에서 팽이처럼
-   도는 «진동수»를 셉니다. 그 진동수가 자기장 세기에 비례하는 것이 물리 상수라
-   <b>따로 눈금을 맞추지 않아도 절대값이 나옵니다.</b> 그래도 현장에서 동작·시각·
-   상태 점검은 그대로 해야 합니다. 그리고 <b>세기(F)만 재고 방향은 못 잽니다.</b></p></div>
+   <p><b>올해 씁니다.</b> 센서 속 액체의 수소 원자핵이 도는 «진동수»를 셉니다.
+   그 진동수가 자기장 세기에 비례하는 것이 물리 상수라 <b>눈금을 맞추지 않아도
+   절대값이 나옵니다</b>(동작·시각 점검은 그대로 합니다).
+   <b>세기(F)만 재고 방향은 못 잽니다.</b></p></div>
   <div class="card good"><h3 class="hl-g">② GNSS 수신기</h3>
-   <p><b>올해 씁니다.</b> 중심점의 위도·경도를 <b>십진도 여섯 자리</b>로 잽니다
-   (방위표지 좌표는 <b>별도로 통보된 대상 지점만</b>). 다음 사람이 그 자리를
-   다시 찾아오는 <b>가장 확실한 단서</b>라, 이 값이 틀리면 그 점을 잃습니다.</p></div>
+   <p><b>올해 씁니다.</b> 중심점의 위도·경도를 <b>십진도 여섯 자리</b>로
+   잽니다(방위표지 좌표는 <b>통보된 대상 지점만</b>). 다시 찾아오는
+   <b>가장 확실한 단서</b>라 이 값이 틀리면 그 점을 잃습니다.</p></div>
   <div class="card"><h3 style="color:var(--muted)">③ DI-flux 자기경위의</h3>
    <p><b>내년에 씁니다.</b> 편각·복각을 재는 장비이고,
    <b class="hl">비자성 경위의</b> 위에 <b class="hl">플럭스게이트</b> 센서를
@@ -437,10 +542,10 @@ svg.figsvg text{font-family:"Pretendard","Noto Sans KR","맑은 고딕",system-u
  </div>
  <div class="grid2 reveal" style="margin-top:16px">
   <div class="card"><h3 class="hl">비자성 경위의가 무엇입니까</h3>
-   <p>각도를 재는 측량용 망원경을 «경위의»라 합니다. 그것을
+   <p>각도를 재는 측량용 망원경이 «경위의»입니다. 그것을
    <b>자성 재료를 쓰지 않고</b> 만들어(놋쇠·알루미늄·세라믹 등) 자기 영향이
-   없음을 검증해 둔 것이 비자성 경위의입니다. 보통 측량기는 강철이 들어 있어
-   장비 자체가 자기장을 흐트러뜨리므로 자기장을 재는 자리에는 쓸 수 없습니다.</p></div>
+   없음을 검증해 둔 것입니다. 보통 측량기는 강철이 들어 있어 장비 자체가
+   자기장을 흐트러뜨립니다.</p></div>
   <div class="card"><h3 class="hl">플럭스게이트가 무엇입니까</h3>
    <p><b>1축 플럭스게이트는 센서축 방향의 자기장 성분을 측정합니다.</b>
    DI-flux 측정에서는 그 성분이 <b>0 에 가까워지는 자세</b>를 찾아 경위의의
@@ -722,18 +827,16 @@ svg.figsvg text{font-family:"Pretendard","Noto Sans KR","맑은 고딕",system-u
   <h2>현장에서는 이 카드<br>한 장을 채웁니다</h2>
   <p class="lead">점마다 카드가 한 장씩 있습니다. 한 장을 다 채우면
   그 지점의 기록이 끝납니다. 순서대로 되어 있으니 위에서부터 채워 가시면 됩니다.</p>
-  <p class="lead">보라색으로 표시한 칸은 <b>모든 지점에서 하는 것이 아닙니다.</b>
-  대상 지점만 채우고, 아니면 「해당없음」으로 남겨 주십시오.</p>
  </div>
  <div class="steps reveal">
   <div class="step"><div><b>측정 전 확인</b>
    <small>몸에 지닌 자성 물품, 차량 위치, 전자기기 전원</small></div></div>
   <div class="step"><div><b>도착 · 관측 조건 · 원시자료 연결</b>
-   <small>일자·시각·관측자·기상·Kp, 그리고 <b>장비 원시파일명과 레코드 범위</b>.
-   시각은 <b>모든 F 줄에 시·분·초까지</b> — 종이와 기기 파일을 잇는 끈입니다</small></div></div>
+   <small>일자·관측자·기상·Kp·<b>장비 원시파일명과 레코드 범위</b>.
+   시각은 <b>모든 F 줄에 시·분·초까지</b></small></div></div>
   <div class="step"><div><b>기준점 좌표</b>
-   <small>GNSS 실측 위도·경도를 <b>십진도 여섯 자리</b>로. 미리 알려 드린
-   사전좌표와 많이 다르면 왜 그런지도 함께</small></div></div>
+   <small>GNSS 실측 위도·경도를 <b>십진도 여섯 자리</b>로.
+   사전좌표와 많이 다르면 그 사유도 함께</small></div></div>
   <div class="step"><div><b>수평 자기구배</b>
    <small>네 방향 × 11점, 방향마다 P0 앞뒤로 한 번씩</small></div></div>
   <div class="step"><div><b>수직 자기구배</b>
@@ -743,9 +846,8 @@ svg.figsvg text{font-family:"Pretendard","Noto Sans KR","맑은 고딕",system-u
    background:rgba(155,127,232,.06)">
    <div><b>방위표지 시준 <span style="color:#b9a6f2;font-size:15px;
     font-weight:600">— 대상 지점만</span></b>
-   <small>정·반 시준과 표지 좌표·취득방법. <b>전 지점에서 하는 것이 아닙니다</b> —
-   방위표지는 내년 절대측정을 위한 준비라 대상 여부를 착수 전에 따로 알려 드립니다.
-   대상이 아니면 이 구역은 「해당없음」으로 두시면 됩니다</small></div></div>
+   <small>정·반 시준과 표지 좌표·취득방법. <b>전 지점에서 하지 않습니다</b> —
+   대상 여부를 착수 전에 알려 드리고, 아니면 「해당없음」으로 둡니다</small></div></div>
   <div class="step"><div><b>현장 사진 9칸</b>
    <small>중심점·측정 모습·표지 2장·네 방향 전경·교란 요소</small></div></div>
   <div class="step"><div><b>중심점 최종 결정 · 소견</b>
@@ -823,28 +925,27 @@ svg.figsvg text{font-family:"Pretendard","Noto Sans KR","맑은 고딕",system-u
  </div>
  <div class="card reveal" style="border-color:rgba(155,127,232,.5);
   background:rgba(155,127,232,.09);margin:0 0 26px">
-  <p style="font-size:17px;color:var(--ink)">
-  <b style="color:#b9a6f2">★ 올해 여러분이 하는 일은 아닙니다.</b>
-  여기부터는 <b>내년에 실제 측량이 시작되면</b> 반드시 확인해야 하는 내용입니다.
-  그래도 지금 알아 두셔야 하는 이유는, 올해 여러분이 고른 자리와 남긴 좌표가
-  그때 그대로 쓰이기 때문입니다.</p>
+  <p style="font-size:16.5px;color:var(--ink)">
+  <b style="color:#b9a6f2">★ 올해 하는 일은 아닙니다.</b>
+  <b>내년에 실제 측량이 시작되면</b> 확인해야 하는 내용인데, 올해 고른 자리와
+  남긴 좌표가 그때 그대로 쓰이기 때문에 지금 알아 두셔야 합니다.</p>
  </div>
  <div class="reveal">
   <p class="lead">같은 표석을 몇 년 뒤 다시 재면 자연스러운 변화만큼만
   달라져야 합니다. 그런데 <b class="hl-r">재방문 자료의 방위표지 보정 후
   잔여 RMS 는 33.7분</b> 이었습니다. 16구간 가운데 9구간에서 어긋남이
   6분을 넘었습니다.</p>
-  <p class="lead">장비나 계산 탓이 아니었습니다. 야장의 산술을 다시 계산해 보니
-  <b class="hl-g">0.16초</b> 까지 맞았고, 같은 날 두 번 재면
-  <b class="hl-g">1.4분</b> 안에 들어옵니다. <b>정밀한데 부정확했던 것입니다.</b></p>
-  <p class="lead">원인은 <b class="hl-r">방문할 때마다 시준한 방위표지가
-  달라져 있었다</b>는 것이었습니다. 표지를 바꾼 것 자체는 잘못이 아닙니다.
-  다만 바뀐 표지의 참방위각이 틀리면 그 방문의 편각이 통째로 그만큼 틀어집니다.</p>
+  <p class="lead">장비나 계산 탓이 아니었습니다. 야장 산술은
+  <b class="hl-g">0.16초</b> 까지 맞았고 같은 날 두 번 재면
+  <b class="hl-g">1.4분</b> 안에 들어옵니다 — <b>정밀한데 부정확했습니다.</b>
+  원인은 <b class="hl-r">방문할 때마다 시준한 방위표지가 달라져 있었다</b>는
+  것이었습니다. 바뀐 표지의 참방위각이 틀리면 그 방문의 편각이 통째로
+  그만큼 틀어집니다.</p>
  </div>
  <div class="reveal" style="margin-top:30px"><canvas class="fig" id="figAudit"
-  width="1100" height="330" aria-label="같은 날 재현성과 재방문 재현성 비교"></canvas></div>
- <div class="quote reveal r">한 번 잘못 잰 값은 <b>그 자리의 40년 기록을
- 통째로 흔듭니다.</b> 다음 사람이 무엇을 보고 쟀는지 알 수 있게 남겨 주십시오.</div>
+  width="1100" height="252" aria-label="같은 날 재현성과 재방문 재현성 비교"></canvas></div>
+ <div class="quote reveal r">다음 사람이 <b>무엇을 보고 쟀는지</b> 알 수 있게
+ 남겨 주십시오.</div>
 </div></section>
 
 <section data-t="당신의 자리"><div class="wrap">
@@ -1001,9 +1102,8 @@ svg.figsvg text{font-family:"Pretendard","Noto Sans KR","맑은 고딕",system-u
  편각·복각·총자기장을 안정적으로 측정할 관측점을 결정합니다.</b>
  그 관측점에서 축적된 성과가 <b class="hl">지역 지자기 모델과 국가기본도
  자편각의 기초자료</b>가 됩니다.</p>
- <p class="lead reveal">가장 눈에 보이는 쓰임은 지형도입니다. 1:50,000 지형도
- 가장자리에는 「이 도엽에서 나침반이 진북에서 얼마나 틀어지는가」가 인쇄되어
- 있습니다.</p>
+ <p class="lead reveal">가장 눈에 보이는 쓰임은 지형도입니다 — 1:50,000
+ 도엽 가장자리의 자침편차 표기가 그것입니다.</p>
 </div></section>
 
 <!-- ══ 에필로그 ══ -->
@@ -1110,14 +1210,22 @@ addEventListener("scroll", onScroll, {passive: true});
 onScroll();
 
 /* 발표 모드 — 방향키·스페이스로 장면 이동 */
-let idx = 0;
+function nearest() {
+  let best = 0, min = Infinity;
+  secs.forEach((s, i) => {
+    const d = Math.abs(s.getBoundingClientRect().top);
+    if (d < min) { min = d; best = i; }
+  });
+  return best;
+}
 addEventListener("keydown", e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (["ArrowDown", "PageDown", " ", "ArrowRight"].includes(e.key)) {
-    e.preventDefault(); idx = Math.min(idx + 1, secs.length - 1);
-    secs[idx].scrollIntoView({behavior: "smooth"});
+    e.preventDefault();
+    secs[Math.min(nearest() + 1, secs.length - 1)].scrollIntoView({behavior: "smooth"});
   } else if (["ArrowUp", "PageUp", "ArrowLeft"].includes(e.key)) {
-    e.preventDefault(); idx = Math.max(idx - 1, 0);
-    secs[idx].scrollIntoView({behavior: "smooth"});
+    e.preventDefault();
+    secs[Math.max(nearest() - 1, 0)].scrollIntoView({behavior: "smooth"});
   }
 });
 
@@ -1672,7 +1780,7 @@ function hidpi(cv) {
   [["같은 날 두 번 재면", 1.4, "#3fd8a0", "이만큼 잘 맞습니다 (산포 중앙값)"],
    ["몇 년 뒤 다시 가서 재면", 33.7, "#e8503f", "이만큼 어긋났습니다 (잔여 RMS)"]
   ].forEach((r, i) => {
-    const y = 102 + i * 92;
+    const y = 74 + i * 80;
     ctx.fillStyle = "#eaf2f8"; ctx.font = "700 16px sans-serif"; ctx.textAlign = "right";
     ctx.fillText(r[0], L - 22, y + 8);
     ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.fillRect(L, y - 14, R - L, 40);
@@ -1684,11 +1792,10 @@ function hidpi(cv) {
     ctx.fillText(r[3], L + bw(r[1]) + 14, y + 26);
   });
   ctx.fillStyle = "#8ba3b8"; ctx.font = "600 13.5px sans-serif"; ctx.textAlign = "left";
-  ctx.fillText("장비도 계산도 문제가 없었습니다. 달라진 것은 «무엇을 보고 방위를 잡았는가» 하나였습니다.",
-               42, h - 38);
+  ctx.fillText("달라진 것은 «무엇을 보고 방위를 잡았는가» 하나였습니다.", 42, h - 34);
   ctx.fillStyle = "#55707f"; ctx.font = "600 12px sans-serif";
-  ctx.fillText("두 값은 재는 방식이 다릅니다(산포 중앙값 ↔ 잔여 RMS) — 자릿수를 견주는 그림이지 같은 잣대의 비교가 아닙니다.",
-               42, h - 16);
+  ctx.fillText("두 값은 재는 방식이 다릅니다(산포 중앙값 ↔ 잔여 RMS) — 자릿수를 견주는 그림입니다.",
+               42, h - 14);
 })();
 
 /* ── 배경 자기력선 (WebGL) ───────────────────────── */
@@ -1729,6 +1836,87 @@ function hidpi(cv) {
     cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix();
     rn.setSize(innerWidth, innerHeight);
   });
+})();
+/* ── Cinematic presentation controls ───────────────────── */
+(function(){
+ const title=document.getElementById('hudCurrent');
+ const flash=document.getElementById('sectionFlash');
+ const sections=[...document.querySelectorAll('main>section')];
+ let current='';
+ const io=new IntersectionObserver(entries=>entries.forEach(entry=>{
+   if(!entry.isIntersecting)return;
+   const next=entry.target.dataset.t||'현장교육';
+   if(next!==current){
+     current=next;title.textContent=next;
+     flash.classList.remove('go');void flash.offsetWidth;flash.classList.add('go');
+   }
+ }),{threshold:.55});
+ sections.forEach(s=>io.observe(s));
+ document.getElementById('fullScreen').addEventListener('click',async()=>{
+   if(!document.fullscreenElement)await document.documentElement.requestFullscreen?.();
+   else await document.exitFullscreen?.();
+ });
+ document.getElementById('hudToggle').addEventListener('click',()=>document.body.classList.toggle('hud-hidden'));
+ addEventListener('keydown',async e=>{
+   /* ⚠️ Ctrl+F(찾기)·Cmd+H 까지 삼키면 안 된다 */
+   if(e.ctrlKey||e.metaKey||e.altKey||!e.key)return;
+   if(e.key.toLowerCase()==='h')document.body.classList.toggle('hud-hidden');
+   if(e.key.toLowerCase()==='f'){
+     if(!document.fullscreenElement)await document.documentElement.requestFullscreen?.();
+     else await document.exitFullscreen?.();
+   }
+ });
+ /* ⚠️ 포인터마다 CSS 변수를 쓰면 배경 그라디언트가 매번 다시 칠해진다.
+    빔프로젝터를 물린 노트북에서 눈에 띄게 끊긴다 — 프레임당 한 번으로 묶는다. */
+ let px=0,py=0,queued=false;
+ addEventListener('pointermove',e=>{
+   px=e.clientX/innerWidth*100;py=e.clientY/innerHeight*100;
+   if(queued)return;queued=true;
+   requestAnimationFrame(()=>{queued=false;
+     document.body.style.setProperty('--mx',px.toFixed(2)+'%');
+     document.body.style.setProperty('--my',py.toFixed(2)+'%');});
+ },{passive:true});
+})();
+
+/* ── 장면을 한 화면에 맞춘다 ───────────────────────────── */
+/* ⚠️ transform 은 «레이아웃 상자»를 바꾸지 않는다. 축소만 하면 section 은
+   원래 높이를 그대로 차지해 빈 공간이 남는다 — 넘치는 장면만 height 를
+   화면 높이로 못박고 overflow:hidden 이 축소된 결과를 담게 한다. */
+(function () {
+  const secs = [...document.querySelectorAll("main>section")];
+  let raf = 0;
+  /* 장면이 화면에 들어올 때(=캔버스가 그려질 때) 그 장면을 다시 잰다 */
+  const seen = new IntersectionObserver(es => {
+    if (es.some(e => e.isIntersecting)) schedule();
+  }, {threshold: .2});
+  function fit() {
+    const vh = innerHeight, wide = innerWidth > 860;
+    secs.forEach(s => {
+      const w = s.firstElementChild; if (!w) return;
+      s.style.height = ""; w.style.removeProperty("--fit");
+      if (!wide) return;
+      const cs = getComputedStyle(s);
+      const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      const need = w.getBoundingClientRect().height + pad;
+      if (need > vh - 6) {
+        w.style.setProperty("--fit", Math.max(.72, (vh - 6) / need).toFixed(4));
+        s.style.height = vh + "px";
+      }
+    });
+  }
+  /* ⚠️ requestAnimationFrame 으로 예약하면 «보이지 않는 탭»에서 멈춘다.
+     배경 탭으로 열어 두었다가 넘어오면 장면이 안 맞은 채로 뜬다 —
+     setTimeout 은 숨어 있어도 돈다. */
+  function schedule() { clearTimeout(raf); raf = setTimeout(fit, 40); }
+  schedule();
+  addEventListener("resize", schedule);
+  addEventListener("load", () => setTimeout(schedule, 60));
+  addEventListener("visibilitychange", schedule);
+  /* 도판이 그려지고 글꼴이 앉은 뒤 다시 — 캔버스는 화면에 들어와야 크기가 잡힌다 */
+  [400, 900, 1800].forEach(t => setTimeout(schedule, t));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  secs.forEach(x => seen.observe(x));
+  window.__fit = fit;
 })();
 </script>
 </body></html>
