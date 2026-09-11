@@ -7,7 +7,8 @@
     python create_field_training.py
 
 지자기 측량이 무엇이고 왜 당신의 기록 하나가 중요한가를 전달하는 스크롤형
-교육 자료. **22장면 · 약 35분**(질의 별도). 실시일 `TRAINING_DATE`.
+교육 자료. **23장면 · 약 40분**(질의 별도). 실시일 `TRAINING_DATE`.
+발표자 대본은 `create_field_script.py` 가 같은 payload 로 낸다.
 
 ## 이 자료가 다른 발표자료와 다른 점
 
