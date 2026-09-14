@@ -7,7 +7,7 @@
     python create_field_training.py
 
 지자기 측량이 무엇이고 왜 당신의 기록 하나가 중요한가를 전달하는 스크롤형
-교육 자료. **23장면 · 약 40분**(질의 별도). 실시일 `TRAINING_DATE`.
+교육 자료. **24장면 · 약 45분**(질의 별도). 실시일 `TRAINING_DATE`.
 발표자 대본은 `create_field_script.py` 가 같은 payload 로 낸다.
 
 ## 이 자료가 다른 발표자료와 다른 점
@@ -263,6 +263,7 @@ def build_payload():
         ],
         "gap_sites": [p["지점명"] for p in pts if p["예측구배"] is None],
         "drift": declination_drift(),
+        "grad_demo": GRAD_DEMO,          # 구배 장면 설명용 곡선의 숫자 (대본이 읽는다)
         **declination_now(),
     }
 
@@ -632,6 +633,119 @@ SVG_USE = r'''<svg class="figsvg" viewBox="0 0 1180 470" role="img"
 </g>
 </svg>'''
 
+# ── 구배란 무엇인가 ─────────────────────────────────────────────
+# ⚠️ 오른쪽 두 곡선은 «모양»을 보이려고 만든 식이지 실측이 아니다(캡션에 밝힌다).
+#    구배·30 cm 차이 숫자는 그 식에서 계산해 그림·글·대본이 어긋나지 않게 한다.
+def _f_quiet(x):
+    import math
+    return 0.8 * x + 0.3 * math.sin(1.5 * x)
+
+
+def _f_steep(x):
+    import math
+    return 20 * math.tanh(x / 1.2)
+
+
+GRAD_DEMO = {k: {"rise": round(f(1) - f(0), 1), "off30": round(abs(f(.3) - f(0)), 1)}
+             for k, f in (("quiet", _f_quiet), ("steep", _f_steep))}
+
+
+def _grad_panel(x0, title, col, f):
+    L, R = x0 + 40, x0 + 348
+    cx, y0 = (L + R) / 2, 150
+    pm, pn = (R - L) / 10, 3.2          # px/m (−5~+5 m) · px/nT
+    rise, off = f(1) - f(0), abs(f(.3) - f(0))
+    pts = " ".join(f"{cx + i / 20 * pm:.1f},{y0 - f(i / 20) * pn:.1f}"
+                   for i in range(-100, 101))
+    return f"""<g font-family="inherit">
+ <rect x="{x0}" y="4" width="388" height="318" rx="3" fill="rgba(255,255,255,.025)"
+  stroke="{col}" stroke-opacity=".45" stroke-width="1.4"/>
+ <text x="{x0 + 18}" y="38" fill="{col}" font-size="20" font-weight="800">{title}</text>
+ <rect x="{cx - .3 * pm:.1f}" y="60" width="{.6 * pm:.1f}" height="176" fill="{col}" fill-opacity=".13"/>
+ <path d="M{L} {y0}H{R}" stroke="rgba(140,180,210,.4)" stroke-width="1" stroke-dasharray="3 4"/>
+ <text x="{L}" y="{y0 - 8}" fill="#55707f" font-size="12.5" font-weight="600">중심점 값</text>
+ <polyline points="{pts}" fill="none" stroke="{col}" stroke-width="3.2" stroke-linejoin="round"/>
+ <path d="M{cx:.1f} {y0}H{cx + pm:.1f}V{y0 - rise * pn:.1f}Z" fill="#eaf2f8" fill-opacity=".16"
+  stroke="#eaf2f8" stroke-width="1.6"/>
+ <circle cx="{cx:.1f}" cy="{y0}" r="5.5" fill="#ff7048"/>
+ <text x="{cx + pm / 2:.1f}" y="{y0 + 17}" fill="#c9d6e2" font-size="12.5" text-anchor="middle">1 m</text>
+ <text x="{cx + 14:.1f}" y="{y0 + 48}" fill="#eaf2f8" font-size="16" font-weight="700">1 m 에 +{rise:.1f} nT</text>
+ <g fill="#8ba3b8" font-size="13" font-weight="600" text-anchor="middle">
+  <text x="{L}" y="256">−5 m</text><text x="{cx:.1f}" y="256">P0</text>
+  <text x="{R}" y="256">+5 m</text></g>
+ <text x="{cx:.1f}" y="55" fill="#8ba3b8" font-size="12" font-weight="600" text-anchor="middle">±30 cm</text>
+ <text x="{x0 + 18}" y="286" fill="{col}" font-size="20" font-weight="800">구배 ≈ {rise:.1f} nT/m</text>
+ <text x="{x0 + 18}" y="308" fill="#c9d6e2" font-size="15" font-weight="600">중심점에서 30 cm 비껴 서면 {off:.1f} nT 차이</text>
+</g>"""
+
+
+SVG_GRAD = ("""<svg class="figsvg" viewBox="0 0 1180 326" role="img"
+ aria-label="구배는 길의 경사처럼 옮긴 거리당 값의 변화이며, 조용한 자리는 완만하고 교란된 자리는 가파르다">
+<g font-family="inherit">
+ <text x="10" y="40" fill="#eaf2f8" font-size="20" font-weight="800">길의 경사</text>
+ <text x="110" y="40" fill="#8ba3b8" font-size="15" font-weight="600">= 오른 높이 ÷ 간 거리</text>
+ <path d="M20 128H210V78Z" fill="rgba(139,163,184,.16)" stroke="#8ba3b8" stroke-width="2"/>
+ <text x="115" y="152" fill="#c9d6e2" font-size="15" text-anchor="middle">100 m 갔더니</text>
+ <text x="222" y="104" fill="#c9d6e2" font-size="15">5 m 오름</text>
+ <text x="222" y="128" fill="#eaf2f8" font-size="16" font-weight="700">→ 5 %</text>
+ <text x="10" y="200" fill="#3fd8d0" font-size="20" font-weight="800">자기 구배</text>
+ <text x="110" y="200" fill="#8ba3b8" font-size="15" font-weight="600">= 변한 값 ÷ 옮긴 거리</text>
+ <path d="M20 288H210V238Z" fill="rgba(63,216,208,.12)" stroke="#3fd8d0" stroke-width="2"/>
+ <text x="115" y="312" fill="#c9d6e2" font-size="15" text-anchor="middle">1 m 옮겼더니</text>
+ <text x="222" y="264" fill="#c9d6e2" font-size="15">3 nT 커짐</text>
+ <text x="222" y="288" fill="#3fd8d0" font-size="16" font-weight="700">→ 3 nT/m</text>
+ <path d="M354 14V306" stroke="rgba(140,180,210,.22)" stroke-width="1"/>
+</g>
+""" + _grad_panel(380, "조용한 자리", "#3fd8a0", _f_quiet)
+    + _grad_panel(788, "교란된 자리", "#e8503f", _f_steep) + "\n</svg>")
+
+
+# ── 중심점 재측정으로 «시간 몫»을 걷어내는 셈 ─────────────────────
+# ⚠️ 이 그림의 요점은 «그냥 빼면 6» 이 «시간 몫 2.5 + 자리 몫 3.5» 로 쪼개지는
+#    것 하나다. 직선을 긋는 것만으로는 전달되지 않았다(발주자 지적).
+#    x: 10:00→70 … 10:04→610 (1분 135) · y: 98→330 … 108→40 (1 nT 29)
+SVG_CORR = r"""<svg class="figsvg" viewBox="0 0 640 372" role="img"
+ aria-label="중심점을 앞뒤로 재어 시간 몫을 걷어내면 그냥 뺀 차이 6 이 시간 몫 2.5 와 자리 몫 3.5 로 나뉜다">
+<defs><path id="corrLine" d="M70 272L610 127"/></defs>
+<g font-family="inherit">
+ <path d="M70 272H614M70 127H614" stroke="rgba(140,180,210,.1)" stroke-width="1"/>
+ <path d="M70 30V330H616" fill="none" stroke="rgba(140,180,210,.38)" stroke-width="1.2"/>
+ <g fill="#55707f" font-size="13" font-weight="600" text-anchor="end">
+  <text x="60" y="277">100</text><text x="60" y="132">105</text></g>
+ <g fill="#8ba3b8" font-size="13.5" font-weight="600" text-anchor="middle">
+  <text x="70" y="354">10:00</text><text x="205" y="354">10:01</text>
+  <text x="340" y="354">10:02</text><text x="475" y="354">10:03</text>
+  <text x="608" y="354">10:04</text></g>
+
+ <!-- 보정하지 않은 기준 — 처음 중심점 값 그대로 -->
+ <path d="M70 272H340" stroke="#8ba3b8" stroke-width="1.8" stroke-dasharray="2 5"/>
+ <!-- 중심점이 변해 간 선(어림) -->
+ <use href="#corrLine" stroke="#ff7048" stroke-width="2.4" stroke-dasharray="7 6"/>
+ <text fill="#ff9a7a" font-size="13.5" font-weight="600" dy="-9">
+  <textPath href="#corrLine" startOffset="4%">중심점이 변해 간 선 (어림)</textPath></text>
+
+ <!-- 그냥 빼면 6 -->
+ <path d="M330 98H318V272H330" fill="none" stroke="#8ba3b8" stroke-width="1.8"/>
+ <text x="310" y="190" fill="#8ba3b8" font-size="16" font-weight="700" text-anchor="end">그냥 빼면 6</text>
+ <!-- 시간 몫 · 자리 몫 -->
+ <path d="M350 272H362V199.5H350" fill="none" stroke="#ff7048" stroke-width="2.4"/>
+ <path d="M350 199.5H362V98H350" fill="none" stroke="#3fd8a0" stroke-width="2.4"/>
+ <text x="372" y="140" fill="#3fd8a0" font-size="17" font-weight="800">자리 몫 3.5</text>
+ <text x="372" y="216" fill="#c9d6e2" font-size="14" font-weight="600">← ④ 이때 중심점 102.5</text>
+ <text x="372" y="254" fill="#ff7048" font-size="17" font-weight="800">시간 몫 2.5</text>
+
+ <!-- 점 -->
+ <circle cx="70" cy="272" r="7" fill="#ff7048"/>
+ <circle cx="610" cy="127" r="7" fill="#ff7048"/>
+ <circle cx="340" cy="199.5" r="6" fill="#050a12" stroke="#ff7048" stroke-width="2.4"/>
+ <circle cx="340" cy="98" r="8" fill="#3fd8d0"/>
+ <text x="84" y="302" fill="#ff7048" font-size="15.5" font-weight="700">① 중심점 100</text>
+ <text x="340" y="76" fill="#3fd8d0" font-size="15.5" font-weight="700" text-anchor="middle">② 동쪽 2 m 106</text>
+ <text x="600" y="104" fill="#ff7048" font-size="15.5" font-weight="700" text-anchor="end">③ 다시 중심점 105</text>
+</g>
+</svg>"""
+
+
 
 # ══════════════════════════════════════════════════════════════
 TEMPLATE = r"""<!doctype html>
@@ -691,6 +805,14 @@ b{color:#fff;font-weight:700}
 .card.good{border-color:rgba(63,216,160,.4);background:rgba(63,216,160,.06)}
 .card h3{margin-bottom:8px}
 .card p{color:var(--muted);font-size:15px;line-height:1.62}
+.figcap{color:#55707f;font-size:13px;margin-top:6px;text-align:right}
+.note{color:var(--muted);font-size:14px;line-height:1.55;margin-top:10px}
+.seq{display:grid;gap:8px}
+.seq>div{display:grid;grid-template-columns:26px 1fr;gap:8px;
+ color:var(--muted);font-size:15.5px;line-height:1.5}
+.seq i{font-style:normal;font-weight:800;color:var(--cyan)}
+@media(max-height:900px){.seq{gap:5px}.seq>div{font-size:14px}
+ .note{font-size:13px;margin-top:7px}.figcap{font-size:12px;margin-top:3px}}
 .num{font:800 clamp(30px,4.4vw,64px)/1 "Arial Narrow","Pretendard",sans-serif;
  letter-spacing:-.03em;display:block}
 .num.c{color:var(--cyan)}.num.o{color:var(--orange)}.num.r{color:var(--red)}
@@ -1096,9 +1218,38 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
  </div>
 </div></section>
 
-<section data-t="측선 설계"><div class="wrap grid2">
+<section data-t="구배"><div class="wrap">
  <div class="reveal">
   <span class="tag o">10</span>
+  <h2>「조용한 자리」를 숫자로 말하면<br><span class="hl">구배</span>입니다</h2>
+  <p class="lead">구배는 <b>«기울기»</b>라는 뜻입니다. 길이 얼마나 가파른지를
+  «100 m 가서 5 m 오른다»로 말하듯, <b class="hl">자기 구배는 «1 m 옮겼을 때
+  총자력이 몇 nT 변하는가»</b> 입니다. 그래서 단위도 <b>nT/m</b>
+  (미터당 나노테슬라)입니다.</p>
+ </div>
+ <div class="reveal" style="margin-top:22px">{{SVG_GRAD}}
+  <p class="figcap">오른쪽 두 그림은 «모양»을 보여 드리려고 그린 것입니다 —
+  실측값이 아닙니다.</p></div>
+ <div class="grid2 reveal" style="margin-top:16px;align-items:stretch">
+  <div class="card"><h3 class="hl">셈은 이렇게 합니다</h3>
+   <p>중심점 <b>50,000 nT</b> · 동쪽 2 m <b>50,004 nT</b> →
+   4 nT ÷ 2 m = <b class="hl-g">2 nT/m</b></p>
+   <p>「+·−」는 값이 커졌는지 작아졌는지 <b>방향</b>일 뿐이고, 크고 작음은
+   부호를 뗀 크기로 봅니다. 센서 높이를 바꿔 재는 <b>수직 구배</b>도 같은
+   셈입니다.</p></div>
+  <div class="card"><h3 class="hl-o">왜 구배가 작은 자리를 찾습니까</h3>
+   <p>구배가 크면 <b>몇 cm 만 비껴 서도</b> 값이 달라집니다. 다음 사람이 같은
+   값을 다시 잴 수 없고, 그 한 점의 값이 <b>주변 지역을 대표하지도
+   못합니다.</b></p>
+   <p>얼마면 «작다»고 할지는 <b>아직 정해지지 않았습니다</b> — 뒤에서 다시
+   말씀드립니다. 올해 한 지점에서 재는 {{N_READ}}번은 전부 이 구배를 구하려는
+   것입니다.</p></div>
+ </div>
+</div></section>
+
+<section data-t="측선 설계"><div class="wrap grid2">
+ <div class="reveal">
+  <span class="tag o">11</span>
   <h2>중심점에서 네 방향,<br>그리고 위로</h2>
   <p class="lead"><b>수평</b> — 중심점(P0)에서 재고, 동쪽으로
   {{OFFSETS_TXT}} m 를 차례로 잰 뒤 <b class="hl">다시 중심점으로 돌아와
@@ -1127,45 +1278,44 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 
 <section data-t="P0 재측정"><div class="wrap">
  <div class="reveal">
-  <span class="tag o">11</span>
+  <span class="tag o">12</span>
   <h2>왜 중심점으로<br>자꾸 돌아옵니까</h2>
-  <p class="lead">자력계가 <b>한 대뿐</b>이기 때문입니다. 한 대로 여러 자리를 재면
-  <b class="hl-o">위치가 바뀌는 동안 시간도 함께 흘러갑니다.</b> 그 사이 자기장은
-  저절로 변합니다.</p>
-  <p class="lead">중심점을 앞뒤로 두 번 재두면, 그 두 값을 직선으로 이어
-  «각 측점을 잰 순간의 중심점 값»을 추정할 수 있습니다. 그만큼을 빼면
-  <b class="hl">자리 때문에 생긴 차이에 훨씬 가까워집니다.</b></p>
-  <p class="lead">다만 이것은 두 시각 사이가 <b>직선으로 변했다고 «본»</b> 것이라
-  전부를 걷어내지는 못합니다. 그래서 시각을 정확히 적는 일이 더 중요합니다 —
-  사무실에서 다르게 계산해 볼 여지를 남겨 두는 것이 시각입니다.</p>
+  <p class="lead">자력계가 <b>한 대뿐</b>이라 자리를 옮기는 동안 시간도 흐릅니다.
+  그런데 자기장은 가만히 있어도 <b class="hl-o">하루에 수십 nT 를 오르내립니다.</b>
+  그래서 뒤에 잰 값에는 <b>«자리가 달라서 생긴 차이»</b>와
+  <b>«그 사이 시간이 흘러 생긴 차이»</b>가 섞여 들어옵니다.</p>
+  <p class="lead">해 뜨는 아침에 거실과 안방 온도를 차례로 재면 뒤에 잰 방이 더
+  따뜻하게 나옵니다 — 방이 따뜻해서가 아니라 그 사이 기온이 올라서입니다.
+  중심점으로 돌아와 다시 재는 것은 <b class="hl">그 «시간 몫»을 알아내서
+  빼기 위해서</b>입니다.</p>
  </div>
- <div class="grid2 reveal" style="margin-top:30px">
-  <div><canvas class="fig" id="figCorr" width="640" height="380"
-   aria-label="시간변화 보정 예시"></canvas></div>
+ <div class="grid2 reveal" style="margin-top:22px">
+  <div>{{SVG_CORR}}
+   <p class="figcap">설명용으로 줄인 값입니다 — 실제 판독은 약 5만 nT 입니다</p></div>
   <div>
-   <div class="tblwrap"><table>
-    <tr><th>순서</th><th>시각</th><th>값</th></tr>
-    <tr><td>중심점 P0</td><td>10:00</td><td><b>100 nT</b></td></tr>
-    <tr><td>동쪽 2 m</td><td>10:02</td><td><b>106 nT</b></td></tr>
-    <tr><td>중심점 P0</td><td>10:04</td><td><b>105 nT</b></td></tr>
-   </table></div>
-   <div class="card good" style="margin-top:20px">
-    <p style="color:var(--ink)">10:02 의 중심점 추정값 = <b>102.5</b> nT<br>
-    차이 ΔF = 106 − 102.5 = <b>3.5</b> nT<br>
-    구배 = 3.5 ÷ 2 m = <b class="hl-g">1.75 nT/m</b></p>
-   </div>
-   <div class="card warn" style="margin-top:13px">
-    <p>보정하지 않으면 (106−100)÷2 = <b class="hl-r">3.0 nT/m</b> —
-    <b>71 % 과대평가</b> 됩니다. 자리 탓이 아니라 시간이 흐른 몫까지
-    자리 탓으로 돌리게 됩니다.</p>
-   </div>
+   <div class="card"><div class="seq">
+    <div><i>①</i><span>10:00 중심점 <b>100</b></span></div>
+    <div><i>②</i><span>10:02 동쪽 2 m <b>106</b> — 그냥 빼면 <b>6</b></span></div>
+    <div><i>③</i><span>10:04 다시 중심점 <b>105</b> — 자리를 안 옮겼는데
+     <b class="hl-o">5 가 올랐습니다. 이것이 시간 몫</b>입니다</span></div>
+    <div><i>④</i><span>10:02 는 딱 중간이니 중심점도 절반인 2.5 만큼 올라
+     <b>102.5</b> 였다고 봅니다</span></div>
+    <div><i>⑤</i><span>자리 몫 = 106 − 102.5 = <b class="hl-g">3.5 nT</b> →
+     구배 = 3.5 ÷ 2 m = <b class="hl-g">1.75 nT/m</b></span></div>
+   </div></div>
+   <div class="card warn" style="margin-top:12px">
+    <p>돌아오지 않았다면 6 을 전부 자리 탓으로 보고 <b class="hl-r">3.0 nT/m</b> —
+    실제의 <b>1.7배</b>로 부풀립니다.</p></div>
+   <p class="note">④ 는 4분 동안 «고르게» 변했다고 본 어림입니다. 그래서
+   <b>모든 줄에 시각</b>을 적어 두셔야 사무실에서 더 나은 방법으로 다시 계산할
+   수 있습니다. 계산은 현장에서 하지 않습니다.</p>
   </div>
  </div>
 </div></section>
 
 <section data-t="실측 사례"><div class="wrap">
  <div class="reveal">
-  <span class="tag o">12</span>
+  <span class="tag o">13</span>
   <h2>실제로 재어 봤더니</h2>
   <p class="lead">기존 지자기점 두 곳에서 시범으로 재어 본 결과입니다.
   중심점에서 1 m 떨어진 네 방향 값입니다.</p>
@@ -1186,7 +1336,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 
 <section data-t="기준이 없다"><div class="wrap">
  <div class="reveal">
-  <span class="tag o">13</span>
+  <span class="tag o">14</span>
   <h2>그런데 아직<br><span class="hl-o">합격 기준이 없습니다</span></h2>
   <p class="lead">해외에는 「반경 {{IAGA_RADIUS}} m 안에서 {{IAGA_RANGE}} nT
   이내」「구배 {{EURO_GRAD}} nT/m 미만」이라는 값이 있습니다. 다만
@@ -1209,7 +1359,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 
 <section data-t="자기청정"><div class="wrap grid2">
  <div class="reveal">
-  <span class="tag o">14</span>
+  <span class="tag o">15</span>
   <h2>측정하는 사람도<br>자기장을 만듭니다</h2>
   <p class="lead">센서 가까이에 쇠붙이가 있으면 그 영향이 값에 섞여 들어옵니다.
   문제는 나중에 보면 <b class="hl-r">그것이 사람 때문인지 그 자리의 성질인지
@@ -1223,7 +1373,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 
 <section data-t="카드"><div class="wrap">
  <div class="reveal">
-  <span class="tag o">15</span>
+  <span class="tag o">16</span>
   <h2>현장에서는 이 카드<br>한 장을 채웁니다</h2>
   <p class="lead">점마다 카드가 한 장씩 있습니다. 한 장을 다 채우면
   그 지점의 기록이 끝납니다. 순서대로 되어 있으니 위에서부터 채워 가시면 됩니다.</p>
@@ -1258,7 +1408,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 <!-- ══ 4부 왜 당신이 중요한가 ══ -->
 <section data-t="4부 · 실화"><div class="wrap">
  <div class="reveal">
-  <span class="tag" style="color:var(--red)">4부 — 실제로 있었던 일 · 16</span>
+  <span class="tag" style="color:var(--red)">4부 — 실제로 있었던 일 · 17</span>
   <h2>날짜는 적혔는데<br><span class="hl-r">시각이 비어 있던 일</span></h2>
   <p class="lead">지난 자료를 정리하면서 야장 <b>68건을 전부</b> 열어 봤습니다.
   총자력 측정 결과 절이 있는 것이 <b>36건</b>, 그 절에는
@@ -1291,7 +1441,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 
 <section data-t="좌표"><div class="wrap">
  <div class="reveal">
-  <span class="tag" style="color:var(--red)">17</span>
+  <span class="tag" style="color:var(--red)">18</span>
   <h2>좌표가 어긋나서<br><span class="hl-r">점 하나를 잃은 일</span></h2>
  </div>
  <div class="card reveal" style="border-color:rgba(155,127,232,.5);
@@ -1323,7 +1473,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 
 <section data-t="두 번의 방문"><div class="wrap">
  <div class="reveal">
-  <span class="tag" style="color:var(--red)">18</span>
+  <span class="tag" style="color:var(--red)">19</span>
   <h2>같은 자리를 다시 갔더니<br><span class="hl-r">34분이 어긋났습니다</span></h2>
  </div>
  <div class="card reveal" style="border-color:rgba(155,127,232,.5);
@@ -1353,7 +1503,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 
 <section data-t="당신의 자리"><div class="wrap">
  <div class="reveal">
-  <span class="tag">19</span>
+  <span class="tag">20</span>
   <h2>여러분이 고른 자리가<br><span class="hl">앞으로 수십 년</span>의 기준입니다</h2>
  </div>
  <div class="grid2 reveal" style="margin-top:30px">
@@ -1373,7 +1523,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 
 <section data-t="활용"><div class="wrap">
  <div class="reveal">
-  <span class="tag">5부 — 이 자료가 어디에 쓰이는가 · 20</span>
+  <span class="tag">5부 — 이 자료가 어디에 쓰이는가 · 21</span>
   <h2>여러분의 기록은<br>여기에 쓰입니다</h2>
  </div>
  <div class="grid3 reveal" style="margin-top:30px">
@@ -1401,7 +1551,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 <!-- ══ 에필로그 ══ -->
 <section data-t="에필로그"><div class="wrap">
  <div class="reveal">
-  <span class="tag">에필로그 · 21</span>
+  <span class="tag">에필로그 · 22</span>
   <h2>현장에서 지킬 다섯 가지</h2>
   <p class="lead">여러분이 현장에서 적은 값 하나, 시각 하나, 좌표 하나가
   데이터베이스로, 전국 지도로, 대한민국 지자기 기준으로 이어집니다.</p>
@@ -1429,7 +1579,7 @@ canvas.fig,svg.figsvg{max-height:50vh;width:auto;max-width:100%;
 <!-- ══ 마무리 ══ -->
 <section data-t="마무리"><div class="wrap">
  <div class="reveal">
-  <span class="tag">마무리 · 22</span>
+  <span class="tag">마무리 · 23</span>
   <h2>다 기억하지 않으셔도 됩니다</h2>
   <p class="lead">오늘 말씀드린 것을 전부 외우실 필요는 없습니다.
   현장에서 필요한 것은 <b>카드에 순서대로 다 적혀 있습니다.</b>
@@ -2014,48 +2164,6 @@ function hidpi(cv) {
   }, {threshold: .25}).observe(cv);
 })();
 
-/* ── 시간변화 보정 ───────────────────────────────── */
-(function () {
-  const cv = document.getElementById("figCorr"); if (!cv) return;
-  const {ctx, w, h} = hidpi(cv);
-  const L = 52, R = w - 20, T = 26, B = h - 40;
-  ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(140,180,210,.22)";
-  ctx.beginPath(); ctx.moveTo(L, T); ctx.lineTo(L, B); ctx.lineTo(R, B); ctx.stroke();
-  const px = m => L + m / 4 * (R - L);
-  const py = v => B - (v - 96) / 12 * (B - T);
-  ctx.font = "600 12px sans-serif"; ctx.fillStyle = "#8ba3b8";
-  ctx.textAlign = "center";
-  ["10:00", "10:01", "10:02", "10:03", "10:04"].forEach((s, i) =>
-    ctx.fillText(s, px(i), B + 19));
-  /* P0 선형보간 */
-  ctx.strokeStyle = "#ff7048"; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
-  ctx.beginPath(); ctx.moveTo(px(0), py(100)); ctx.lineTo(px(4), py(105)); ctx.stroke();
-  ctx.setLineDash([]);
-  [[0, 100], [4, 105]].forEach(([m, v]) => {
-    ctx.beginPath(); ctx.arc(px(m), py(v), 6, 0, 7);
-    ctx.fillStyle = "#ff7048"; ctx.fill();
-  });
-  /* 추정값 */
-  ctx.beginPath(); ctx.arc(px(2), py(102.5), 5, 0, 7);
-  ctx.fillStyle = "#ffd7c8"; ctx.fill();
-  /* 측정값 */
-  ctx.beginPath(); ctx.arc(px(2), py(106), 7, 0, 7);
-  ctx.fillStyle = "#3fd8d0"; ctx.fill();
-  /* ΔF */
-  ctx.strokeStyle = "#3fd8a0"; ctx.lineWidth = 2.4;
-  ctx.beginPath(); ctx.moveTo(px(2), py(106)); ctx.lineTo(px(2), py(102.5)); ctx.stroke();
-  ctx.fillStyle = "#3fd8a0"; ctx.font = "800 15px sans-serif";
-  ctx.textAlign = "left"; ctx.fillText("ΔF = 3.5 nT", px(2) + 12, py(104.2));
-  ctx.fillStyle = "#ff7048"; ctx.font = "700 12px sans-serif";
-  ctx.fillText("P0 앞뒤를 이은 선", px(0) + 8, py(100) - 12);
-  ctx.fillStyle = "#3fd8d0";
-  ctx.fillText("동쪽 2 m 측정값", px(2) + 12, py(106) - 10);
-  ctx.fillStyle = "#55707f"; ctx.font = "600 11.5px sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText("설명용으로 줄인 값입니다 — 실제 판독은 약 5만 nT 입니다", L, h - 8);
-})();
-
 /* ── 재현성 비교 ─────────────────────────────────── */
 (function () {
   const cv = document.getElementById("figAudit"); if (!cv) return;
@@ -2258,7 +2366,8 @@ def render(payload):
         "PILOT_TABLE": pilot_table(payload),
     }
     for k, v in (("SVG_GEAR", SVG_GEAR), ("SVG_CLEAN", SVG_CLEAN),
-                 ("SVG_USE", SVG_USE)):
+                 ("SVG_USE", SVG_USE), ("SVG_GRAD", SVG_GRAD),
+                 ("SVG_CORR", SVG_CORR)):
         html = html.replace("{{" + k + "}}", v)
     for k, v in tokens.items():
         html = html.replace("{{" + k + "}}", str(v))
