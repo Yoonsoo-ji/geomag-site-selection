@@ -28,7 +28,10 @@
 원 계획 31면의 선점실시 절차가 「GNSS 수신기 → 오버하우저 자기구배 확인 →
 중심점 선정 및 표지 설치」이며 DI-flux 절대관측은 여기 없다 — 그것은 선점이
 끝난 뒤의 «관측» 단계다. 따라서 §19①(1일 6회)·§20(정수차 30′·20분)도 이
-단계의 요건이 아니다. 이 야장이 잰 것은 **오버하우저 총자력뿐**이다.
+단계의 요건이 아니다. 이 야장이 재는 것은 **프로톤 자력계(GSM-19T) 총자력뿐**이다.
+
+⚠️ **GSM-19T 는 오버하우저가 아니다** — 매뉴얼 1쪽·부록 A.1.1 이 «표준 양성자
+(프로톤) 자력계»라고 밝힌다. 원 계획 31면의 「오버하우저」는 표기 오류다.
 
 ⚠️ **시간변화 보정 계산은 현장에서 하지 않는다.** 현장은 «시각과 값»을 정확히
 남기는 데 집중하고, P0 선형보간·구배 산출·판정은 사무실에서 17시트 야장으로
@@ -43,7 +46,7 @@
 
 | 지적 | 반영 |
 |---|---|
-| **C1** 카드는 F 한 칸인데 사무실은 F1·F2·F3 을 요구 — 점당 192회 산정이 성립 안 함 | **1 판독 기준으로 통일**했다. 오버하우저는 기기 내부에서 평균하므로 IAGA 예시도 점당 단일값이다. 판독이 의심스러우면 「재측」 칸에 적고 사유를 남긴다 — 작업량도 **64회/점**으로 다시 셌다 |
+| **C1** 카드는 F 한 칸인데 사무실은 F1·F2·F3 을 요구 — 점당 192회 산정이 성립 안 함 | **1 판독 기준으로 통일**했다. IAGA §4.2 예시가 측점마다 «a PPM reading» 하나다. 판독이 의심스러우면 반복값을 비고에 적고 사유를 남긴다 — 작업량도 **64회/점**으로 다시 셌다. ⚠️ 당시 적은 「기기가 내부에서 평균한다」는 **틀린 근거였다**(아래 GSM-19T 절) |
 | **C2** Visit·Location·Set·Attempt 식별자가 없어 재시작·재방문·중심 이동을 유일하게 구분 못 함 | 카드 머리에 **Visit ID · Location ID**, 구역마다 **Set ID · 차수**. 중심점을 옮기면 **새 Location ID 로 새 카드**를 쓰고 기존 값을 덮지 않는다 |
 | **C3** §18③ 자기오염 방지(작업자 금속물 제거)가 없다 | 「0. 측정 전 확인」 구역 신설 — 개인 금속물·차량·전자기기 통제 체크. **이건 D·I 와 무관하게 총자력 측정에 직접 영향을 준다** |
 | **M1** 절대측정 제외의 잔재(야간 의무 문구) | 「야간」 의무를 **「시간변화가 안정된 구간」**으로 바꿨다 |
@@ -62,9 +65,31 @@
 | 작업량 | **파일럿 후 확정** | 2.6 h/점 · 130 h 는 대외 일정에 쓰지 않는다 |
 
 ⚠️ **판독은 위치당 1회다.** 종이에 손으로 쓰는 것이 원본이라 64위치를 3회씩
-받아 적는 것은 현실적이지 않고, 기기가 이미 내부에서 여러 번 재어 평균을 낸다.
-IAGA 예시도 점당 단일값이다. 값이 미덥지 않으면 차수를 올려 그 방향을 처음부터
-다시 재는 것으로 갈음한다.
+받아 적는 것은 현실적이지 않고, IAGA §4.2 예시도 측점마다 판독 하나다. 신호품질
+뒷자리가 0 이면(쓸 수 없는 판독) 「1」(반복) 키로 다시 재고 그 값을 비고에 적는다.
+
+## GSM-19T 매뉴얼 반영 (2026-09-14)
+
+`GSM-19T 사용자 매뉴얼(한글판)_v1.0.pdf`(지리원 자료)를 전수로 읽고 고쳤다.
+
+| 매뉴얼 | 카드에 미친 영향 |
+|---|---|
+| 1쪽·부록 A — **표준 양성자(프로톤) 자력계** | 「오버하우저」 표기 삭제 |
+| 5.3.9 — 필터링·**평균화 없이** 측정값을 그대로 출력 | 「기기가 안에서 평균을 낸다」 문장 삭제. 1회 판독의 근거는 IAGA 예시로 바꿨다 |
+| 5.3.1 — 점마다 버튼으로 재는 것은 **Mobile** 모드 (Base 는 두 대일 때 기준용) | 1구역 「측정 모드」 |
+| 5.3.4 — **X/Y**: 동·북 +, 서·남 − · 「1-repeat」은 좌표를 그대로 둔다 | 3구역 머리글에 좌표 규약 · P0 로 돌아오면 (0,0) 을 다시 넣으라고 적었다 |
+| 5.4.1 — 판독 화면에 **시각이 안 나온다**(총자력·앞 판독과의 차·품질·좌표) | 시각은 «기록자가 적는 대조용», 정본은 기기 파일 |
+| 11장 — 꺼진 뒤 **24시간이 지나면 날짜·시각이 지워진다** | 1구역 「기기 시각 맞춤」·「GNSS 시각 대비(초)」 |
+| 5.8 — **GPS 가 켜지면 시각이 UTC** 로 덮어써지고 좌표도 GPS 값 | 1구역 「GPS 옵션」 |
+| 5.4.6 — 신호품질 두 자리, **뒷자리 0 은 쓸 수 없는 판독** | 3·4구역 「품질」 칸 · 완전성 점검 |
+| 5.3.8·5.3.9 · 부록 A — 튜닝(한반도 «50») · AC 60 Hz · 방향선 수직(복각 53° > 45°) | 1구역 설정 확인 |
+
+⚠️ IAGA §4.2 는 수평 측점을 **절대관측에 쓰는 표준 높이**에서 재라고 한다.
+그래서 3구역에 「수평 센서 높이」 칸을 두고 모든 측점에서 같게 두도록 했다.
+
+⚠️ **수직(20~200 cm · 20 cm 간격)의 거치 방법은 아직 정하지 않았다.** 표준
+막대가 45 cm 마디 넷이라 마디 조립만으로는 20 cm 간격이 안 나온다. IAGA 는
+「눈금 막대(graduated rod)」를 권한다 — 발주자 확인 후 4구역을 고친다.
 
 ⚠️ **차수(Attempt)는 사무실 야장의 조회 키에 들어간다.** 같은 방향을 다시 재면
 차수를 올려 행을 «새로» 추가한다 — 차수 없이 같은 Set ID 로 행만 늘리면 P0 가
@@ -86,6 +111,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.worksheet.pagebreak import Break
 
 import trial_survey_points as TP
 import trial_survey_spec as SP
@@ -131,9 +157,20 @@ def _s(ws, r, text, note=None):
         ws.merge_cells(f"A{r+1}:I{r+1}")
         n = ws[f"A{r+1}"]
         n.value, n.font, n.alignment = note, F_SM, AL_TL
-        ws.row_dimensions[r + 1].height = 13 * max(1, -(-len(note) // 108)) + 3
+        ws.row_dimensions[r + 1].height = _text_h(note, per=92, size=8.5)
         return r + 2
     return r + 1
+
+
+def _text_h(text, per=80, size=8.5):
+    """병합한 A:I 한 줄에 들어갈 글자 수로 행 높이를 잡는다.
+
+    ⚠️ 고정 높이(14·40)로 두었더니 LibreOffice·인쇄에서 끝줄이 잘렸다.
+       한 줄 글자 수는 A:I 폭(약 113자 폭)에서 한글이 넓은 만큼 줄여 잡는다 —
+       경고문(굵게)은 80자, 작은 설명은 92자.
+    """
+    lines = max(1, -(-len(text) // per))
+    return round(lines * size * 1.55 + 4, 1)
 
 
 def _span(ws, ref, fill):
@@ -259,7 +296,7 @@ def build_card(wb, p, idx):
                "쓰시면 됩니다. 옮기기 전 자리에서 잰 값은 옮긴 자리가 조용하다는 근거가 "
                "되지 못하기 때문입니다.")
     c.font, c.fill, c.alignment = F_WARN, FILL_WARN, AL_TL
-    ws.row_dimensions[r].height = 14
+    ws.row_dimensions[r].height = _text_h(c.value)
     r += 1
 
     # ── 0. 측정 전 확인 (§18③ 자기오염 방지) ────────────────
@@ -317,6 +354,38 @@ def build_card(wb, p, idx):
     _lbl(ws, f"G{r}", "Variometer 파일명")
     _fld(ws, f"H{r}:I{r}")
     r += 1
+    # ── GSM-19T 설정 확인 — 매뉴얼에서 온 것들 ──
+    # ⚠️ 꺼진 뒤 24시간이 지나면 시계가 지워진다(매뉴얼 11장). 판독마다 파일에
+    #    저장되는 시각이 전부 이 시계를 따르므로 «맞췄는가»를 카드에 남긴다.
+    _lbl(ws, f"A{r}", "측정 모드");   _fld(ws, f"B{r}")
+    _dv(ws, f"B{r}", ["Mobile", "기타(사유 기재)"])
+    _lbl(ws, f"C{r}", "기기 시각 맞춤"); _fld(ws, f"D{r}")
+    _dv(ws, f"D{r}", ["오늘 KST 로 맞춤", "안 맞춤(사유 기재)"])
+    _lbl(ws, f"E{r}", "GNSS 시각 대비(초)"); _fld(ws, f"F{r}", "0")
+    _lbl(ws, f"G{r}", "GPS 옵션");     _fld(ws, f"H{r}:I{r}")
+    _dv(ws, f"H{r}", ["없음", "끔", "켜짐 — 시각 UTC(사유 기재)"])
+    r += 1
+    _lbl(ws, f"A{r}", "좌표 방식");   _fld(ws, f"B{r}")
+    _dv(ws, f"B{r}", ["X/Y (P0 = 0·0)", "Line/Station", "기타"])
+    _lbl(ws, f"C{r}", "AC 필터");     _fld(ws, f"D{r}")
+    _dv(ws, f"D{r}", ["60 Hz", "50 Hz", "없음"])
+    _lbl(ws, f"E{r}", "튜닝");        _fld(ws, f"F{r}")
+    _dv(ws, f"F{r}", ["수동 50", "자동 탐색"])
+    _lbl(ws, f"G{r}", "센서 방향선");  _fld(ws, f"H{r}:I{r}")
+    _dv(ws, f"H{r}", ["수직", "수직 · 남북(신호 약할 때)", "기타"])
+    r += 1
+    ws.merge_cells(f"A{r}:I{r}")
+    c = ws[f"A{r}"]
+    c.value = ("GSM-19T 는 꺼 둔 지 24시간이 지나면 날짜와 시각이 지워집니다. 매일 켜자마자 "
+               "GNSS 시각에 맞춰 KST 로 넣어 주시고, 몇 초 차이였는지 적어 주세요. 판독마다 "
+               "기기에 저장되는 시각이 전부 이 시계를 따릅니다. GPS 옵션이 있는 기기라면 "
+               "꺼 주세요 — 켜 두면 시각이 UTC 로 바뀌고 좌표도 GPS 값으로 들어가 0.5 m "
+               "간격을 가를 수 없습니다. 튜닝은 구배가 큰 곳에서 자동 탐색이 실패할 수 "
+               "있어 수동으로 «50»(약 5만 nT)을 넣는 편이 안전합니다. 센서의 방향선은 "
+               "세워서(수직) 씁니다.")
+    c.font, c.fill, c.alignment = F_WARN, FILL_WARN, AL_TL
+    ws.row_dimensions[r].height = _text_h(c.value)
+    r += 1
     ws.merge_cells(f"A{r}:I{r}")
     c = ws[f"A{r}"]
     c.value = ("이 카드가 원본입니다. 장비에 저장된 원시파일은 나중에 따로 불러올 "
@@ -324,10 +393,13 @@ def build_card(wb, p, idx):
                "방법은 여기 적힌 파일명과 레코드 범위밖에 없습니다. 잊지 말고 적어 "
                "주세요.")
     c.font, c.fill, c.alignment = F_WARN, FILL_WARN, AL_TL
-    ws.row_dimensions[r].height = 14
+    ws.row_dimensions[r].height = _text_h(c.value)
     r += 2
 
     # ── 2. 기준점 좌표 ──────────────────────────────────────
+    # ⚠️ 한 방향 표가 쪽 경계에서 쪼개지면 종이에서 줄을 헷갈린다 — 2구역부터
+    #    새 쪽을 시작해 「2구역 + 동·서 표」, 「남·북 표 + 점검」이 한 쪽씩 되게 한다.
+    ws.row_breaks.append(Break(id=r - 1))
     r = _s(ws, r, "2. 기준점 좌표 (GNSS 실측)",
            "십진도로 적어 주세요. 미리 알려 드린 사전좌표와 많이 차이가 난다면, 어떤 "
            "사정으로 자리를 옮기셨는지 소견에 적어 주시면 됩니다.")
@@ -339,22 +411,20 @@ def build_card(wb, p, idx):
     _fld(ws, f"H{r}:I{r}", "0.0",
          calc=f'=IF(COUNT(B{r},D{r})<2,"",ROUND(SQRT((({p["경도"]}-D{r})*'
               f'111320*COS(RADIANS({p["위도"]})))^2+(({p["위도"]}-B{r})*110574)^2),1))')
-    r += 2
+    r += 1
 
     # ── 3. 수평 자기구배 ────────────────────────────────────
     r = _s(ws, r, "3. 수평 자기구배 — 방향마다 P0 재측정",
-           f"한 방향을 다 재고 나면 중심점으로 돌아와 P0 를 한 번 더 재 주세요. 시각은 "
-           f"시·분·초까지 적어 주셔야 합니다. 사무실에서 그 시각을 이용해 재는 동안 "
-           f"자기장이 흘러간 만큼을 빼내기 때문에, 분까지만 적으면 계산이 되지 않습니다. "
-           f"한 방향을 처음부터 다시 재게 되면 차수를 2, 3 으로 올려 주세요. 앞서 "
-           f"적은 값은 지우지 마시고 그대로 두시면 됩니다. 사무실에서 차수로 갈라 "
-           f"보기 때문에 1차와 2차가 섞이지 않습니다. "
-           f"참고로 국제 권고에는 반경 10 m 안에서 {SP.IAGA_RANGE_NT:.0f} nT, "
-           f"구배 {SP.EURO_GRAD_NT_PER_M:.0f} nT/m 라는 값이 있습니다. 다만 국내 "
-           f"기준은 아직 없고 오히려 이 탐사가 그 기준을 만들 자료를 모으는 "
-           f"것이므로, 값이 이보다 크게 나오더라도 현장에서 이 자리를 접지 마시고 "
-           f"나온 대로 적어 주세요. 그리고 저희는 네 방향 측선만 재기 때문에 "
-           f"측선 사이나 대각선은 알 수 없습니다. 판정은 사무실에서 합니다.")
+           f"자력계는 Mobile 모드로, 좌표는 X/Y 로 둡니다. 중심점 P0 가 (0, 0)이고 "
+           f"동쪽이 +x, 서쪽이 −x, 북쪽이 +y, 남쪽이 −y 입니다. 한 방향을 다 재고 "
+           f"중심점으로 돌아오면 좌표를 (0, 0)으로 다시 넣고 재 주세요 — 「1」(반복) 키는 "
+           f"좌표를 그대로 두기 때문에 그냥 누르면 10 m 좌표로 저장됩니다. 센서 높이는 "
+           f"모든 측점에서 같게 두시고(막대를 같은 마디 수로) 그 높이를 적어 주세요. "
+           f"시각은 시·분·초까지 적습니다. 기기에도 판독마다 시각이 저장되지만 판독 "
+           f"화면에는 나오지 않으니, 기록하시는 분이 센서에서 떨어져 시계를 보고 적어 "
+           f"주세요. 사무실에서는 기기 파일의 시각을 정본으로 쓰고 카드 시각으로 줄을 "
+           f"맞춥니다. 한 방향을 처음부터 다시 재게 되면 차수를 2, 3 으로 올리고 앞서 "
+           f"적은 값은 지우지 마세요.")
     _lbl(ws, f"A{r}", "Set ID 접두")
     _fld(ws, f"B{r}:C{r}", calc=f'="{p["_sid"]}-H"&"(방향)"')
     _lbl(ws, f"D{r}", "차수(Attempt)")
@@ -363,74 +433,96 @@ def build_card(wb, p, idx):
     _lbl(ws, f"F{r}", "실측거리 사용")
     _fld(ws, f"G{r}")
     _dv(ws, f"G{r}", ["명목거리 그대로", "실측(비고에 기재)"])
-    _lbl(ws, f"H{r}:I{r}", "다시 재면 차수를 올려 주세요")
+    # ⚠️ IAGA §4.2 — 수평 측점은 «절대관측에 쓰는 표준 높이»에서 잰다.
+    _lbl(ws, f"H{r}", "센서 높이(cm)")
+    _fld(ws, f"I{r}", "0")
     r += 1
-    hdr_r = r
-    _lbl(ws, f"A{r}", "거리(m)")
-    for k, d in enumerate(SP.H_DIRECTIONS):
-        col1, col2 = COLS[1 + k * 2], COLS[2 + k * 2]
-        _lbl(ws, f"{col1}{r}", f"{d} 시각")
-        _lbl(ws, f"{col2}{r}", f"{d} F(nT)")
-    ws.row_dimensions[r].height = 18
-    r += 1
-    first_data = r
+    # 네 방향을 한 표에 두면 «시각·F·품질»이 13열이 되어 A4 가로를 넘는다.
+    # 동·서 / 남·북 두 표로 나누고 남는 두 열을 비고(반복값·사유)로 쓴다.
     seq = ["P0(전)"] + [f"{x} m" for x in SP.H_OFFSETS_M] + ["P0(후)"]
-    rows_of = {}
-    for lab in seq:
-        isP0 = lab.startswith("P0")
-        c = ws[f"A{r}"]
-        c.value, c.font, c.border, c.alignment = lab, F_LBL, BOX, AL_C
-        c.fill = FILL_P0 if isP0 else FILL_LBL
-        for k in range(len(SP.H_DIRECTIONS)):
-            _fld(ws, f"{COLS[1+k*2]}{r}", "hh:mm:ss")
-            _fld(ws, f"{COLS[2+k*2]}{r}", "0.0")
-            if isP0:
-                ws[f"{COLS[1+k*2]}{r}"].fill = FILL_P0
-                ws[f"{COLS[2+k*2]}{r}"].fill = FILL_P0
-        rows_of[lab] = r
+    BLOCKS = [SP.H_DIRECTIONS[:2], SP.H_DIRECTIONS[2:]]
+    for bi, dirs in enumerate(BLOCKS):
+        _lbl(ws, f"A{r}", "거리(m)")
+        for k, d in enumerate(dirs):
+            b = 1 + k * 3
+            _lbl(ws, f"{COLS[b]}{r}", f"{d} 시각")
+            _lbl(ws, f"{COLS[b+1]}{r}", f"{d} F(nT)")
+            _lbl(ws, f"{COLS[b+2]}{r}", f"{d} 품질")
+        _lbl(ws, f"H{r}:I{r}", "비고 (반복값 · 사유)")
+        ws.row_dimensions[r].height = 18
         r += 1
-    last_data = r - 1
-    # 현장 즉시 확인용 두 지표 — 정밀 보정은 사무실에서
-    p0a, p0b = rows_of["P0(전)"], rows_of["P0(후)"]
-    m_lo = rows_of[f"{SP.H_OFFSETS_M[0]} m"]
-    m_hi = rows_of[f"{SP.H_OFFSETS_M[-1]} m"]
-    for lab, fml in (
-        ("P0 전후차(nT)",
-         lambda c: f'=IF(COUNT({c}{p0a},{c}{p0b})<2,"",{c}{p0b}-{c}{p0a})'),
-        ("관측값 max−min(nT)",
-         lambda c: f'=IF(COUNT({c}{m_lo}:{c}{m_hi})=0,"",'
-                   f'MAX({c}{m_lo}:{c}{m_hi})-MIN({c}{m_lo}:{c}{m_hi}))'),
-    ):
-        _lbl(ws, f"A{r}", lab)
-        for k in range(len(SP.H_DIRECTIONS)):
-            col = COLS[2 + k * 2]
-            _lbl(ws, f"{COLS[1+k*2]}{r}", "")
-            _fld(ws, f"{col}{r}", "0.0", calc=fml(col))
-        r += 1
+        rows_of = {}
+        for lab in seq:
+            isP0 = lab.startswith("P0")
+            c = ws[f"A{r}"]
+            c.value, c.font, c.border, c.alignment = lab, F_LBL, BOX, AL_C
+            c.fill = FILL_P0 if isP0 else FILL_LBL
+            for k in range(len(dirs)):
+                b = 1 + k * 3
+                _fld(ws, f"{COLS[b]}{r}", "hh:mm:ss")
+                _fld(ws, f"{COLS[b+1]}{r}", "0.0")
+                _fld(ws, f"{COLS[b+2]}{r}", "00")
+                if isP0:
+                    for off in range(3):
+                        ws[f"{COLS[b+off]}{r}"].fill = FILL_P0
+            _fld(ws, f"H{r}:I{r}")
+            rows_of[lab] = r
+            r += 1
+        # 현장 즉시 확인용 두 지표 — 정밀 보정은 사무실에서
+        p0a, p0b = rows_of["P0(전)"], rows_of["P0(후)"]
+        m_lo = rows_of[f"{SP.H_OFFSETS_M[0]} m"]
+        m_hi = rows_of[f"{SP.H_OFFSETS_M[-1]} m"]
+        for lab, fml in (
+            ("P0 전후차(nT)",
+             lambda c: f'=IF(COUNT({c}{p0a},{c}{p0b})<2,"",{c}{p0b}-{c}{p0a})'),
+            ("max−min(nT)",
+             lambda c: f'=IF(COUNT({c}{m_lo}:{c}{m_hi})=0,"",'
+                       f'MAX({c}{m_lo}:{c}{m_hi})-MIN({c}{m_lo}:{c}{m_hi}))'),
+        ):
+            _lbl(ws, f"A{r}", lab)
+            for k in range(len(dirs)):
+                b = 1 + k * 3
+                _lbl(ws, f"{COLS[b]}{r}", "")
+                _fld(ws, f"{COLS[b+1]}{r}", "0.0", calc=fml(COLS[b + 1]))
+                _lbl(ws, f"{COLS[b+2]}{r}", "")
+            _lbl(ws, f"H{r}:I{r}", "")
+            r += 1
+        if bi == 0:
+            # 빈 줄을 두면 동·서 표가 쪽을 꽉 채운 경우 그 빈 줄 하나가 빈 쪽을 만든다
+            ws.row_breaks.append(Break(id=r - 1))
     ws.merge_cells(f"A{r}:I{r}")
     c = ws[f"A{r}"]
-    c.value = ("P0 전후차가 수십 nT 로 벌어졌다면 그 방향을 재는 동안 자기장이 꽤 "
-               "흔들렸다는 뜻입니다. 여유가 되면 다시 재시고, 어려우면 소견에 적어 "
-               "주세요. 위 두 값은 시간변화를 빼기 «전»의 참고치라서 이것만 보고 "
-               "좋고 나쁨을 가르지는 않습니다. 판독은 한 자리에 한 번이면 됩니다"
-               "(기기가 안에서 여러 번 재어 평균을 냅니다). 값이 미덥지 않으면 "
-               "차수를 올려 그 방향을 처음부터 다시 재 주세요.")
+    c.value = (f"국제 권고에는 반경 10 m 안에서 {SP.IAGA_RANGE_NT:.0f} nT, 구배 "
+               f"{SP.EURO_GRAD_NT_PER_M:.0f} nT/m 라는 값이 있지만 국내 기준은 아직 없고, "
+               f"이 탐사가 그 기준을 만들 자료를 모으는 것입니다. 값이 크게 나와도 현장에서 "
+               f"이 자리를 접지 마시고 나온 대로 적어 주세요. 네 방향 측선만 재므로 측선 "
+               f"사이나 대각선은 알 수 없고, 판정은 사무실에서 합니다. "
+               "P0 전후차가 벌어졌다면 그 방향을 재는 동안 자기장이 흔들렸다는 뜻입니다. "
+               "IAGA 지침은 중심점 값이 «몇 nT» 넘게 바뀌면 다시 재거나 Variometer·관측소 "
+               "자료로 보정하라고 합니다. 이번에는 그 기준을 파일럿에서 정하니, 얼마나 "
+               "벌어졌는지 소견에 적고 여유가 되면 차수를 올려 다시 재 주세요. 판독은 한 "
+               "자리에 한 번이 기본입니다. 품질 두 자리 가운데 뒷자리가 0 이면 쓸 수 없는 "
+               "판독이니 「1」(반복) 키로 다시 재고, 다시 잰 값은 비고에 적어 주세요. 위 두 "
+               "값은 시간변화를 빼기 «전»의 참고치라서 이것만 보고 좋고 나쁨을 가르지는 "
+               "않습니다.")
     c.font, c.fill, c.alignment = F_WARN, FILL_WARN, AL_TL
-    ws.row_dimensions[r].height = 26
+    ws.row_dimensions[r].height = _text_h(c.value)
     r += 1
     # ── 현장 완전성 점검 (Codex M3) — 자동지표만으로는 못 정한다 ──
     _lbl(ws, f"A{r}", "완전성 점검")
     for lab, col in (("필수행 다 채움", "B"), ("시각 시:분:초", "C"),
                      ("P0 전·후 있음", "D"), ("측정시각 P0 사이", "E"),
-                     ("Variometer 연결", "F")):
+                     ("기기 시각 맞춤", "F"), ("품질 뒷자리 0 없음", "G"),
+                     ("Variometer 연결", "H")):
         _lbl(ws, f"{col}{r}", lab)
-    _lbl(ws, f"G{r}:I{r}", "「아니오」가 하나라도 있으면 철수 전에 채워 주세요")
+    _lbl(ws, f"I{r}", "「아니오」면 철수 전에")
+    ws.row_dimensions[r].height = 26
     r += 1
     _lbl(ws, f"A{r}", "예 / 아니오")
-    for col in "BCDEF":
+    for col in "BCDEFGH":
         _fld(ws, f"{col}{r}")
         _dv(ws, f"{col}{r}", ["예", "아니오"])
-    _fld(ws, f"G{r}:I{r}")
+    _fld(ws, f"I{r}")
     r += 2
 
     # ── 4. 수직 자기구배 ────────────────────────────────────
@@ -453,7 +545,8 @@ def build_card(wb, p, idx):
     _lbl(ws, f"B{r}", "실제 높이(cm)")
     _lbl(ws, f"C{r}", "시각")
     _lbl(ws, f"D{r}", "F(nT)")
-    _lbl(ws, f"E{r}:I{r}", "비고")
+    _lbl(ws, f"E{r}", "품질")
+    _lbl(ws, f"F{r}:I{r}", "비고 (반복값 · 거치 방법)")
     r += 1
     vseq = ["기준(전)"] + [f"{h} cm" for h in SP.V_HEIGHTS_CM] + ["기준(후)"]
     v_first = r
@@ -465,9 +558,10 @@ def build_card(wb, p, idx):
         _fld(ws, f"B{r}", "0.0")
         _fld(ws, f"C{r}", "hh:mm:ss")
         _fld(ws, f"D{r}", "0.0")
-        _fld(ws, f"E{r}:I{r}")
+        _fld(ws, f"E{r}", "00")
+        _fld(ws, f"F{r}:I{r}")
         if isR:
-            for cc in "BCD":
+            for cc in "BCDE":
                 ws[f"{cc}{r}"].fill = FILL_P0
         r += 1
     _lbl(ws, f"A{r}", "F max−min(nT)")
@@ -476,7 +570,8 @@ def build_card(wb, p, idx):
     _fld(ws, f"D{r}", "0.0",
          calc=f'=IF(COUNT(D{v_first+1}:D{r-2})=0,"",'
               f'MAX(D{v_first+1}:D{r-2})-MIN(D{v_first+1}:D{r-2}))')
-    _fld(ws, f"E{r}:I{r}", calc='="측정 높이 구간의 총자기장 변화폭 (참고)"')
+    _fld(ws, f"E{r}", calc="")
+    _fld(ws, f"F{r}:I{r}", calc='="측정 높이 구간의 총자기장 변화폭 (참고)"')
     r += 2
 
     # ── 5. 방위표지 ─────────────────────────────────────────
