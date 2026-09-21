@@ -162,7 +162,8 @@ def build(wb: Workbook, sites: list[str]) -> None:
                                   f'VALUE(LEFT(TRIM({s}),6)),""),"")')
             ws[f'{h["f"]}{r}'] = f'=IFERROR(VALUE(TRIM(MID({tok},31,30))),"")'
             ws[f'{h["q"]}{r}'] = f'=IFERROR(TRIM(MID({tok},61,30)),"")'
-            ws[f'{h["use"]}{r}'] = (f'=IF(OR({h["t"]}{r}="",{h["f"]}{r}=""),0,'
+            # ⚠️ 품질 칸이 비면 RIGHT("",1)="" 이라 «0 이 아니므로» 통과해 버린다
+            ws[f'{h["use"]}{r}'] = (f'=IF(OR({h["t"]}{r}="",{h["f"]}{r}="",{h["q"]}{r}=""),0,'
                                     f'IF(AND({h["f"]}{r}>1000,RIGHT({h["q"]}{r},1)<>"0"),1,0))')
         for k in h.values():
             ws.column_dimensions[k].hidden = True
@@ -182,7 +183,10 @@ def build(wb: Workbook, sites: list[str]) -> None:
             ws[f"{s['n']}{r}"] = f'=COUNTIFS({B},{k},{U},1)'
             # ⚠️ else 를 비워 두면 FALSE 가 0 으로 섞일 수 있다 — "" 로 둬야 무시된다
             cond = f'IF(({B}={k})*({U}=1),{F},"")'
-            tcond = f'IF(({B}={k})*({U}=1),{T},"")'
+            # ⚠️ 시각은 «유효 판독»이 아니라 «그 블록의 모든 판독»에서 잡는다.
+            #    유효 판독으로 잡으면 한 블록이 통째로 탈락했을 때 t0 가 비고,
+            #    RANK 가 그 블록을 건너뛰어 «뒤 거리가 한 칸씩 당겨진다»(코덱스 C1).
+            tcond = f'IF({B}={k},{T},"")'
             ws[f"{s['t0']}{r}"] = ArrayFormula(f"{s['t0']}{r}",
                                                f'=IFERROR(SMALL({tcond},1),"")')
             ws[f"{s['t1']}{r}"] = ArrayFormula(f"{s['t1']}{r}",
@@ -318,11 +322,15 @@ def build(wb: Workbook, sites: list[str]) -> None:
         rng = f"${seg}${SUM_TOP}:${seg}${SUM_TOP + 9}"
         lab = f"${CL(SEG_COL)}${SUM_TOP}:${CL(SEG_COL)}${SUM_TOP + 9}"
         nb = f'COUNT(${s["t0"]}${SUM_TOP}:${s["t0"]}${SUM_TOP + SUM_N - 1})'
+        hh = _cols(d)
+        B0 = f'${hh["blk"]}${PASTE_TOP}:${hh["blk"]}${PASTE_TOP + PASTE_N - 1}'
+        T0 = f'${hh["t"]}${PASTE_TOP}:${hh["t"]}${PASTE_TOP + PASTE_N - 1}'
         ws.cell(r, 7).value = DIRS[d]
         ws.cell(r, 8).value = f'=IF({nb}<3,"",({nb}-2)&" m")'
         ws.cell(r, 9).value = (f'=IF(COUNT(${fc}${RES_TOP},${fc}${RES_TOP + 11})<2,"",'
                                f'${fc}${RES_TOP + 11}-${fc}${RES_TOP})')
-        ws.cell(r, 10).value = (f'=IF(COUNT(${fc}${RES_TOP}:${fc}${RES_TOP + 10})=0,"",'
+        # ⚠️ 값이 하나면 MAX−MIN 이 0 이 되어 «변화가 없었다»로 읽힌다 — 두 개부터
+        ws.cell(r, 10).value = (f'=IF(COUNT(${fc}${RES_TOP}:${fc}${RES_TOP + 10})<2,"",'
                                 f'MAX(${fc}${RES_TOP}:${fc}${RES_TOP + 10})'
                                 f'-MIN(${fc}${RES_TOP}:${fc}${RES_TOP + 10}))')
         ws.cell(r, 11).value = f'=IF(COUNT({rng})=0,"",MAX({rng}))'
@@ -336,10 +344,13 @@ def build(wb: Workbook, sites: list[str]) -> None:
         thin = f'COUNTIFS({used_r},">0",{used_r},"<10")'
         noisy = f'SUMPRODUCT(({drop_r}<>"")*({used_r}>0)*({drop_r}>{used_r}))'
         ws.merge_cells(f"M{r}:N{r}")
-        ws.cell(r, 15).value = (f'=IF({nb}=0,"원문을 붙여 넣어 주세요",'
+        orphan = f'COUNTIFS({B0},0,{T0},">0")'
+        ws.cell(r, 15).value = (f'=IF({orphan}>0,"첫 /time 이 없습니다 — 머리글째 다시",'
+                                f'IF({nb}=0,"원문을 붙여 넣어 주세요",'
+                                f'IF({nb}>12,"블록 "&{nb}&"개 — 10 m 까지만 표시",'
                                 f'IF({nb}<3,"블록이 "&{nb}&"개뿐 — P0 전·후가 다 있는지 보세요",'
                                 f'IF({thin}>0,{thin}&"개 지점 읽음 부족 — 확인",'
-                                f'IF({noisy}>0,{noisy}&"개 지점 제외 과다 — 확인","정상"))))')
+                                f'IF({noisy}>0,{noisy}&"개 지점 제외 과다 — 확인","정상"))))))')
         for cc in range(7, 16):
             c = ws.cell(r, cc)
             c.border, c.alignment, c.font = MC.BOX, AL_C, MC.F_VAL
