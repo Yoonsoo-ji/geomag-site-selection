@@ -297,7 +297,7 @@ def build(wb: Workbook, sites: list[str]) -> None:
     ws[f"G{PRE_TOP - 1}"].value = "붙여넣기 전 확인 — 카드에서 나올 값과 같습니다"
     ws[f"G{PRE_TOP - 1}"].font, ws[f"G{PRE_TOP - 1}"].fill = F_H, SUBHEAD
     ws[f"G{PRE_TOP - 1}"].alignment = AL_L
-    for j, t in enumerate(["방향", "잰 거리", "P0 전후차", "F 변화폭", "최대 구간구배", "발생구간"]):
+    for j, t in enumerate(["방향", "잰 거리", "P0 후 − 전", "F 최대−최소", "최대 구간구배", "발생구간"]):
         c = ws.cell(PRE_TOP, 7 + j)
         c.value, c.font, c.fill, c.alignment, c.border = t, F_H, SUBHEAD, AL_C, MC.BOX
     ws.merge_cells(f"M{PRE_TOP}:N{PRE_TOP}")
@@ -345,12 +345,19 @@ def build(wb: Workbook, sites: list[str]) -> None:
         noisy = f'SUMPRODUCT(({drop_r}<>"")*({used_r}>0)*({drop_r}>{used_r}))'
         ws.merge_cells(f"M{r}:N{r}")
         orphan = f'COUNTIFS({B0},0,{T0},">0")'
+        # ⚠️ 야간에는 재지 않기로 했다(발주자 결정) — 18시 이후·06시 이전 블록을 센다.
+        #    자정을 넘기면 hhmmss 숫자가 작아져 RANK 순서가 뒤집히므로 시각 폭도 본다.
+        t0r = f'${s["t0"]}${SUM_TOP}:${s["t0"]}${SUM_TOP + SUM_N - 1}'
+        night = f'COUNTIFS({t0r},">=180000")+COUNTIFS({t0r},">0",{t0r},"<60000")'
+        span = f'AND(COUNT({t0r})>1,MAX({t0r})-MIN({t0r})>120000)'
         ws.cell(r, 15).value = (f'=IF({orphan}>0,"첫 /time 이 없습니다 — 머리글째 다시",'
                                 f'IF({nb}=0,"원문을 붙여 넣어 주세요",'
+                                f'IF({span},"시각이 12시간 넘게 벌어짐 — 자정 확인",'
+                                f'IF({night}>0,"야간 시각 "&{night}&"개 — 확인",'
                                 f'IF({nb}>12,"블록 "&{nb}&"개 — 10 m 까지만 표시",'
                                 f'IF({nb}<3,"블록이 "&{nb}&"개뿐 — P0 전·후가 다 있는지 보세요",'
                                 f'IF({thin}>0,{thin}&"개 지점 읽음 부족 — 확인",'
-                                f'IF({noisy}>0,{noisy}&"개 지점 제외 과다 — 확인","정상"))))))')
+                                f'IF({noisy}>0,{noisy}&"개 지점 제외 과다 — 확인","정상"))))))))')
         for cc in range(7, 16):
             c = ws.cell(r, cc)
             c.border, c.alignment, c.font = MC.BOX, AL_C, MC.F_VAL
