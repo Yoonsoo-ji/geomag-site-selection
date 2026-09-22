@@ -125,6 +125,7 @@
 </div>
 <script>
 (function(){
+  try{if(window.innerWidth<=760){var t0=document.getElementById('titleBar');if(t0)t0.classList.add('collapsed');}}catch(e){}
   function build(){
     var d=document.getElementById('legendDock');if(!d)return;
     var body=d.querySelector('.dock-body'),head=d.querySelector('.dock-head'),
@@ -139,9 +140,9 @@
     paint();
     var t=document.getElementById('titleBar');
     if(t){var tc=t.querySelector('.t-chev');
-      t.addEventListener('click',function(){
-        var c=t.classList.toggle('collapsed');
-        tc.innerHTML=c?'▸ 제목':'▾';});}
+      function tpaint(){tc.innerHTML=t.classList.contains('collapsed')?'▸ 제목':'▾';}
+      t.addEventListener('click',function(){t.classList.toggle('collapsed');tpaint();});
+      tpaint();}
   }
   if(document.readyState==='complete')setTimeout(build,300);
   else window.addEventListener('load',function(){setTimeout(build,300);});
