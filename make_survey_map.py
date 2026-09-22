@@ -320,6 +320,10 @@ def dock_ui():
 #legendDock .leaflet-control-layers{position:static;margin:0;float:none;clear:none;
   box-shadow:0 1px 6px rgba(0,0,0,.3);}
 #legendDock #legendBox{position:static!important;bottom:auto!important;left:auto!important;}
+#titleBar{cursor:pointer;user-select:none;}
+#titleBar.collapsed{padding:6px 13px;}
+#titleBar.collapsed .t-body{display:none;}
+#titleBar.collapsed .t-chev{margin-left:0;}
 </style>
 <div id='legendDock' class='collapsed'>
   <div class='dock-head'>&#9776; 범례 &middot; 레이어<span class='chev'>&#9656; 펼치기</span></div>
@@ -339,6 +343,11 @@ def dock_ui():
     head.addEventListener('click',function(){d.classList.toggle('collapsed');paint();});
     if(window.innerWidth>760){d.classList.remove('collapsed');}
     paint();
+    var t=document.getElementById('titleBar');
+    if(t){var tc=t.querySelector('.t-chev');
+      t.addEventListener('click',function(){
+        var c=t.classList.toggle('collapsed');
+        tc.innerHTML=c?'▸ 제목':'▾';});}
   }
   if(document.readyState==='complete')setTimeout(build,300);
   else window.addEventListener('load',function(){setTimeout(build,300);});
@@ -548,9 +557,11 @@ def build(records):
         "z-index:9999;background:rgba(31,56,100,.95);color:#fff;padding:8px 20px;"
         "border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.3);"
         "font-family:\"맑은 고딕\",sans-serif;font-size:15px;font-weight:bold'>"
-        "지자기 도상선점 — 현장조사 선점 검토"
+        "<span class='t-body'>지자기 도상선점 — 현장조사 선점 검토"
         f"<span style='font-size:11px;font-weight:normal;opacity:.8;margin-left:10px'>"
-        f"{datetime.now():%Y-%m-%d} 기준 · {total}개 후보지</span></div>")
+        f"{datetime.now():%Y-%m-%d} 기준 · {total}개 후보지</span></span>"
+        "<span class='t-chev' style='font-size:11px;font-weight:normal;"
+        "opacity:.85;margin-left:10px'>&#9662;</span></div>")
     m.get_root().html.add_child(folium.Element(title))
     m.get_root().html.add_child(folium.Element(dock_ui()))
     return m, counts
