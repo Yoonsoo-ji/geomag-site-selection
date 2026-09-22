@@ -274,7 +274,7 @@ def legend_html(counts, total, n_tgt=0, n_oth=0):
         f"<b>{counts.get(k,0)}</b></span></div>"
         for k, c, lab in LAYERS)
     return (
-        "<div style='position:fixed;bottom:22px;left:22px;z-index:9999;"
+        "<div id='legendBox' style='position:fixed;bottom:22px;left:22px;z-index:9999;"
         "background:rgba(255,255,255,.95);padding:11px 14px;border-radius:8px;"
         "box-shadow:0 1px 6px rgba(0,0,0,.3);font-family:\"맑은 고딕\",sans-serif'>"
         "<div style='font-weight:bold;font-size:13px;margin-bottom:6px'>"
@@ -297,6 +297,54 @@ def legend_html(counts, total, n_tgt=0, n_oth=0):
         "<b style='color:#B8860B'>✔</b> 방위각·거리는 기준점·방위표지 좌표로 "
         "재계산한 값. 카드 기재값은 팝업에 병기.</div>"
         "</div>")
+
+
+def dock_ui():
+    """등급 범례(#legendBox)와 레이어 컨트롤(A/B/C/D 체크박스)을 왼쪽 접이식
+    도크로 모은다. 기본은 접힘 — 모바일에서 지도를 가리지 않도록. 머리글을
+    누르면 펼쳐지고 다시 누르면 접힌다. 넓은 화면(>760px)은 처음부터 펼친다.
+    두 요소를 JS 로 도크 안에 옮기므로 레이어 토글 이벤트는 그대로 살아 있다."""
+    return """
+<style>
+#legendDock{position:fixed;left:10px;top:80px;z-index:10000;
+  font-family:"맑은 고딕",sans-serif;display:flex;flex-direction:column;
+  max-height:calc(100vh - 96px);max-width:min(280px,86vw);}
+#legendDock .dock-head{background:rgba(31,56,100,.96);color:#fff;
+  padding:7px 11px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.3);
+  font-size:13px;font-weight:bold;cursor:pointer;user-select:none;
+  display:flex;align-items:center;gap:8px;white-space:nowrap;}
+#legendDock .dock-head .chev{margin-left:auto;font-weight:normal;font-size:11px;opacity:.85;}
+#legendDock .dock-body{margin-top:8px;overflow-y:auto;overflow-x:hidden;
+  display:flex;flex-direction:column;gap:8px;padding-right:2px;}
+#legendDock.collapsed .dock-body{display:none;}
+#legendDock .leaflet-control-layers{position:static;margin:0;float:none;clear:none;
+  box-shadow:0 1px 6px rgba(0,0,0,.3);}
+#legendDock #legendBox{position:static!important;bottom:auto!important;left:auto!important;}
+</style>
+<div id='legendDock' class='collapsed'>
+  <div class='dock-head'>&#9776; 범례 &middot; 레이어<span class='chev'>&#9656; 펼치기</span></div>
+  <div class='dock-body'></div>
+</div>
+<script>
+(function(){
+  function build(){
+    var d=document.getElementById('legendDock');if(!d)return;
+    var body=d.querySelector('.dock-body'),head=d.querySelector('.dock-head'),
+        chev=head.querySelector('.chev');
+    var lc=document.querySelector('.leaflet-control-layers'),
+        lg=document.getElementById('legendBox');
+    if(lc)body.appendChild(lc);
+    if(lg)body.appendChild(lg);
+    function paint(){chev.innerHTML=d.classList.contains('collapsed')?'▸ 펼치기':'▾ 접기';}
+    head.addEventListener('click',function(){d.classList.toggle('collapsed');paint();});
+    if(window.innerWidth>760){d.classList.remove('collapsed');}
+    paint();
+  }
+  if(document.readyState==='complete')setTimeout(build,300);
+  else window.addEventListener('load',function(){setTimeout(build,300);});
+})();
+</script>
+"""
 
 
 def add_topo_layer(m):
@@ -496,7 +544,7 @@ def build(records):
     m.get_root().html.add_child(folium.Element(bangwi_script(bangwi)))
 
     title = (
-        "<div style='position:fixed;top:12px;left:50%;transform:translateX(-50%);"
+        "<div id='titleBar' style='position:fixed;top:12px;left:50%;transform:translateX(-50%);"
         "z-index:9999;background:rgba(31,56,100,.95);color:#fff;padding:8px 20px;"
         "border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.3);"
         "font-family:\"맑은 고딕\",sans-serif;font-size:15px;font-weight:bold'>"
@@ -504,6 +552,7 @@ def build(records):
         f"<span style='font-size:11px;font-weight:normal;opacity:.8;margin-left:10px'>"
         f"{datetime.now():%Y-%m-%d} 기준 · {total}개 후보지</span></div>")
     m.get_root().html.add_child(folium.Element(title))
+    m.get_root().html.add_child(folium.Element(dock_ui()))
     return m, counts
 
 
