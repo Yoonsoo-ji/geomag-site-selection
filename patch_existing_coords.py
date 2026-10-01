@@ -133,14 +133,124 @@ def rebuild_globe_pts(check_only=False):
     return 0 if same else 1
 
 
+
+# ======================================================================
+# 「점조서 좌표(현장 확인용)」 레이어
+# ======================================================================
+#
+# ⚠️ **좌표를 덮었다고 옛 자리를 지우지 않는다.** 어느 쪽에 표석이 있는지는
+# 현장에 나가 봐야 알 수 있으므로 두 자리를 **함께** 찍어 둔다. Folium 이
+# 좌표를 HTML 에 박아 내므로 여기서도 마커·팝업·레이어 컨트롤 항목을 직접
+# 끼워 넣는다. **멱등**이다 — 표식(`PREV_MARK`)이 이미 있으면 손대지 않는다.
+#
+# ⚠️ `make_survey_map.py` 를 다시 돌리면 이 레이어는 사라진다. 그때는 이
+#    스크립트를 다시 실행하면 된다.
+
+PREV_LAYER_LABEL = "▫️ 점조서 좌표 (현장 확인용)"
+PREV_MARK = "prevcoord"            # 멱등 판정용 표식
+
+
+def _km(la0, lo0, la1, lo1):
+    import math
+    m = math.radians((la0 + la1) / 2)
+    return math.hypot((lo1 - lo0) * 111.320 * math.cos(m),
+                      (la1 - la0) * 110.574)
+
+
+def _tpl(t):
+    """JS 템플릿 리터럴에 넣을 문자열 이스케이프."""
+    return t.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
+
+
+def patch_prev_markers(check_only=False):
+    """`COORD_OVERRIDE` 측점마다 **점조서 원좌표** 마커를 새 레이어로 얹는다."""
+    if not HTML.exists():
+        print("[건너뜀] survey_review.html 없음")
+        return 0
+    s = HTML.read_text(encoding="utf-8")
+    if PREV_MARK in s:
+        print("■ 점조서 좌표 레이어 — 이미 있음")
+        return 0
+    if not EN.COORD_OVERRIDE:
+        print("■ 점조서 좌표 레이어 — 대상 없음")
+        return 0
+
+    mv = re.search(r"var (map_\w+) = L\.map\(", s)
+    ctrl = re.search(r"\n\s*var layer_control_\w+_layers = \{", s)
+    if not (mv and ctrl):
+        print("■ 점조서 좌표 레이어 — HTML 구조를 못 찾음(건너뜀)")
+        return 1
+
+    raw = EN.load_register(override=False).set_index("지점명")
+    js = ["", f"        // ---- {PREV_MARK}: 점조서 원좌표(현장 확인용) ----",
+          f"        var fg_{PREV_MARK} = L.featureGroup({{}})"
+          f".addTo({mv.group(1)});"]
+    n = 0
+    for nm, o in EN.COORD_OVERRIDE.items():
+        if nm not in raw.index:
+            continue
+        la, lo = float(raw.at[nm, "위도"]), float(raw.at[nm, "경도"])
+        d = _km(la, lo, o["lat"], o["lon"])
+        body = (
+            "<div style='font-family:&quot;맑은 고딕&quot;,sans-serif;"
+            "font-size:12.5px;min-width:250px'>"
+            f"<b style='color:#555'>▫️ {nm} — "
+            "점조서 좌표 (현장 확인용)</b><hr style='margin:4px 0'>"
+            f"<b>위도:</b> {la:.6f}° N &nbsp; "
+            f"<b>경도:</b> {lo:.6f}° E<br>"
+            f"<b>현 표기 위치까지:</b> {d:.1f} km<br>"
+            "<div style='margin-top:6px;padding:6px;background:#F4F4F4;"
+            "border-left:3px solid #AAA;font-size:11px;color:#555'>"
+            f"{o.get('prev_note', '')}</div></div>")
+        icon = ("<div style='width:26px;height:26px;border-radius:50%;"
+                "background:#fff;border:2.5px solid #666;color:#444;"
+                "font:bold 15px/22px sans-serif;text-align:center;"
+                "box-shadow:0 1px 4px rgba(0,0,0,.4)'>?</div>")
+        v = f"mk_{PREV_MARK}_{n}"
+        js += [
+            f"        var {v} = L.marker([{la}, {lo}], {{}})"
+            f".addTo(fg_{PREV_MARK});",
+            f"        {v}.setIcon(L.divIcon("
+            + json.dumps({"html": icon, "iconAnchor": [13, 13],
+                          "className": "empty"}, ensure_ascii=False) + "));",
+            f"        {v}.bindTooltip(`<div>▫️ {nm} — "
+            "점조서 좌표 (현장 확인)</div>`, "
+            + json.dumps({"sticky": True}) + ");",
+            f"        {v}.bindPopup(L.popup("
+            + json.dumps({"maxWidth": 340})
+            + f").setContent(`{_tpl(body)}`));",
+        ]
+        n += 1
+    if not n:
+        print("■ 점조서 좌표 레이어 — 대상 없음")
+        return 0
+
+    # 그룹은 레이어 컨트롤 «생성 전»에 있어야 한다
+    s = s[:ctrl.start()] + "\n" + "\n".join(js) + "\n" + s[ctrl.start():]
+    # 기존 측정점 항목 «뒤»에 붙인다 — overlays 블록의 끝자리
+    ov = re.search(r"overlays :  \{\n", s)
+    end = s.index("\n                },", ov.end()) + 1
+    s = (s[:end]
+         + f'                    "{PREV_LAYER_LABEL}" : fg_{PREV_MARK},\n'
+         + s[end:])
+
+    print(f"■ 점조서 좌표 레이어 — {n}점 추가")
+    if not check_only:
+        HTML.write_text(s, encoding="utf-8")
+        print(f"    [저장] {HTML.name}")
+    return n
+
+
 def main():
     check = "--check" in sys.argv
     truth = load_truth()
     print(f"기준 {len(truth)}점 (docs/data/existing_sites.geojson)\n")
     a = patch_html(truth, check)
     b = rebuild_globe_pts(check)
+    c = patch_prev_markers(check)
     if check:
-        print(f"\n[점검] 교정 필요: survey_review {a}점 · globe {b}")
+        print(f"\n[점검] 교정 필요: survey_review {a}점 · globe {b}"
+              f" · 점조서 좌표 레이어 {c}")
     return 0
 
 

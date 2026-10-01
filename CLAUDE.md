@@ -3777,10 +3777,22 @@ D:\LX_yoons\2026_research\2026_지자기 연구\20260811_지리원 야장 자료
 `existing_network.COORD_OVERRIDE` 신설. **좌표가 드나드는 단일 통로인
 `load_register()` 안에서 덮으므로** `apply_register()` 도 자동으로 따라온다.
 
+`COORD_OVERRIDE` 는 `{"제천": {"lat":…, "lon":…, "why":…, "prev_note":…}}` 꼴이다.
+
 ```
-COORD_OVERRIDE = {"제천": (37.168056, 128.015833, "사유…")}
-python patch_existing_coords.py        # survey_review.html + existing_pts.geojson
+python patch_existing_coords.py   # 좌표 교정 + 「점조서 좌표」 레이어
 ```
+
+⚠️ **옛 자리를 지우지 않는다 — 현장에서 확인해야 하기 때문이다.** 점조서 값은
+`data/geomag_network_30.csv` 에 **그대로 두고**(override 는 읽는 쪽에서만 덮는다),
+`patch_prev_markers()` 가 survey_review.html 에 **「▫️ 점조서 좌표 (현장 확인용)」**
+레이어를 얹는다(회색 「?」 마커 · 기본 켬 · 레이어 목록 맨 아래). 팝업에는 옛
+좌표·현 표기 위치까지의 거리·`prev_note`(점조서 소재지와 경로 원문)가 들어가
+그 자리를 찾아갈 수 있다. **멱등**이며, `EN.load_register(override=False)` 가
+점조서 원값을 준다.
+
+⚠️ `make_survey_map.py` 를 다시 돌리면 이 레이어는 사라진다 — 그때는
+`patch_existing_coords.py` 를 다시 실행한다.
 
 ⚠️ **`COORD_UNVERIFIED` 와 쓰임이 다르다** — 저쪽은 참 좌표를 «특정하지 못해»
 공간 계산에서 빼는 것이고, 이쪽은 **참 좌표가 특정된** 경우다. 사유를 상수

@@ -8220,6 +8220,14 @@
         
     
                 marker_175370ab4e63abd2a521441b58b24838.setIcon(div_icon_299b4b193ebb917ea727e84b4ad2a723);
+
+        // ---- prevcoord: 점조서 원좌표(현장 확인용) ----
+        var fg_prevcoord = L.featureGroup({}).addTo(map_d1f840e7501509ffe3f5e40c6fd9fb65);
+        var mk_prevcoord_0 = L.marker([37.07463888888889, 128.21144444444442], {}).addTo(fg_prevcoord);
+        mk_prevcoord_0.setIcon(L.divIcon({"html": "<div style='width:26px;height:26px;border-radius:50%;background:#fff;border:2.5px solid #666;color:#444;font:bold 15px/22px sans-serif;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.4)'>?</div>", "iconAnchor": [13, 13], "className": "empty"}));
+        mk_prevcoord_0.bindTooltip(`<div>▫️ 제천 — 점조서 좌표 (현장 확인)</div>`, {"sticky": true});
+        mk_prevcoord_0.bindPopup(L.popup({"maxWidth": 340}).setContent(`<div style='font-family:&quot;맑은 고딕&quot;,sans-serif;font-size:12.5px;min-width:250px'><b style='color:#555'>▫️ 제천 — 점조서 좌표 (현장 확인용)</b><hr style='margin:4px 0'><b>위도:</b> 37.074639° N &nbsp; <b>경도:</b> 128.211444° E<br><b>현 표기 위치까지:</b> 20.2 km<br><div style='margin-top:6px;padding:6px;background:#F4F4F4;border-left:3px solid #AAA;font-size:11px;color:#555'>점조서 「제천」(1-9-2) 소재지는 「충북 제천시 금성면 양화리」이고 경로는 「82번지방도 양화리앞 삼거리에서 금성테크노빌 입간판 반대방향으로 대장리 길을따라 450M정도 진행하다보면 우측으로 양화2교를 지나 120M 전방에 축사가 있고 축사뒷편 능선을 따라오르면 정상에 위치함(남제천T/G에서 제천방면으로 1.5Km 오면 우측에있다.)」이다. 한편 「'10~'19년 지자기점 관측현황」은 같은 좌표에 「제천시 백운면 방학리 백마저수지뚝 가운데」(비고 「이설필요」)를 적어 두었다. 두 자리가 20.2 km 떨어져 있어 어느 쪽에 표석이 있는지 현장 확인이 필요하다.</div></div>`));
+
             
     
             var layer_control_a9a98475ef03ac77b737032919a5a1d3_layers = {
@@ -8237,6 +8245,7 @@
                     "\ud83d\uddfa\ufe0f \ub3c4\uc5fd \uacbd\uacc4 (1:50,000)" : feature_group_17e37ba8702d33cd85e9d0ba3d9b5f8a,
                     "\ud83c\udfaf \uae30\uc874 \uce21\uc815\uc810 \u2014 \uc120\uc810 \ub300\uc0c1 (16)" : feature_group_58c4e0452f99502bbaf1091c9511dbef,
                     "\u2b50 \uae30\uc874 \uce21\uc815\uc810 \u2014 \uae30\ud0c0 (14)" : feature_group_5b1191048d69f15180e380698ef2b069,
+                    "▫️ 점조서 좌표 (현장 확인용)" : fg_prevcoord,
                 },
             };
             let layer_control_a9a98475ef03ac77b737032919a5a1d3 = L.control.layers(
