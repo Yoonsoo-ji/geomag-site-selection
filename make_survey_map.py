@@ -383,6 +383,11 @@ def geolocate_ui():
   border-left:3px solid #1F3864;border-radius:6px;padding:7px 10px;
   box-shadow:0 1px 6px rgba(0,0,0,.25);display:none;word-break:keep-all;}
 #geoMsg.err{border-left-color:#CC3333;}
+#geoMsg .gq{opacity:.62;}
+#geoMsg .gnear{display:block;margin-top:2px;}
+#geoMsg .gmore{margin-top:5px;}
+#geoMore{display:inline-block;color:#1F3864;font-weight:bold;
+  cursor:pointer;border-bottom:1px dotted #1F3864;padding:2px 0;}
 #geoBtn{font-family:"맑은 고딕",sans-serif;font-size:14px;font-weight:bold;
   color:#fff;background:rgba(31,56,100,.96);border:none;border-radius:999px;
   padding:11px 16px;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer;
@@ -425,6 +430,9 @@ def geolocate_ui():
     var wid=null, dot=null, ring=null, follow=true;
     var lastHead=null, moving=false;     // 마지막 이동 방향 · 지금 움직이는가
     var cmp = {on:false, head:null, acc:null, src:null};   // 나침반(바라보는 방향)
+    // ⚠️ 좁은 화면에서 상자가 지도를 반쯤 덮었다(2026-10-06 발주자 지적).
+    //    기본은 **접어** 두고 「더보기」로 펼친다. 넓은 화면은 처음부터 펼침.
+    var expanded = (window.innerWidth > 760);
     var cbtn = document.getElementById('cmpBtn');
 
     function say(t, err){
@@ -517,47 +525,62 @@ def geolocate_ui():
     }
 
     var last = null;
+    function dirOf(v){ return DIR[Math.round(v/45)%8]; }
+
+    // 긴 이름은 접힘 상태에서 두 줄로 흘러 넘친다 — 꼬리 설명을 떼고 쓴다.
+    // 「[B] DS-082 진안 신규점2 · 진안도엽 예비(…)」 → 「[B] DS-082 진안 신규점2」
+    function shortName(n){ return String(n).split(' \u00b7 ')[0]; }
+
     function report(){
       if(!last) return;
       var acc = Math.round(last.acc);
-      var t = '<b>내 위치</b><br>위도 ' + last.la.toFixed(6) + '&deg; &middot; 경도 '
-            + last.lo.toFixed(6) + '&deg;<br>오차 약 ' + acc + ' m';
-      if(acc > 100)
-        t += '<br>오차가 큽니다. 하늘이 트인 곳에서 잠시 기다리면 오차가 줄어듭니다.';
+      var t = '';
+
+      // 1줄 — 방향과 오차. 현장에서 걸으며 보는 것은 이 둘이다.
+      var hd = null, kind = '';
       if(cmp.on && cmp.head !== null){
-        t += '<br>바라보는 방향 &mdash; <b>' + DIR[Math.round(cmp.head/45)%8] + ' '
-           + Math.round(cmp.head) + '&deg;</b> <span style="opacity:.7">(나침반)</span>';
-        if(cmp.acc !== null && cmp.acc < 0)
-          t += '<br><span style="opacity:.7">나침반이 보정되지 않았습니다. '
-             + '기기를 8자를 그리듯 돌려 주세요.</span>';
+        hd = dirOf(cmp.head) + ' ' + Math.round(cmp.head) + '&deg;'; kind = '나침반';
+      }else if(moving){
+        hd = dirOf(lastHead) + ' ' + Math.round(lastHead) + '&deg;'; kind = '진행';
       }
-      else if(cmp.on)
-        t += '<br><span style="opacity:.7">바라보는 방향 &mdash; 방향 센서 값을 '
-           + '기다리는 중입니다.</span>';
-      else if(moving)
-        t += '<br>진행 방향 &mdash; <b>' + DIR[Math.round(lastHead/45)%8] + ' '
-           + Math.round(lastHead) + '&deg;</b>';
-      else if(lastHead !== null)
-        t += '<br><span style="opacity:.7">진행 방향 &mdash; 멈춰 있어 지난 방향('
-           + DIR[Math.round(lastHead/45)%8] + ')을 흐리게 둡니다.</span>';
-      else
-        t += '<br><span style="opacity:.7">진행 방향 &mdash; 걷기 시작하면 '
-           + '화살표가 나타납니다.</span>';
+      t += hd ? ('<b>' + hd + '</b> <span class="gq">' + kind + '</span>'
+                 + ' <span class="gq">&middot;</span> ') : '';
+      t += '<span class="gq">오차</span> ' + acc + ' m';
+      if(!follow) t += ' <span class="gq">&middot; 따라가기 꺼짐</span>';
 
-      var near = nearby(last.la, last.lo, 3);
-      if(near.length){
+      // 2줄 — 가까운 지점. 접었으면 한 곳, 펼쳤으면 세 곳.
+      var near = nearby(last.la, last.lo, expanded ? 3 : 1);
+      near.forEach(function(s, k){
+        t += '<span class="gnear">' + (k ? '<span class="gq">' : '<b>')
+           + (expanded ? s.n : shortName(s.n)) + ' ' + far(s.m) + ' ' + s.d
+           + (k ? '</span>' : '</b>') + '</span>';
+      });
+
+      if(expanded){
         t += '<hr style="border:0;border-top:1px solid #DDD;margin:6px 0">'
-           + '<b>가까운 지점</b>';
-        near.forEach(function(s, i){
-          t += '<br>' + (i ? '<span style="opacity:.7">' : '<b>')
-             + s.n + ' &mdash; ' + far(s.m) + ' ' + s.d
-             + (i ? '</span>' : '</b>');
-        });
-        t += '<br><span style="opacity:.7">거리는 직선거리이고 방향은 진북 기준입니다.</span>';
+           + '<span class="gq">위도 ' + last.la.toFixed(6) + '&deg; &middot; 경도 '
+           + last.lo.toFixed(6) + '&deg;<br>'
+           + '거리는 직선거리이고 방향은 진북 기준입니다.</span>';
+        if(acc > 100)
+          t += '<br><span class="gq">오차가 큽니다. 하늘이 트인 곳에서 잠시 '
+             + '기다리면 오차가 줄어듭니다.</span>';
+        if(cmp.on && cmp.head === null)
+          t += '<br><span class="gq">방향 센서 값을 기다리는 중입니다.</span>';
+        if(cmp.on && cmp.acc !== null && cmp.acc < 0)
+          t += '<br><span class="gq">나침반이 보정되지 않았습니다. 기기를 8자를 '
+             + '그리듯 돌려 주세요.</span>';
+        if(!cmp.on && !moving && lastHead !== null)
+          t += '<br><span class="gq">멈춰 있어 지난 진행 방향을 흐리게 둡니다.</span>';
+        if(!cmp.on && lastHead === null)
+          t += '<br><span class="gq">걷기 시작하면 화살표가 나타납니다. '
+             + '제자리에서 보려면 나침반을 켜 주세요.</span>';
+        if(!follow)
+          t += '<br><span class="gq">지도를 움직여서 자동 따라가기가 '
+             + '멈췄습니다. 파란 점을 누르면 다시 따라갑니다.</span>';
       }
 
-      if(!follow)
-        t += '<br>지도를 움직여서 자동 따라가기가 멈췄습니다. 파란 점을 누르면 다시 따라갑니다.';
+      t += '<div class="gmore"><span id="geoMore">'
+         + (expanded ? '간단히 &#9652;' : '더보기 &#9662;') + '</span></div>';
       say(t);
     }
 
@@ -643,6 +666,15 @@ def geolocate_ui():
 
     if(cbtn) cbtn.addEventListener('click', function(){
       if(cmp.on) cstop(); else cstart();
+    });
+
+    // 안내 상자는 갱신마다 innerHTML 을 다시 쓴다 — 링크에 직접 달면 사라진다.
+    msg.addEventListener('click', function(e){
+      var el = e.target;
+      while(el && el !== msg){ if(el.id === 'geoMore') break; el = el.parentNode; }
+      if(!el || el.id !== 'geoMore') return;
+      expanded = !expanded;
+      report();
     });
 
     // 화살표가 가리키는 것 — 나침반이 켜져 있으면 «바라보는» 방향,
