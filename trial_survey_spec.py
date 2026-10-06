@@ -31,6 +31,44 @@ IAGA_SOURCE = "Guide for Magnetic Repeat Station Surveys §4.2 (IAGA, 1996)"
 H_OFFSETS_M = [0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 H_DIRECTIONS = ["동", "서", "남", "북"]
 
+# ── 방향 중간의 P0 재관측 (2026-09-07 추가) ──────────────────────────
+#
+# ⚠️ **원 계획에는 두 설계가 섞여 있다.** 17면(IAGA)은 「P0 → 방향별 측정 →
+# P0 재측정」이라 한 방향(11점) 전체를 한 번의 보정으로 덮고, 36면의 시간변화
+# 보정 «예시»는 P0 → P1 → P0 로 **4분** 간격이다. 시범관측(19·20면)도 방향별
+# 1점(1 m)만 쟀다. 즉 4분짜리 보정 방식을 20분짜리 측선에 그대로 늘여 쓴 셈이다.
+#
+# CYG 1분 자료 7년치(정온 창 682,319개)로 «직선 보정이 남기는 오차»를 쟀다.
+# 한 방향 20분·11점 기준, 그 오차를 그 점의 거리로 나눈 «구배 오차»(90 백분위):
+#
+#   |         | 0.5 m | 1 m  | 5 m  | 10 m |
+#   |---------|-------|------|------|------|
+#   | 앞뒤만  | 0.66  | 0.75 | 0.26 | 0.03 | nT/m   ← 유럽 참고값 3 nT/m 의 22~25 %
+#   | 중간 추가| 0.60  | 0.61 | 0.06 | 0.03 | nT/m
+#
+# 중간 P0 하나로 **가운데 거리(3~6 m)의 오차가 3~4배 줄어든다**(5 m 9 %→2 %).
+# 가까운 점(0.5~1 m)은 별로 나아지지 않는데, 그 점들은 이미 P0 바로 옆 시각이라
+# 잔차가 작고 «작은 거리로 나누기» 때문이다 — 이건 P0 를 더 자주 재도 안 풀린다.
+#
+# 비용은 점당 4회(방향마다 1회) 추가이고 2분 남짓이다.
+# 되돌리려면 이 값을 None 으로 두면 된다.
+H_MID_P0_AFTER = 5          # 이 거리(m)를 잰 뒤 P0 를 한 번 더 잰다
+
+
+def horizontal_sequence():
+    """한 방향의 관측 순서 — (구분, 거리) 목록.
+
+    중간 P0 를 넣으면 「P0(전) … P0(중) … P0(후)」가 되고, 사무실 야장은
+    각 측점을 «자기 구간의 양 끝»으로 보정한다.
+    """
+    seq = [("P0(전)", None)]
+    for off in H_OFFSETS_M:
+        seq.append(("측정", off))
+        if H_MID_P0_AFTER is not None and off == H_MID_P0_AFTER:
+            seq.append(("P0(중)", None))
+    seq.append(("P0(후)", None))
+    return seq
+
 # 수직 측선 — 중심점에서 지상 높이(cm).
 V_HEIGHTS_CM = list(range(20, 201, 20))          # 20 … 200
 
@@ -196,8 +234,12 @@ if __name__ == "__main__":
         print(f"  {k:<12} {v}")
     print()
     print(f"출처: {DECK}")
+    seq = horizontal_sequence()
+    nP0 = sum(1 for k, _ in seq if k != "측정")
     print(f"수평 측선: {len(H_DIRECTIONS)}방향 × {len(H_OFFSETS_M)}점 "
-          f"= {len(horizontal_plan())}점 (+ 방향별 P0 재측정)")
+          f"= {len(horizontal_plan())}점")
+    print(f"  방향당 순서 {len(seq)}행 (측점 {len(H_OFFSETS_M)} + P0 {nP0})"
+          f" · 중간 P0 = {H_MID_P0_AFTER} m 뒤")
     print(f"  거리(m): {H_OFFSETS_M}")
     print(f"수직 측선: {len(V_HEIGHTS_CM)}점 — {V_HEIGHTS_CM[0]}~{V_HEIGHTS_CM[-1]} cm")
     print(f"판정기준: 반경 {IAGA_RADIUS_M:.0f} m 내 {IAGA_RANGE_NT:.0f} nT · "
