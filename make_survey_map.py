@@ -389,6 +389,16 @@ def geolocate_ui():
   white-space:nowrap;-webkit-tap-highlight-color:transparent;}
 #geoBtn.on{background:#1D7A46;}
 #geoBtn.busy{opacity:.78;}
+.me-wrap{position:relative;width:40px;height:40px;}
+.me-dot{position:absolute;left:9px;top:9px;width:22px;height:22px;border-radius:50%;
+  background:#1A73E8;border:3px solid #fff;
+  box-shadow:0 0 0 1px rgba(0,0,0,.35),0 1px 5px rgba(0,0,0,.5);}
+.me-arrow{position:absolute;left:0;top:0;width:40px;height:40px;display:none;
+  transform-origin:50% 50%;transition:transform .25s linear,opacity .25s linear;}
+.me-arrow::before{content:'';position:absolute;left:50%;top:-1px;margin-left:-7px;
+  width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;
+  border-bottom:13px solid #1A73E8;
+  filter:drop-shadow(0 -1px 0 #fff) drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff);}
 </style>
 <div id='geoWrap'>
   <div id='geoMsg'></div>
@@ -406,6 +416,7 @@ def geolocate_ui():
     if(!btn || !msg) return;
 
     var wid=null, dot=null, ring=null, follow=true;
+    var lastHead=null, moving=false;     // 마지막 이동 방향 · 지금 움직이는가
 
     function say(t, err){
       msg.innerHTML = t || '';
@@ -418,6 +429,7 @@ def geolocate_ui():
       if(wid!==null){navigator.geolocation.clearWatch(wid); wid=null;}
       if(dot){map.removeLayer(dot); dot=null;}
       if(ring){map.removeLayer(ring); ring=null;}
+      lastHead=null; moving=false;
       idle(); say('');
     }
 
@@ -428,6 +440,72 @@ def geolocate_ui():
       report();
     }
 
+    // ── 가장 가까운 지점 ──────────────────────────────────────────
+    // 지점 목록을 따로 싣지 않는다. 지도에 이미 찍힌 마커의 툴팁에서 읽으므로
+    // 후보지·기존점이 늘거나 줄어도 저절로 따라온다.
+    // ⚠️ 꺼 둔 레이어의 마커도 세어야 한다 — `map.eachLayer` 는 지도에 «올라와
+    //    있는» 것만 돈다. Folium 이 만든 `feature_group_*` 전역을 함께 훑는다.
+    // ⚠️ 도엽 경계는 Polygon 이라 Marker·CircleMarker 만 받으면 저절로 빠진다.
+    var SITES = null;
+
+    function label(t){
+      return String(t).replace(/<[^>]+>/g, ' ')
+        .replace(/\\s*\\(클릭[^)]*\\)/, '')
+        .replace(/\\s*\\(현장 확인\\)/, '')
+        .replace('선점 대상 기존점: ', '')
+        .replace('기존 측정점: ', '\\u2b50 ')
+        .replace(/\\s+/g, ' ').trim();
+    }
+
+    function collect(){
+      var out = [], seen = {};
+      function take(l){
+        if(l instanceof L.Marker || l instanceof L.CircleMarker){
+          if(l.options && l.options.zIndexOffset === 2000) return;   // 내 위치
+          var tt = l.getTooltip && l.getTooltip();
+          if(!tt) return;
+          var nm = label(tt.getContent());
+          if(!nm) return;
+          var ll = l.getLatLng();
+          var k = nm + '@' + ll.lat.toFixed(5) + ',' + ll.lng.toFixed(5);
+          if(seen[k]) return;
+          seen[k] = 1;
+          out.push({n:nm, la:ll.lat, lo:ll.lng});
+        }else if(l.eachLayer){ l.eachLayer(take); }
+      }
+      map.eachLayer(take);
+      Object.keys(window).forEach(function(k){
+        if(k.indexOf('feature_group_') === 0 && window[k] && window[k].eachLayer)
+          window[k].eachLayer(take);
+      });
+      return out;
+    }
+
+    var RAD = Math.PI / 180;
+    function metres(a, b, c, d){                      // 하버사인
+      var s1 = Math.sin((c-a)*RAD/2), s2 = Math.sin((d-b)*RAD/2);
+      var h = s1*s1 + Math.cos(a*RAD)*Math.cos(c*RAD)*s2*s2;
+      return 2 * 6371008.8 * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+    var DIR = ['북','북동','동','남동','남','남서','서','북서'];
+    function heading(a, b, c, d){                     // 진북 기준 방위
+      var y = Math.sin((d-b)*RAD) * Math.cos(c*RAD);
+      var x = Math.cos(a*RAD)*Math.sin(c*RAD)
+            - Math.sin(a*RAD)*Math.cos(c*RAD)*Math.cos((d-b)*RAD);
+      return DIR[Math.round(((Math.atan2(y,x)/RAD) + 360) % 360 / 45) % 8];
+    }
+    function far(m){
+      return m < 1000 ? Math.round(m) + ' m'
+           : (m < 10000 ? (m/1000).toFixed(2) : (m/1000).toFixed(1)) + ' km';
+    }
+
+    function nearby(la, lo, n){
+      if(SITES === null) SITES = collect();
+      return SITES.map(function(s){
+          return {n:s.n, m:metres(la, lo, s.la, s.lo), d:heading(la, lo, s.la, s.lo)};
+        }).sort(function(p,q){return p.m - q.m;}).slice(0, n);
+    }
+
     var last = null;
     function report(){
       if(!last) return;
@@ -436,20 +514,63 @@ def geolocate_ui():
             + last.lo.toFixed(6) + '&deg;<br>오차 약 ' + acc + ' m';
       if(acc > 100)
         t += '<br>오차가 큽니다. 하늘이 트인 곳에서 잠시 기다리면 오차가 줄어듭니다.';
+      if(moving)
+        t += '<br>진행 방향 &mdash; <b>' + DIR[Math.round(lastHead/45)%8] + ' '
+           + Math.round(lastHead) + '&deg;</b>';
+      else if(lastHead !== null)
+        t += '<br><span style="opacity:.7">진행 방향 &mdash; 멈춰 있어 지난 방향('
+           + DIR[Math.round(lastHead/45)%8] + ')을 흐리게 둡니다.</span>';
+      else
+        t += '<br><span style="opacity:.7">진행 방향 &mdash; 걷기 시작하면 '
+           + '화살표가 나타납니다.</span>';
+
+      var near = nearby(last.la, last.lo, 3);
+      if(near.length){
+        t += '<hr style="border:0;border-top:1px solid #DDD;margin:6px 0">'
+           + '<b>가까운 지점</b>';
+        near.forEach(function(s, i){
+          t += '<br>' + (i ? '<span style="opacity:.7">' : '<b>')
+             + s.n + ' &mdash; ' + far(s.m) + ' ' + s.d
+             + (i ? '</span>' : '</b>');
+        });
+        t += '<br><span style="opacity:.7">거리는 직선거리이고 방향은 진북 기준입니다.</span>';
+      }
+
       if(!follow)
         t += '<br>지도를 움직여서 자동 따라가기가 멈췄습니다. 파란 점을 누르면 다시 따라갑니다.';
       say(t);
+    }
+
+    // ⚠️ 화살표는 **마커 안쪽 요소**를 돌린다. 마커 자체(`.leaflet-marker-icon`)
+    //    에는 Leaflet 이 자기 `translate3d` 를 걸어 두므로 거기에 rotate 를
+    //    덧쓰면 마커가 제자리를 벗어난다.
+    function aim(){
+      if(!dot || !dot.getElement()) return;
+      var ar = dot.getElement().querySelector('.me-arrow');
+      if(!ar) return;
+      if(lastHead === null){ ar.style.display = 'none'; return; }
+      ar.style.display = 'block';
+      ar.style.transform = 'rotate(' + lastHead + 'deg)';
+      // 멈추면 방향을 새로 못 받는다 — 지난 방향임을 흐리게 알린다.
+      ar.style.opacity = moving ? '1' : '.35';
     }
 
     function show(p){
       var la=p.coords.latitude, lo=p.coords.longitude,
           acc=(p.coords.accuracy==null ? 0 : p.coords.accuracy);
       last = {la:la, lo:lo, acc:acc};
+
+      // coords.heading 은 **이동 방향**(진북 기준·시계방향)이고 나침반이
+      // 아니다. 서 있으면 null 이거나 NaN 이라 지난 방향을 그대로 둔다.
+      var h = p.coords.heading;
+      moving = (h !== null && h !== undefined && isFinite(h));
+      if(moving) lastHead = h;
+
       if(!dot){
         dot = L.marker([la,lo], {zIndexOffset:2000, icon: L.divIcon({className:'',
-          iconAnchor:[11,11], html:"<div style='width:22px;height:22px;border-radius:50%;"
-          +"background:#1A73E8;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35),"
-          +"0 1px 5px rgba(0,0,0,.5)'></div>"})}).addTo(map);
+          iconSize:[40,40], iconAnchor:[20,20],
+          html:"<div class='me-wrap'><div class='me-arrow'></div>"
+              +"<div class='me-dot'></div></div>"})}).addTo(map);
         ring = L.circle([la,lo], {radius:acc, color:'#1A73E8', weight:1,
           fillColor:'#1A73E8', fillOpacity:.12}).addTo(map);
         dot.on('click', recenter);
@@ -458,6 +579,7 @@ def geolocate_ui():
         dot.setLatLng([la,lo]); ring.setLatLng([la,lo]); ring.setRadius(acc);
         if(follow) map.panTo([la,lo], {animate:true});
       }
+      aim();
       btn.className='on'; btn.innerHTML='&#128205; 내 위치 끄기';
       report();
     }
