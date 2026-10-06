@@ -389,6 +389,12 @@ def geolocate_ui():
   white-space:nowrap;-webkit-tap-highlight-color:transparent;}
 #geoBtn.on{background:#1D7A46;}
 #geoBtn.busy{opacity:.78;}
+#cmpBtn{display:none;font-family:"맑은 고딕",sans-serif;font-size:13px;
+  font-weight:bold;color:#fff;background:rgba(31,56,100,.9);border:none;
+  border-radius:999px;padding:8px 13px;box-shadow:0 2px 8px rgba(0,0,0,.3);
+  cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+#cmpBtn.show{display:block;}
+#cmpBtn.on{background:#1D7A46;}
 .me-wrap{position:relative;width:40px;height:40px;}
 .me-dot{position:absolute;left:9px;top:9px;width:22px;height:22px;border-radius:50%;
   background:#1A73E8;border:3px solid #fff;
@@ -402,6 +408,7 @@ def geolocate_ui():
 </style>
 <div id='geoWrap'>
   <div id='geoMsg'></div>
+  <button id='cmpBtn' type='button'>&#129517; 나침반 켜기</button>
   <button id='geoBtn' type='button'>&#128205; 내 위치</button>
 </div>
 <script>
@@ -417,6 +424,8 @@ def geolocate_ui():
 
     var wid=null, dot=null, ring=null, follow=true;
     var lastHead=null, moving=false;     // 마지막 이동 방향 · 지금 움직이는가
+    var cmp = {on:false, head:null, acc:null, src:null};   // 나침반(바라보는 방향)
+    var cbtn = document.getElementById('cmpBtn');
 
     function say(t, err){
       msg.innerHTML = t || '';
@@ -430,7 +439,8 @@ def geolocate_ui():
       if(dot){map.removeLayer(dot); dot=null;}
       if(ring){map.removeLayer(ring); ring=null;}
       lastHead=null; moving=false;
-      idle(); say('');
+      cstop();
+      idle(); say(''); cpaint();
     }
 
     function recenter(){
@@ -514,7 +524,17 @@ def geolocate_ui():
             + last.lo.toFixed(6) + '&deg;<br>오차 약 ' + acc + ' m';
       if(acc > 100)
         t += '<br>오차가 큽니다. 하늘이 트인 곳에서 잠시 기다리면 오차가 줄어듭니다.';
-      if(moving)
+      if(cmp.on && cmp.head !== null){
+        t += '<br>바라보는 방향 &mdash; <b>' + DIR[Math.round(cmp.head/45)%8] + ' '
+           + Math.round(cmp.head) + '&deg;</b> <span style="opacity:.7">(나침반)</span>';
+        if(cmp.acc !== null && cmp.acc < 0)
+          t += '<br><span style="opacity:.7">나침반이 보정되지 않았습니다. '
+             + '기기를 8자를 그리듯 돌려 주세요.</span>';
+      }
+      else if(cmp.on)
+        t += '<br><span style="opacity:.7">바라보는 방향 &mdash; 방향 센서 값을 '
+           + '기다리는 중입니다.</span>';
+      else if(moving)
         t += '<br>진행 방향 &mdash; <b>' + DIR[Math.round(lastHead/45)%8] + ' '
            + Math.round(lastHead) + '&deg;</b>';
       else if(lastHead !== null)
@@ -544,15 +564,105 @@ def geolocate_ui():
     // ⚠️ 화살표는 **마커 안쪽 요소**를 돌린다. 마커 자체(`.leaflet-marker-icon`)
     //    에는 Leaflet 이 자기 `translate3d` 를 걸어 두므로 거기에 rotate 를
     //    덧쓰면 마커가 제자리를 벗어난다.
+    // ── 나침반 — «바라보는» 방향 ────────────────────────────────
+    // `coords.heading` 은 «이동» 방향이라 서 있으면 값이 없다. 제자리에서
+    // 몸만 돌릴 때 화살표가 따라오게 하려면 방향 센서를 따로 써야 한다.
+    //
+    // ⚠️ 아이폰은 **사용자가 누른 순간에만** 허용을 물을 수 있다
+    //    (`DeviceOrientationEvent.requestPermission`). 그래서 버튼을 따로 둔다.
+    // ⚠️ 「설정 → Safari → 동작 및 방향 접근」이 꺼져 있으면 물어보지도 않고
+    //    거부로 떨어진다 — 안내문에 그 자리를 적는다.
+    function cpaint(){
+      if(!cbtn) return;
+      cbtn.className = (wid !== null ? 'show' : '') + (cmp.on ? ' on' : '');
+      cbtn.innerHTML = cmp.on ? '&#129517; 나침반 끄기' : '&#129517; 나침반 켜기';
+    }
+
+    function screenAngle(){
+      if(screen.orientation && typeof screen.orientation.angle === 'number')
+        return screen.orientation.angle;
+      return (typeof window.orientation === 'number') ? window.orientation : 0;
+    }
+
+    function onOrient(e){
+      var h = null;
+      if(typeof e.webkitCompassHeading === 'number'
+         && isFinite(e.webkitCompassHeading)){
+        h = e.webkitCompassHeading;              // 아이폰 — 진북 기준·시계방향
+        cmp.src = 'ios';
+        cmp.acc = (typeof e.webkitCompassAccuracy === 'number')
+                    ? e.webkitCompassAccuracy : null;
+      }else if(e.absolute === true && typeof e.alpha === 'number'
+               && isFinite(e.alpha)){
+        h = (360 - e.alpha) % 360;               // 안드로이드 — 절대 방위
+        cmp.src = 'abs';
+        cmp.acc = null;
+      }
+      if(h === null) return;
+      cmp.head = (((h + screenAngle()) % 360) + 360) % 360;
+      aim(); report();
+    }
+
+    function cstart(){
+      if(typeof DeviceOrientationEvent === 'undefined'){
+        say('이 기기는 방향 센서를 지원하지 않습니다.', true); return;
+      }
+      var go = function(){
+        window.addEventListener('deviceorientationabsolute', onOrient, true);
+        window.addEventListener('deviceorientation', onOrient, true);
+        cmp.on = true; cpaint(); report();
+        setTimeout(function(){
+          if(cmp.on && cmp.head === null)
+            say('방향 센서에서 값이 오지 않습니다. 기기를 8자를 그리듯 몇 번 '
+               +'돌려 보정한 뒤 다시 켜 주세요.', true);
+        }, 5000);
+      };
+      if(typeof DeviceOrientationEvent.requestPermission === 'function'){
+        try{
+          DeviceOrientationEvent.requestPermission().then(function(r){
+            if(r === 'granted') go();
+            else say('<b>방향 센서를 허용하지 않았습니다.</b><br>'
+                    +'「설정 &rarr; Safari(안 보이면 「앱」 안) &rarr; '
+                    +'<b>동작 및 방향 접근</b>」이 켜져 있는지 보고, '
+                    +'사파리를 껐다 열어 다시 눌러 주세요.', true);
+          })['catch'](function(){
+            say('방향 센서를 켜지 못했습니다. 다시 눌러 주세요.', true);
+          });
+        }catch(err){
+          say('방향 센서를 켜지 못했습니다. 다시 눌러 주세요.', true);
+        }
+      }else go();
+    }
+
+    function cstop(){
+      window.removeEventListener('deviceorientationabsolute', onOrient, true);
+      window.removeEventListener('deviceorientation', onOrient, true);
+      cmp.on = false; cmp.head = null; cmp.acc = null; cmp.src = null;
+      cpaint(); aim(); report();
+    }
+
+    if(cbtn) cbtn.addEventListener('click', function(){
+      if(cmp.on) cstop(); else cstart();
+    });
+
+    // 화살표가 가리키는 것 — 나침반이 켜져 있으면 «바라보는» 방향,
+    // 아니면 «이동» 방향이다. 둘은 다른 값이라 안내 글에 이름을 밝힌다.
+    function facing(){
+      if(cmp.on && cmp.head !== null) return {ang:cmp.head, live:true, cmp:true};
+      if(lastHead !== null) return {ang:lastHead, live:moving, cmp:false};
+      return null;
+    }
+
     function aim(){
       if(!dot || !dot.getElement()) return;
       var ar = dot.getElement().querySelector('.me-arrow');
       if(!ar) return;
-      if(lastHead === null){ ar.style.display = 'none'; return; }
+      var f = facing();
+      if(!f){ ar.style.display = 'none'; return; }
       ar.style.display = 'block';
-      ar.style.transform = 'rotate(' + lastHead + 'deg)';
-      // 멈추면 방향을 새로 못 받는다 — 지난 방향임을 흐리게 알린다.
-      ar.style.opacity = moving ? '1' : '.35';
+      ar.style.transform = 'rotate(' + f.ang + 'deg)';
+      // 멈추면 이동 방향을 새로 못 받는다 — 지난 방향임을 흐리게 알린다.
+      ar.style.opacity = f.live ? '1' : '.35';
     }
 
     function show(p){
@@ -581,7 +691,7 @@ def geolocate_ui():
       }
       aim();
       btn.className='on'; btn.innerHTML='&#128205; 내 위치 끄기';
-      report();
+      cpaint(); report();
     }
 
     function fail(e){
