@@ -32,6 +32,8 @@ data/*.json
 # 그 원장의 출처·해시 기록 (사이드카)
 !data/geomag_network_30.meta.json
 data/수치지질도_25만축척_전국/
+# 임도망도 shapefile·zip (47 MB, 지리원 제공 원본)
+data/임도망도/
 
 # ── docs 내 잘못 생성되는 폴더 ───────────────────────────────
 docs/output/data/
@@ -60,3 +62,36 @@ Thumbs.db
 
 # ── Office 임시 파일 ──────────────────────────────────────────
 ~$*
+
+# ── 임시 작업 폴더 (2026-10-06) ───────────────────────────────
+# 전부 다시 만들 수 있는 생성물이라 커밋하지 않는다. 합계 약 640 MB 였다.
+# Codex CLI 작업 폴더 (23,828개 · 166 MB)
+.codex_tmp/
+# 한글(hwpx)·LibreOffice·공정보고 점검용 임시 폴더
+.tmp_*/
+tmp/
+_tmp_imgs/
+# 카드 약도 이미지 — capture_map_images.py 로 재생성 (824개 · 462 MB)
+_card_maps/
+
+# ── 실행 로그·일회성 점검 덤프 ───────────────────────────────
+*.log
+_az_check.txt
+_gap_check.txt
+_sheet_check.txt
+
+# ── 조사카드 워크북 (카드마다 지도 이미지가 박혀 수십 MB) ────
+# ⚠️ 종전 패턴은 「도상선점_조사카드」만 잡아 v2 총괄 48 MB 가 새어 나왔다.
+#    이름이 바뀌어도 걸리도록 「조사카드」로 넓힌다. 로컬 보관.
+docs/output/*조사카드*.xlsx
+docs/output/*조사카드*/
+
+# ── 야장 «원자료» (지리원 제공) ──────────────────────────────
+# 파생자료인 docs/data/fieldbook_sessions.csv 만 커밋한다는 방침에 맞춘다.
+docs/data/*야장*.xlsx
+docs/data/*야장기록*.xlsx
+docs/data/거제,남지.지자기야장.xlsx
+
+# ⚠️ `_*.py` 를 통째로 무시하지 말 것 — `_fb_match.py`·`_site_funnel.py`·
+#    `_compare_2020_vs_2225.py` 처럼 **CLAUDE.md 에 이름이 적힌 도구**가 섞여
+#    있다. 일회성 점검 스크립트는 지우거나 하나씩 추가한다.
