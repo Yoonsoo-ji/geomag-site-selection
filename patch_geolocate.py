@@ -21,31 +21,53 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 HTML = ROOT / "docs" / "survey_review.html"
 
-MARK = "id='geoWrap'"          # 멱등 판정용 표식
+OPEN, CLOSE = "<!-- GEO_UI -->", "<!-- /GEO_UI -->"
 
 
 def patch(check_only=False):
+    """버튼 블록을 넣거나, 이미 있으면 **최신 내용으로 갈아 끼운다**.
+
+    ⚠️ 「이미 있으면 건너뛴다」로 두면 안내 문구를 고쳐도 배포본이 옛 문구를
+    계속 쓴다(실제로 아이폰 안내가 틀린 채 남아 있었다). 그래서 마커 사이를
+    통째로 바꾼다 — `build_sv_viewer.py` 의 `SV_CARD` 와 같은 방식이다.
+    """
     if not HTML.exists():
         print(f"[건너뜀] {HTML.name} 없음")
         return 1
     s = HTML.read_text(encoding="utf-8")
-    if MARK in s:
-        print("■ 내 위치 버튼 — 이미 있음")
-        return 0
 
     from make_survey_map import geolocate_ui
     block = geolocate_ui()
 
-    # Folium 산출물에는 </body> 가 없을 수 있다 — 그때는 </html> 앞에 넣는다.
-    for tag in ("</body>", "</html>"):
-        i = s.rfind(tag)
-        if i != -1:
-            s = s[:i] + block + "\n" + s[i:]
-            break
+    i, j = s.find(OPEN), s.find(CLOSE)
+    if i != -1 and j != -1:
+        cur = s[i:j + len(CLOSE)]
+        if cur == block.strip():
+            print("■ 내 위치 버튼 — 이미 최신")
+            return 0
+        s = s[:i] + block.strip() + s[j + len(CLOSE):]
+        print(f"■ 내 위치 버튼 — 갱신 ({len(block):,} 바이트)")
+    elif "id='geoWrap'" in s:
+        # 마커를 붙이기 «전»에 끼운 판본 — 구조로 찾아 갈아 끼운다.
+        # 블록은 <style>…</style> + <div id='geoWrap'>…</div> + <script>…</script>
+        # 하나뿐이라 style 시작 뒤 첫 </script> 가 블록의 끝이다.
+        a = s.find("<style>\n#geoWrap{")
+        b = s.find("</script>", a)
+        if a == -1 or b == -1:
+            print("■ 내 위치 버튼 — 옛 판본을 찾지 못함(손으로 지울 것)")
+            return 1
+        s = s[:a] + block.strip() + s[b + len("</script>"):]
+        print(f"■ 내 위치 버튼 — 옛 판본 교체 ({len(block):,} 바이트)")
     else:
-        s = s + block
-
-    print(f"■ 내 위치 버튼 — 추가 ({len(block):,} 바이트)")
+        # Folium 산출물에는 </body> 가 없을 수 있다 — 그때는 </html> 앞에 넣는다.
+        for tag in ("</body>", "</html>"):
+            k = s.rfind(tag)
+            if k != -1:
+                s = s[:k] + block + "\n" + s[k:]
+                break
+        else:
+            s = s + block
+        print(f"■ 내 위치 버튼 — 추가 ({len(block):,} 바이트)")
     if not check_only:
         HTML.write_text(s, encoding="utf-8")
         print(f"    [저장] {HTML.name}")
