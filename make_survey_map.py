@@ -357,6 +357,148 @@ def dock_ui():
 """
 
 
+def geolocate_ui():
+    """「📍 내 위치」 버튼 — 휴대폰 브라우저의 위치를 지도에 찍는다.
+
+    현장에서 그 자리를 찾아갈 때 쓴다. 파란 점이 현재 위치이고 둘레의 옅은
+    원이 오차 범위다. 한 번 더 누르면 꺼진다.
+
+    ⚠️ **위치 기능은 https 에서만 동작한다.** GitHub Pages 는 https 라
+    그대로 되지만, 파일을 내려받아 `file://` 로 열거나 http 로 띄우면
+    브라우저가 막는다. 그 경우 안내문이 사유를 밝힌다.
+
+    ⚠️ **`watchPosition` 은 위치를 계속 받으므로 배터리를 쓴다.** 그래서
+    기본은 꺼짐이고, 버튼을 눌러야 켜진다.
+
+    ⚠️ 지도 객체는 Folium 이 만든 `map_<해시>` 전역이라 이름을 모른다 —
+    `bangwi_script()` 와 같은 방식으로 찾는다.
+    """
+    return """
+<style>
+#geoWrap{position:fixed;right:10px;bottom:70px;z-index:10000;
+  display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+#geoMsg{max-width:min(300px,78vw);font-family:"맑은 고딕",sans-serif;
+  font-size:12px;line-height:1.5;color:#222;background:rgba(255,255,255,.97);
+  border-left:3px solid #1F3864;border-radius:6px;padding:7px 10px;
+  box-shadow:0 1px 6px rgba(0,0,0,.25);display:none;word-break:keep-all;}
+#geoMsg.err{border-left-color:#CC3333;}
+#geoBtn{font-family:"맑은 고딕",sans-serif;font-size:14px;font-weight:bold;
+  color:#fff;background:rgba(31,56,100,.96);border:none;border-radius:999px;
+  padding:11px 16px;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer;
+  white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+#geoBtn.on{background:#1D7A46;}
+#geoBtn.busy{opacity:.78;}
+</style>
+<div id='geoWrap'>
+  <div id='geoMsg'></div>
+  <button id='geoBtn' type='button'>&#128205; 내 위치</button>
+</div>
+<script>
+(function(){
+  function boot(){
+    var mk = Object.keys(window).find(function(k){
+      return k.indexOf('map_')===0 && window[k] instanceof L.Map;});
+    if(!mk){setTimeout(boot,400);return;}
+    var map = window[mk];
+    var btn = document.getElementById('geoBtn'),
+        msg = document.getElementById('geoMsg');
+    if(!btn || !msg) return;
+
+    var wid=null, dot=null, ring=null, follow=true;
+
+    function say(t, err){
+      msg.innerHTML = t || '';
+      msg.className = err ? 'err' : '';
+      msg.style.display = t ? 'block' : 'none';
+    }
+    function idle(){ btn.className=''; btn.innerHTML='&#128205; 내 위치'; }
+
+    function stop(){
+      if(wid!==null){navigator.geolocation.clearWatch(wid); wid=null;}
+      if(dot){map.removeLayer(dot); dot=null;}
+      if(ring){map.removeLayer(ring); ring=null;}
+      idle(); say('');
+    }
+
+    function recenter(){
+      if(!dot) return;
+      follow = true;
+      map.setView(dot.getLatLng(), Math.max(map.getZoom(), 17));
+      report();
+    }
+
+    var last = null;
+    function report(){
+      if(!last) return;
+      var acc = Math.round(last.acc);
+      var t = '<b>내 위치</b><br>위도 ' + last.la.toFixed(6) + '&deg; &middot; 경도 '
+            + last.lo.toFixed(6) + '&deg;<br>오차 약 ' + acc + ' m';
+      if(acc > 100)
+        t += '<br>오차가 큽니다. 하늘이 트인 곳에서 잠시 기다리면 오차가 줄어듭니다.';
+      if(!follow)
+        t += '<br>지도를 움직여서 자동 따라가기가 멈췄습니다. 파란 점을 누르면 다시 따라갑니다.';
+      say(t);
+    }
+
+    function show(p){
+      var la=p.coords.latitude, lo=p.coords.longitude,
+          acc=(p.coords.accuracy==null ? 0 : p.coords.accuracy);
+      last = {la:la, lo:lo, acc:acc};
+      if(!dot){
+        dot = L.marker([la,lo], {zIndexOffset:2000, icon: L.divIcon({className:'',
+          iconAnchor:[11,11], html:"<div style='width:22px;height:22px;border-radius:50%;"
+          +"background:#1A73E8;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35),"
+          +"0 1px 5px rgba(0,0,0,.5)'></div>"})}).addTo(map);
+        ring = L.circle([la,lo], {radius:acc, color:'#1A73E8', weight:1,
+          fillColor:'#1A73E8', fillOpacity:.12}).addTo(map);
+        dot.on('click', recenter);
+        map.setView([la,lo], Math.max(map.getZoom(), 17));
+      }else{
+        dot.setLatLng([la,lo]); ring.setLatLng([la,lo]); ring.setRadius(acc);
+        if(follow) map.panTo([la,lo], {animate:true});
+      }
+      btn.className='on'; btn.innerHTML='&#128205; 내 위치 끄기';
+      report();
+    }
+
+    function fail(e){
+      var t;
+      if(e && e.code===1)
+        t='위치 권한이 막혀 있습니다. 주소창의 자물쇠를 눌러 이 사이트의 위치 접근을 허용해 주세요.';
+      else if(e && e.code===2)
+        t='위치를 찾지 못했습니다. 건물 안이면 신호가 약합니다. 밖으로 나가서 다시 눌러 주세요.';
+      else if(e && e.code===3)
+        t='위치를 찾는 데 시간이 너무 걸렸습니다. 다시 눌러 주세요.';
+      else t='위치를 가져오지 못했습니다.';
+      say(t, true);
+      if(wid!==null){navigator.geolocation.clearWatch(wid); wid=null;}
+      if(!dot) idle();
+    }
+
+    btn.addEventListener('click', function(){
+      if(wid!==null){stop(); return;}
+      if(!navigator.geolocation){
+        say('이 브라우저는 위치 기능을 지원하지 않습니다.', true); return;}
+      if(window.isSecureContext===false){
+        say('주소가 https 로 시작할 때만 위치를 쓸 수 있습니다. '
+           +'GitHub Pages 주소로 열어 주세요.', true); return;}
+      follow = true;
+      btn.className='busy'; btn.innerHTML='&#128205; 위치 찾는 중&hellip;';
+      say('위치를 찾고 있습니다. 허용을 묻는 창이 뜨면 「허용」을 눌러 주세요.');
+      wid = navigator.geolocation.watchPosition(show, fail,
+        {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
+    });
+
+    // 지도를 손으로 움직이면 자동 따라가기를 멈춘다 — 다른 곳을 보는 중이다.
+    map.on('dragstart', function(){ if(dot && follow){follow=false; report();} });
+  }
+  if(document.readyState==='complete') setTimeout(boot,300);
+  else window.addEventListener('load', function(){setTimeout(boot,300);});
+})();
+</script>
+"""
+
+
 def add_topo_layer(m):
     """도엽(1:50,000) 경계 폴리곤 토글 — index.html 과 동일 스타일, 기본 꺼짐."""
     p = DATA / "topo_sheets.geojson"
@@ -565,6 +707,7 @@ def build(records):
         "opacity:.85;margin-left:10px'>&#9662;</span></div>")
     m.get_root().html.add_child(folium.Element(title))
     m.get_root().html.add_child(folium.Element(dock_ui()))
+    m.get_root().html.add_child(folium.Element(geolocate_ui()))
     return m, counts
 
 
