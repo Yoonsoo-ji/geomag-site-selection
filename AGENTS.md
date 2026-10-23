@@ -30,6 +30,13 @@
 | `create_lmm_cinematic_previews.py` | **A/B/C 디자인 비교본 생성(배포본 미변경)** | `docs/design_previews/` |
 | `vendor/three.r149.min.js` | **시네마틱 오프라인 WebGL 런타임(MIT, SHA-256은 vendor/README.md)** | HTML에 인라인 |
 | `parse_point_register.py` | **지자기 점조서 → 관측망 30점 좌표 정본** | `data/geomag_network_30.csv` |
+| `parse_kriss_legacy.py` | **2012~2016 절대관측 원자료 → 세션표 (단일 출처)** | `docs/data/kriss_legacy_sessions.csv` |
+| `kriss_cyg_timeseries.py` | 세션 시각 × 청양 1분 자료 대조 | `docs/data/kriss_cyg_match.csv` |
+| `kriss_reliability.py` | **블런더 표시 · β 검정 · 방문 등급** | `kriss_session_flags.csv` · `kriss_reliability.csv` |
+| `kriss_reproduce2020.py` | 2020 보고서 표4-12 재현(세션 조합 되짚기) | `docs/data/kriss_reproduce2020.csv` |
+| `kriss_gap_external.py` | 재현 안 되는 쌍이 외부장인지 검정 | `docs/data/kriss_gap_external.csv` |
+| `kriss_lmm_intake.py` | **LMM 투입 판정 (성분별 4관문)** | `docs/data/kriss_lmm_intake.csv` |
+| `add_noaa_kp_forecast.py` | **표준·현장야장에 NOAA 3일·27일 Kp 예보, 자동 조회·그래프 추가** | `docs/output/*_NOAA_Kp예보_*.xlsx` |
 | `add_noaa_kp_forecast.py` | **표준·현장야장에 NOAA 3일·27일 Kp 예보, 자동 조회·그래프 추가** | `docs/output/*_NOAA_Kp예보_*.xlsx` |
 
 ⚠️ 시네마틱은 `lmm_model.json` 등 배포 자료를 읽는다 — **`lmm_build.py` 를 먼저**
@@ -130,9 +137,22 @@ Excel 기본 묶은 세로 막대그래프 두 개를 둔다. 노란색 `조회 
 
 ⚠️ **2012~2016 절대관측 원자료가 있다** — `parse_kriss_legacy.py` →
 `docs/data/kriss_legacy_sessions.csv` (151세션 · 25측점 · 시각·참방위각·변화계).
-시트의 `Code` 칸은 **양식 복사 잔재**라 믿지 말 것(봉평·제천이 서산 부호를 달고
-있다) — 측점은 **파일명**으로 읽는다. 복각 90° 세션 11개도 잔재다.
-편각은 쓸 만하고(잔차 23.5′) **총자력은 못 쓴다**(490 nT).
+순서는 **① parse → ② kriss_cyg_timeseries → ③ kriss_reliability → ④⑤⑥**
+(④ 재현 · ⑤ 간격 검정 · ⑥ 투입 판정)이며, ④⑤⑥ 은 ③ 의 블런더 표시를 읽는다.
+자세한 것은 CLAUDE.md **15-C**.
+
+| 알아 둘 것 | 내용 |
+|---|---|
+| **양식 복사 오염이 칸마다 따로 있다** | `Code` 칸(봉평·제천 2012 가 서산 부호) · **머리글 좌표**(`[결과] 15년 제천.xls` 가 장흥과 0.00 km) · 복각 90° 잔재 11세션. 측점은 **파일명**, 좌표는 **관측망 대조**, 전자력은 **범위 검사**로 각각 걸러야 한다 |
+| **편각 부호를 교정할 것** | 설악 2012 는 `+7.9989` 로 기재돼 있다. 음수화하지 않으면 IGRF 잔차가 977.8′ 로 나온다(교정 후 20.5′) |
+| **블런더는 세션 하나에서 온다** | 151세션 중 32건. 봉평 2012 4회차 D=+2.06° 처럼 한 세션이 10° 틀어진다. **지우지 않고 표시만** 하고 방문 대표는 중앙값으로 |
+| **블런더 표시는 전 연도에** | 청양이 붙은 2014~2016 행에만 걸면 2012·2013 을 놓쳐 보고서 재현이 19/29 에서 멈춘다. 판정에 청양은 필요하지 않다 |
+| **5 km 넘는 좌표 차는 대개 이설** | 삼척 2012(임계) · 영천 2015(경주) · 언양 2012(양산) · 남양 2016(장지저수지) 등. 이력으로 설명되지 않는 것만 배제한다 |
+| **보고서 재현 24/29** | 규칙 하나로는 안 된다 — 쌍마다 뺀 세션이 다르다. 남은 4쌍(청송 2014 · 강화 2013 · 봉평 2015 · 남양 2012)은 **청양 보정으로도 설명되지 않는다** |
+| **투입 판정** | 편각 **18방문 / 16측점**(LMM 에 없는 측점 10 — 남해·봉평·부안·서산·설악·순창·언양·제천·청양·춘양) · 잔차 RMS **21.6′**. 총자력은 11방문·189 nT 뿐이라 **「F 63 → 50 nT」를 이 자료로 얻을 수 없다** |
+
+⚠️ **아직 투입하지 않았다** — Midterm Baseline v1 동결 중이고, 16 → 26 측점이면
+정본 수치가 전부 움직인다. `eval_set.json` 도 다시 얼려야 한다.
 
 ⚠️ **제천 좌표는 점조서가 아니라 현장 확인값 37.168056/128.015833 을 쓴다**
 (`EN.COORD_OVERRIDE`, 2026-10-02). 점조서는 소재지·경로·좌표가 모두 「금성면
