@@ -36,7 +36,9 @@
 | `kriss_reproduce2020.py` | 2020 보고서 표4-12 재현(세션 조합 되짚기) | `docs/data/kriss_reproduce2020.csv` |
 | `kriss_gap_external.py` | 재현 안 되는 쌍이 외부장인지 검정 | `docs/data/kriss_gap_external.csv` |
 | `kriss_lmm_intake.py` | **LMM 투입 판정 (성분별 4관문)** | `docs/data/kriss_lmm_intake.csv` |
-| `add_noaa_kp_forecast.py` | **표준·현장야장에 NOAA 3일·27일 Kp 예보, 자동 조회·그래프 추가** | `docs/output/*_NOAA_Kp예보_*.xlsx` |
+| `build_obs_archive.py` | **절대관측 다섯 출처 통합 시계열 (단일 출처)** | `docs/data/obs_archive_{sessions,visits}.csv` |
+| `lmm_intake_decide.py` | **시계열 변동 정리 · LMM 투입 판정** | `lmm_intake_decision.csv` · `obs_timeseries_summary.csv` |
+| `create_intake_report.py` | 투입 검토 보고서 | `docs/output/*_기존관측자료_LMM투입검토.docx` |
 | `add_noaa_kp_forecast.py` | **표준·현장야장에 NOAA 3일·27일 Kp 예보, 자동 조회·그래프 추가** | `docs/output/*_NOAA_Kp예보_*.xlsx` |
 
 ⚠️ 시네마틱은 `lmm_model.json` 등 배포 자료를 읽는다 — **`lmm_build.py` 를 먼저**
@@ -153,6 +155,26 @@ Excel 기본 묶은 세로 막대그래프 두 개를 둔다. 노란색 `조회 
 
 ⚠️ **아직 투입하지 않았다** — Midterm Baseline v1 동결 중이고, 16 → 26 측점이면
 정본 수치가 전부 움직인다. `eval_set.json` 도 다시 얼려야 한다.
+
+⚠️ **절대관측 측정값은 다섯 갈래로 흩어져 있다 — `build_obs_archive.py` 가
+한 표로 모은다**(`docs/data/obs_archive_sessions.csv`, 587행 · 방문 315 ·
+측점 30 · 1984~2025). 순서는 **① build_obs_archive → ② lmm_intake_decide →
+③ create_intake_report**. 자세한 것은 CLAUDE.md **15-D**.
+
+| 알아 둘 것 | 내용 |
+|---|---|
+| **날짜 형식이 출처마다 다르다** | 점조서가 「1993.10.19」·「1995.0927」·「1996.00.00」·「2010연구성과」를 섞어 쓴다. `pd.to_datetime(…, errors="coerce")` 는 형식 하나를 추정하고 나머지를 NaT 로 버린다 — **587행 중 482행이 날아갔다.** `parse_day()` 가 (날짜, 정밀도) 로 돌려준다 |
+| **열 이름을 짐작하지 말 것** | 점조서 측점명은 `지점명` 이 아니라 **「도엽명」** · 야장 역산은 `D_deg` 가 아니라 **`D_야장`** · `current_points()` 는 **시트 목록을 인자로 받는다**. 셋 다 조용히 빈 자료를 냈다 |
+| **좌표 관문이 없으면 오염이 통과한다** | 제천 2015 는 머리글이 장흥 좌표인데 편각 잔차만 −11.7′ 로 멀쩡해 보였다. 관측망 좌표와 5 km · 이설 이력으로 가른다 |
+| **이설 이전은 「별도측점」** | 현재점 매설일보다 앞선 관측은 폐지된 다른 표석에서 잰 것이다. 같은 측점으로 묶지 말 것(12-A 0단계) |
+| **출처불일치로 거르지 말 것** | 우리가 고른 쪽이 정보량이 많은 출처다. 어긋남은 버린 쪽의 전사 문제일 수 있다 — **30′ 넘을 때만** 보류 |
+| **판정 결과** | 편각 **투입 29 방문 / 20 측점** · 잔차 RMS **22.9′**(2019 25.2′ · 2022~25 33.4′ 보다 작다). LMM 에 없는 측점 **10** — 남해·봉평·부안·서산·설악·순창·제천·청송·청양·춘양. 총자력은 19 방문 · 200 nT 뿐 |
+
+✅ **남양 좌표 정정 완료(2026-10-23)** — 2016 관측 좌표(장지저수지 162 m)를
+`EN.COORD_OVERRIDE` 에 넣고 `COORD_UNVERIFIED` 를 비웠다. 15-A 가
+**공간 30점 · 목표 80** 으로 재계산됐다(보강 1순위 61 → 73셀).
+
+⚠️ **아직 투입하지 않았다** — Midterm Baseline v1 동결 중이다.
 
 ⚠️ **제천 좌표는 점조서가 아니라 현장 확인값 37.168056/128.015833 을 쓴다**
 (`EN.COORD_OVERRIDE`, 2026-10-02). 점조서는 소재지·경로·좌표가 모두 「금성면
@@ -1062,3 +1084,10 @@ docs/data/korea_boundary.geojson   # root data/ 에서 복사(fetch 는 docs 기
 | **초기 계산은 setTimeout** | 표면 색지도·등치선 계산을 `requestAnimationFrame` 으로 지연하면 **패널/탭 숨김 시 rAF 멈춰** 계산 안 됨. `setTimeout`(숨겨도 실행)으로 할 것 |
 | **표면 색지도 정합** | Earth 셰이더가 지오메트리 UV 대신 **오브젝트 좌표 normal→lat/lon**(`lat=asin(n.y), lon=atan2(n.z,n.x)`)로 equirect 텍스처 샘플 → 호버·해안선·자기력선과 좌표계 일치. 자전은 earthGroup 전체를 돌려 지리계 동반 |
 | **경계 fetch 경로** | geojson 은 `docs/` 기준 상대경로(`data/...`)로 fetch. root `data/` 파일은 `docs/data/` 로 복사해야 Pages 에서 로드됨 |
+
+## 출장복명서 작성 기록 (2026-10-14)
+
+- 2026-10-12 부안 기존 지자기점 선점 보완 출장복명서를 작성했다. 사용자 요청에 따라 제공 PDF 양식의 복명 문구 아래 출장목적·출장지·출장일·주요내용을 구성하고, 수평·수직 자기구배 결과 이미지 두 장을 붙임으로 포함했다.
+- 산출물: `docs/output/20261014_103046_부안_지자기점_선점보완_출장복명서.hwpx` (본문 1쪽 + 붙임 1쪽). 한컴 한글 COM으로 HWPX 저장·재열기 및 PDF 렌더 확인을 완료했다.
+
+- 2026-10-14 사용자 보완 요청으로 출장복명서에 「5. 향후계획」(선점 보완 검토 및 필요 시 추가 현장 탐사)을 추가했다. 최신 산출물: `docs/output/20261014_103528_부안_지자기점_선점보완_출장복명서_향후계획포함.hwpx` (2쪽, 붙임 결과표 유지 및 렌더 확인).
