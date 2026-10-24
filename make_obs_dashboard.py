@@ -206,6 +206,12 @@ main{display:grid;grid-template-columns:330px 1fr;gap:10px;padding:10px;
 table{border-collapse:collapse;width:100%;font-size:12px}
 th,td{padding:3px 7px;border-bottom:1px solid #EDEFF2;text-align:left;
  white-space:nowrap}
+/* ⚠ table-layout:fixed 에 white-space:nowrap 이 같이 걸리면, 칸을 넘은
+   글자가 잘리지도 접히지도 않고 **옆 칸 위에 그대로 그려진다**.
+   고정 레이아웃 표(플래그 목록)는 칸 안에서 접고 넘치면 숨긴다. */
+table.fx{table-layout:fixed;width:100%}
+table.fx th,table.fx td{white-space:normal;overflow-wrap:anywhere;
+ word-break:break-word;overflow:hidden;vertical-align:top}
 th{position:sticky;top:0;background:#F7F8FA;font-weight:700;font-size:11px;
  color:#4B5563;cursor:pointer;user-select:none;z-index:2}
 th:hover{background:#EEF1F5}
@@ -506,7 +512,18 @@ def main():
 
     h = OUT / "기존측정점_자료점검.html"
     h.write_text(build_html(P), encoding="utf-8")
-    x = build_excel(ST, V, S, F, P, OUT / "기존측정점_자료점검.xlsx")
+
+    # ⚠️ 엑셀에서 그 파일을 열어 둔 채로 다시 돌리면 **PermissionError** 로
+    #    통째로 멈춘다. HTML 은 이미 저장된 뒤라 둘이 어긋난 채 남는다.
+    #    잠겨 있으면 시각을 붙인 이름으로 내고 그 사실을 알린다.
+    xp = OUT / "기존측정점_자료점검.xlsx"
+    try:
+        x = build_excel(ST, V, S, F, P, xp)
+        alt = False
+    except PermissionError:
+        xp = OUT / f"기존측정점_자료점검_{dt.datetime.now():%H%M%S}.xlsx"
+        x = build_excel(ST, V, S, F, P, xp)
+        alt = True
 
     print(f"■ 측점 {len(ST)} · 방문 {len(V)} · 세션 {len(S)}"
           f" · 플래그 {len(F)} · 원본 파일 {len(P['원본'])}")
@@ -515,6 +532,9 @@ def main():
         for k in ("확인필요", "주의", "참고")))
     print(f"\n[저장] {h}  ({h.stat().st_size / 1024:.0f} KB)")
     print(f"[저장] {x}  ({x.stat().st_size / 1024:.0f} KB)")
+    if alt:
+        print("\n⚠ 원래 이름의 엑셀이 열려 있어 다른 이름으로 냈다 —"
+              " 엑셀을 닫고 다시 돌리면 제 이름으로 저장된다")
     print("\n⚠ local/ 은 .gitignore 로 막혀 있다 — 커밋되지 않는다")
     return 0
 

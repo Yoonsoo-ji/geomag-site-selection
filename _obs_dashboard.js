@@ -465,30 +465,43 @@ function viewVisits(vs) {
 }
 function viewFlags(fs, showSite) {
   if (!fs.length) return '<div class="note">확인이 필요한 항목이 없습니다.</div>';
-  var h = '<table style="table-layout:fixed;width:100%"><colgroup>' +
-    '<col style="width:62px"><col style="width:' + (showSite ? '56' : '0') +
-    'px"><col style="width:46px"><col style="width:112px">' +
-    '<col style="width:150px"><col><col style="width:116px">' +
-    '<col style="width:210px"></colgroup>' +
-    '<thead><tr><th>심각도</th>' +
-    (showSite ? '<th>측점</th>' : '<th style="display:none"></th>') +
-    '<th>연도</th><th>종류</th><th>내용</th><th>왜 보나</th>' +
-    '<th>출처</th><th>원본 파일</th></tr></thead><tbody>';
+  /* ⚠ 머리글·칸·<col> 을 세 곳에 따로 적으면 조건이 붙는 순간 어긋난다.
+   *   실제로 「측점」 칸을 showSite 가 거짓일 때 **아예 안 내보내면서**
+   *   <col> 은 8개 그대로 둬서 열이 한 칸씩 밀렸고, 「종류」가 46px 칸에
+   *   들어가 글자가 석 줄로 접혔다.
+   *   → 열 정의를 **한 배열**에 두고 머리글·칸·<col> 을 모두 거기서 만든다. */
+  var COL = [
+    {t: '심각도', w: 62, f: function (f) {
+      return '<span class="sev" style="background:' +
+        (D['색_심각도'][f['심각도']] || '#888') + '">' + esc(f['심각도']) +
+        '</span>'; }},
+    {t: '측점', w: 60, on: showSite, f: function (f) {
+      return '<a href="#" onclick="select(\'' + esc(f['측점']) +
+        '\');return false">' + esc(f['측점']) + '</a>'; }},
+    {t: '연도', w: 48, cls: 'n', f: function (f) { return f['연도'] || '-'; }},
+    {t: '종류', w: 132, f: function (f) { return esc(f['종류']); }},
+    {t: '내용', w: 218, f: function (f) {
+      return esc(f['내용']) + (f['상세']
+        ? '<br><span class="muted">' + esc(f['상세']) + '</span>' : ''); }},
+    {t: '왜 보나', min: 210, cls: 'muted', f: function (f) {
+      return esc(f['왜']); }},
+    {t: '출처', w: 136, cls: 'muted', f: function (f) {
+      return esc(f['출처']); }},
+    {t: '원본 파일', w: 272, cls: 'path', f: function (f) {
+      return f['원본파일'] ? esc(f['원본파일']) : '-'; }}
+  ].filter(function (c) { return c.on !== false; });
+
+  var h = '<table class="fx"><colgroup>' + COL.map(function (c) {
+    return '<col style="' + (c.w ? 'width:' + c.w + 'px'
+      : 'min-width:' + c.min + 'px') + '">';
+  }).join('') + '</colgroup><thead><tr>' + COL.map(function (c) {
+    return '<th' + (c.cls === 'n' ? ' class="n"' : '') + '>' + c.t + '</th>';
+  }).join('') + '</tr></thead><tbody>';
   fs.forEach(function (f) {
-    h += '<tr><td><span class="sev" style="background:' +
-      (D['색_심각도'][f['심각도']] || '#888') + '">' + esc(f['심각도']) +
-      '</span></td>' +
-      (showSite ? '<td><a href="#" onclick="select(\'' + esc(f['측점']) +
-        '\');return false">' + esc(f['측점']) + '</a></td>' : '') +
-      '<td class="n">' + (f['연도'] || '-') + '</td>' +
-      '<td>' + esc(f['종류']) + '</td>' +
-      '<td style="white-space:normal">' + esc(f['내용']) +
-      (f['상세'] ? '<br><span class="muted">' + esc(f['상세']) + '</span>' : '') +
-      '</td><td class="muted" style="white-space:normal;max-width:320px">' +
-      esc(f['왜']) + '</td>' +
-      '<td class="muted" style="white-space:normal">' + esc(f['출처']) + '</td>' +
-      '<td class="path">' + (f['원본파일'] ? esc(f['원본파일']) : '-') +
-      '</td></tr>';
+    h += '<tr>' + COL.map(function (c) {
+      return '<td' + (c.cls ? ' class="' + c.cls + '"' : '') + '>' +
+        c.f(f) + '</td>';
+    }).join('') + '</tr>';
   });
   return h + '</tbody></table>';
 }
