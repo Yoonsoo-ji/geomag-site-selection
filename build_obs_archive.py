@@ -60,6 +60,9 @@ import existing_network as EN                        # noqa: E402
 SITE_CANON = {"임계": "삼척", "경주": "영천", "양산": "언양",
               "곡성": "순창", "인제": "설악"}
 
+SRC_ORDER = ("register", "legacy1019", "survey2225",
+             "kriss", "fieldbook")
+
 # 한반도 범위 — 넘으면 「범위밖」으로 표시만 한다(버리지 않는다)
 RANGE = {"D": (-20.0, 20.0), "I": (30.0, 70.0), "F": (30000.0, 60000.0)}
 
@@ -166,7 +169,8 @@ def src_register():
                 좌표출처=(f"{csrc} · ⚠ {bury} 매설 이전 관측" if pre else csrc),
                 좌표신뢰=("이설 이전 — 좌표 불확실" if pre else "현재점"),
                 D=r.get("편각"), I=r.get("복각"), F=r.get("전자력"),
-                장비=r.get("장비", ""), 점의부호=p.get("점의부호", "")))
+                장비=r.get("장비", ""), 점의부호=p.get("점의부호", ""),
+                원본시트_raw=p.get("시트", "")))
     return pd.DataFrame(rows)
 
 
@@ -259,6 +263,7 @@ def src_kriss():
             위도=r.get("위도"), 경도=r.get("경도"), 좌표출처="관측 야장 머리글",
             D=r.get("편각"), I=r.get("복각"), F=r.get("총자력"),
             장비="", 점의부호=str(r.get("코드", "")),
+            원본파일_raw=r.get("파일", ""),
             참방위각=r.get("FM_True"), 편각시작=r.get("편각시작")))
     return pd.DataFrame(rows)
 
@@ -296,8 +301,124 @@ def src_fieldbook():
             I=(r.get(icol) if icol else None),
             F=(r.get(fcol) if fcol else None),
             장비="", 점의부호="",
+            원본파일_raw=r.get("파일", ""), 원본시트_raw=r.get("시트", ""),
             참방위각=r.get("FM_True", np.nan)))
     return pd.DataFrame(rows)
+
+
+# ── 원본 자료 위치 ────────────────────────────────────────────────────
+#
+# 값마다 **어느 파일의 어느 시트에서 왔는지**를 함께 싣는다. 점검 단계에서
+# 「이 숫자가 어디서 왔나」를 되짚으려면 이것이 없으면 안 된다.
+#
+# ⚠️ 원본은 저장소 밖(D: 지리원 자료)에 있는 것이 많다. 경로를 적어 두되
+#    **파일을 복사해 오지 않는다** — 용량이 크고 git 대상도 아니다.
+def _src_root(name):
+    """출처마다 원본이 놓인 폴더·파일. 없으면 빈 문자열."""
+    try:
+        if name == "register":
+            from parse_point_register import REGISTER_XLSX
+            return str(REGISTER_XLSX)
+        if name == "kriss":
+            from parse_kriss_legacy import SRC
+            return str(SRC)
+        if name == "legacy1019":
+            return str(DATA / "'10~'19년 지자기점 관측현황(최종).xls")
+        if name == "survey2225":
+            return str(DATA / "지자기측량 성과정리(22_25).xlsx")
+        if name == "fieldbook":
+            from lmm_fieldbook import NGII_FIELDBOOK_DIR
+            return str(NGII_FIELDBOOK_DIR)
+    except Exception:
+        pass
+    return ""
+
+
+_FB_CACHE = {}
+
+
+def _FB_INDEX():
+    """야장 파일 이름 → 전체 경로. 트리를 한 번만 훑는다."""
+    if _FB_CACHE:
+        return _FB_CACHE
+    import os
+    try:
+        from lmm_fieldbook import ngii_files
+        for full in ngii_files():
+            _FB_CACHE.setdefault(os.path.basename(str(full)), str(full))
+    except Exception:
+        pass
+    # docs/data 의 2019 야장도 같은 표에 넣는다
+    for q in (ROOT / "docs" / "data").glob("*야장*.xls*"):
+        _FB_CACHE.setdefault(q.name, str(q))
+    return _FB_CACHE
+
+
+def attach_provenance(d):
+    """행마다 `원본파일`·`원본시트`·`원본폴더` 를 채운다."""
+    import os
+    roots = {k: _src_root(k) for k in SRC_ORDER}
+    files, sheets = [], []
+    for _, r in d.iterrows():
+        src = r["출처"]
+        f = str(r.get("원본파일_raw") or "").strip()
+        s = str(r.get("원본시트_raw") or "").strip()
+        if src == "kriss" and f:
+            # 13년분은 하위 폴더에 있다 — 실제로 있는 쪽을 적는다
+            root = roots.get("kriss", "")
+            cand = os.path.join(root, f)
+            sub = os.path.join(root, "13년 직영출장결과", f)
+            f = sub if (not os.path.exists(cand) and os.path.exists(sub)) else cand
+        elif src == "fieldbook" and f:
+            # ⚠️ `collect_raw()` 는 **파일 이름만** 준다(`Path(f).name`). 야장은
+            #    연도·측점 하위 폴더에 흩어져 있어 루트에 이어 붙이면 없는
+            #    경로가 된다(처음에 35개가 전부 「존재 0」이었다).
+            #    실제 트리를 한 번 훑어 이름 → 전체 경로 표를 만들어 쓴다.
+            f = _FB_INDEX().get(os.path.basename(f), f)
+            if not os.path.isabs(f):
+                f = os.path.join(roots.get("fieldbook", ""), f)
+        elif not f:
+            f = roots.get(src, "")
+        files.append(f)
+        sheets.append(s)
+    # ⚠️ **전체 경로를 커밋 대상 CSV 에 넣지 않는다.** 원본 상당수가 저장소
+    #    밖(D: 지리원 자료)에 있어 절대 경로가 사용자의 폴더 구조를 드러낸다.
+    #    CSV 에는 **파일 이름만** 싣고, 전체 경로가 필요한 쪽(로컬 점검
+    #    대시보드)은 `resolve_path()` 로 그때 만든다.
+    d["원본파일"] = [os.path.basename(f) if f else "" for f in files]
+    d["원본시트"] = sheets
+    _FULL.clear()
+    for src_, full in zip(d["출처"], files):
+        if full:
+            _FULL[(src_, os.path.basename(full))] = full
+    return d
+
+
+_FULL = {}
+
+
+def resolve_path(src, basename):
+    """
+    파일 이름 → 전체 경로. **로컬 전용**이다.
+
+    CSV 에는 이름만 실리므로, 경로가 필요한 쪽에서 이 함수를 부른다.
+    출처 뿌리와 야장 트리 색인을 다시 써서 그때그때 만든다.
+    """
+    import os
+    if not basename:
+        return ""
+    key = (src, basename)
+    if key in _FULL:
+        return _FULL[key]
+    root = _src_root(src)
+    if src == "fieldbook":
+        return _FB_INDEX().get(basename, os.path.join(root, basename))
+    if src == "kriss":
+        a = os.path.join(root, basename)
+        b = os.path.join(root, "13년 직영출장결과", basename)
+        return b if (not os.path.exists(a) and os.path.exists(b)) else a
+    return root if root.endswith((".xls", ".xlsx")) else os.path.join(root,
+                                                                     basename)
 
 
 # ── IGRF 잔차 ────────────────────────────────────────────────────────
@@ -391,6 +512,12 @@ def main():
                           else "현재점 또는 병합값"))
 
     parsed = [parse_day(v) for v in d["일자"]]
+    for c in ("원본파일_raw", "원본시트_raw"):
+        if c not in d.columns:
+            d[c] = ""
+        d[c] = d[c].fillna("")
+    d = attach_provenance(d)
+
     d["_date"] = pd.to_datetime([x[0] for x in parsed], errors="coerce")
     d["일자정밀도"] = [x[1] for x in parsed]
     d["연도"] = d["_date"].dt.year
@@ -409,7 +536,7 @@ def main():
             "위도", "경도", "좌표출처", "D", "I", "F",
             "D_판정", "I_판정", "F_판정", "D_원본", "D부호교정",
             "rD분", "rI분", "rF_nT", "일자정밀도", "좌표신뢰",
-            "참방위각", "장비", "점의부호"]
+            "참방위각", "장비", "점의부호", "원본파일", "원본시트"]
     S = d[[c for c in cols if c in d.columns]].reset_index(drop=True)
 
     # ── 방문 대표값 — 세션은 중앙값으로 묶는다 ──────────────────────
